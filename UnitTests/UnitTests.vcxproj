@@ -160,6 +160,8 @@
   <ItemGroup>
     <ClCompile Include="TestAny.cpp" />
     <ClCompile Include="TestChunkBuffer.cpp" />
+    <ClCompile Include="TestRPC.cpp" />
+    <ClCompile Include="TestRPCTraits.cpp" />
     <ClCompile Include="TestTCPSocket.cpp" />
     <ClCompile Include="UnitTests.cpp" />
     <ClCompile Include="UnitTestsPCH.cpp">

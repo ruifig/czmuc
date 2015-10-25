@@ -22,10 +22,10 @@ class GenericRPCClass
 {
 };
 
-#define RPCTABLE_CLASS GenericRPCClass
-#define RPCTABLE_CONTENTS
-#include "crazygaze/rpc/RPCGenerate.h"
-
 } // namespace rpc
 } // namespace cz
+
+#define RPCTABLE_CLASS cz::rpc::GenericRPCClass
+#define RPCTABLE_CONTENTS
+#include "crazygaze/rpc/RPCGenerate.h"
 

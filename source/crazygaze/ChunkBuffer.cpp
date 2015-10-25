@@ -260,6 +260,10 @@ ChunkBuffer& operator << (ChunkBuffer& stream, const char* v)
 	return stream;
 }
 
+ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Any &v)
+{
+	return v.saveToStream(stream);
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -278,6 +282,10 @@ const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::string& v)
 	return stream;
 }
 
+const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Any &v)
+{
+	return v.readFromStream(stream);
+}
 
 void details::ParameterPack::serialize(ChunkBuffer& stream)
 {

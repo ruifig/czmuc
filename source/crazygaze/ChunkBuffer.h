@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "crazygaze/Any.h"
+
 namespace cz
 {
 
@@ -304,6 +306,7 @@ template<typename T>
 inline ChunkBuffer& operator << (ChunkBuffer& stream, T v) { stream.write(v); return stream; }
 ChunkBuffer& operator << (ChunkBuffer& stream, const std::string& v);
 ChunkBuffer& operator << (ChunkBuffer& stream, const char* v);
+ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Any &v);
 template<typename T>
 ChunkBuffer& operator << (ChunkBuffer& stream, const std::vector<T>& v)
 {
@@ -320,9 +323,15 @@ ChunkBuffer& operator << (ChunkBuffer& stream, const std::tuple<Elements...>& v)
 //
 // Read operations
 //
+
+// 
 template<typename T>
-inline const ChunkBuffer& operator >> (const ChunkBuffer& stream, T& v) { stream.read(v); return stream; }
+inline const ChunkBuffer& operator >> (const ChunkBuffer& stream, T& v) {
+	stream.read(v); return stream;
+}
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::string& v);
+const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Any &v);
+
 template<typename T>
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::vector<T>& v)
 {

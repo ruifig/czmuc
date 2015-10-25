@@ -211,17 +211,6 @@ class Any
 	std::vector<uint8_t> m_blob;
 };
 
-template<typename Stream>
-const Stream& operator >> (const Stream& stream, cz::Any &v)
-{
-	return v.readFromStream(stream);
-}
-template<typename Stream>
-Stream& operator << (Stream& stream, const cz::Any &v)
-{
-	return v.saveToStream(stream);
-}
-
 struct AnyTree
 {
 	AnyTree() {}

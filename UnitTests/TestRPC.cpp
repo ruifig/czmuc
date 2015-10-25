@@ -1,9 +1,10 @@
 #include "UnitTestsPCH.h"
 
-using namespace czrpc;
 using namespace cz;
+using namespace cz::rpc;
+using namespace cz::net;
 
-extern czrpc::WorkQueue* gRcvQueue;
+extern WorkQueue* gRcvQueue;
 extern std::thread* gRcvQueueThread;
 extern void waitForQueueToFinish();
 
@@ -23,7 +24,7 @@ public:
 #define RPCTABLE_CLASS Object
 #define RPCTABLE_CONTENTS \
 	RPCTABLE_CONTENTS_Object
-#include "czRPC/czRPCGenerate.h"
+#include "crazygaze/rpc/RPCGenerate.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -44,7 +45,7 @@ public:
 #define RPCTABLE_CLASS CalculatorInterface
 #define RPCTABLE_CONTENTS \
 	RPCTABLE_CONTENTS_CalculatorInterface
-#include "czRPC/czRPCGenerate.h"
+#include "crazygaze/rpc/RPCGenerate.h"
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -99,7 +100,7 @@ public:
 	REGISTERRPC(slowSum) \
 	REGISTERRPC(primeNumbers) \
 	REGISTERRPC(doNothing)
-#include "czRPC/czRPCGenerate.h"
+#include "crazygaze/rpc/RPCGenerate.h"
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -179,7 +180,7 @@ public:
 	REGISTERRPC(doFunc1) \
 	REGISTERRPC(doFunc2) \
 	REGISTERRPC(doFunc3)
-#include "czRPC/czRPCGenerate.h"
+#include "crazygaze/rpc/RPCGenerate.h"
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -198,7 +199,7 @@ struct RPCTestClient
 #define RPCTABLE_CONTENTS \
 	REGISTERRPC(func1) \
 	REGISTERRPC(func2)
-#include "czRPC/czRPCGenerate.h"
+#include "crazygaze/rpc/RPCGenerate.h"
 
 // NOTE: Can't put these in the class itself, because at that point, the RPC Tables are not defined yet
 int RPCTestClient::func1(int v)
