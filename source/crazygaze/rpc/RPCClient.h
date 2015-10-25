@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/ScopeGuard.h"
 #include "crazygaze/rpc/RPCBase.h"
 #include "crazygaze/rpc/RPCChannel.h"
 #include "crazygaze/rpc/RPCProcessor.h"

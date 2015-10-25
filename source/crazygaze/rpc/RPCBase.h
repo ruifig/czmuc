@@ -154,7 +154,7 @@ class TableImpl : public BaseTable
 		static_assert(ValidateRPCFuncSignature<F>::value,
 					  "Invalid RPC function signature (Unsupported return type or parameter types)");
 
-		assert(rpcid == m_rpcs.size());
+		CZ_ASSERT(rpcid == m_rpcs.size());
 		auto info = std::make_unique<Info>();
 		typedef ParamTuple<decltype(f)>::type Tuple;
 		info->name = name;
@@ -185,7 +185,7 @@ class TableImpl : public BaseTable
 
 	const Info* get(uint32_t rpcid) const
 	{
-		assert(isValid(rpcid));
+		CZ_ASSERT(isValid(rpcid));
 		return static_cast<Info*>(m_rpcs[rpcid].get());
 	}
 
