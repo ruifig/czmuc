@@ -13,12 +13,12 @@
 #include "crazygaze/Any.h"
 #include "crazygaze/rpc/RPCUtils.h"
 #include "crazygaze/StringUtils.h"
+#include "crazygaze/TypeTraits.h"
 
 namespace cz
 {
 namespace rpc
 {
-using cz::ChunkBuffer;
 
 //! Small utility struct to make it easier to work with the RPC headers
 struct RPCHeader

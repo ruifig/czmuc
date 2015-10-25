@@ -18,58 +18,10 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\source\crazygaze\Any.h" />
-    <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
-    <ClInclude Include="..\source\crazygaze\config.h" />
-    <ClInclude Include="..\source\crazygaze\czlib.h" />
-    <ClInclude Include="..\source\crazygaze\czlibPCH.h" />
-    <ClInclude Include="..\source\crazygaze\FNVHash.h" />
-    <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
-    <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
-    <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
-    <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\BaseRPCProcessor.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCChannel.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCClient.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCProcessor.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCServer.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCUtils.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\TCPChannel.h" />
-    <ClInclude Include="..\source\crazygaze\ScopeGuard.h" />
-    <ClInclude Include="..\source\crazygaze\Semaphore.h" />
-    <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
-    <ClInclude Include="..\source\crazygaze\StringUtils.h" />
-    <ClInclude Include="..\source\crazygaze\targetver.h" />
-    <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
-    <ClInclude Include="..\source\czlibPCH.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\source\crazygaze\Any.cpp" />
-    <ClCompile Include="..\source\crazygaze\ChunkBuffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\czlib.cpp" />
-    <ClCompile Include="..\source\crazygaze\czlibPCH.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCChannel.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp" />
-    <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
-    <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{4DEF60BC-547E-4AB1-B80D-D75B934AB3D6}</ProjectGuid>
+    <ProjectGuid>{152FBC53-A80E-40D9-9E40-85B537FAD9CF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>czlib</RootNamespace>
+    <RootNamespace>RPCChatCommon</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -102,33 +54,33 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="czlib.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="czlib.props" />
+    <Import Project="..\..\..\VisualStudio\czlib.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="czlib.props" />
+    <Import Project="..\..\..\VisualStudio\czlib.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="..\..\..\VisualStudio\czlib.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="czlib.props" />
+    <Import Project="..\..\..\VisualStudio\czlib.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <SDLCheck>true</SDLCheck>
+      <PrecompiledHeaderFile>RPCChatCommonPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -141,7 +93,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <SDLCheck>true</SDLCheck>
+      <PrecompiledHeaderFile>RPCChatCommonPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,7 +109,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <SDLCheck>true</SDLCheck>
+      <PrecompiledHeaderFile>RPCChatCommonPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -173,7 +127,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <SDLCheck>true</SDLCheck>
+      <PrecompiledHeaderFile>RPCChatCommonPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -182,6 +137,31 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="RPCChatClientInterface.h" />
+    <ClInclude Include="RPCChatCommon.h" />
+    <ClInclude Include="RPCChatServerInterface.h" />
+    <ClInclude Include="RPCChatCommonPCH.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="RPCChatCommon.cpp" />
+    <ClCompile Include="RPCChatCommonPCH.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">RPCChatCommonPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">RPCChatCommonPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">RPCChatCommonPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">RPCChatCommonPCH.h</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\VisualStudio\czlib.vcxproj">
+      <Project>{4def60bc-547e-4ab1-b80d-d75b934ab3d6}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
