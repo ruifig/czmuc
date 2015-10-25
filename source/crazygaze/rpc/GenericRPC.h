@@ -1,0 +1,31 @@
+/********************************************************************
+	CrazyGaze (http://www.crazygaze.com)
+	Author : Rui Figueira
+	Email  : rui@crazygaze.com
+	
+	purpose:
+
+	Allows a client to connect to a server without knowing anything at all about the type.
+	This makes it possible for a client to connect and just call generic rpcs, since it doesn't know
+	anything about the types.
+*********************************************************************/
+
+#pragma once
+
+namespace cz
+{
+namespace rpc
+{
+
+
+class GenericRPCClass
+{
+};
+
+#define RPCTABLE_CLASS GenericRPCClass
+#define RPCTABLE_CONTENTS
+#include "crazygaze/rpc/RPCGenerate.h"
+
+} // namespace rpc
+} // namespace cz
+
