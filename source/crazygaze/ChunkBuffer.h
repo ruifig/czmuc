@@ -12,6 +12,9 @@
 #pragma once
 
 #include "crazygaze/Any.h"
+#include <memory>
+#include <queue>
+#include <functional>
 
 namespace cz
 {

@@ -152,7 +152,7 @@ template<typename RemoteType_, typename LocalType_=void>
 thread_local Client<RemoteType_, LocalType_>* Client<RemoteType_, LocalType_>::ms_current;
 
 #define CALLRPC(client, func, ...) \
-	(client)._callrpc((uint32_t)Table<std::decay<decltype(client)>::type::RemoteType>::RPCId::func, &std::decay<decltype(client)>::type::RemoteType::func, __VA_ARGS__)
+	(client)._callrpc((uint32_t)cz::rpc::Table<std::decay<decltype(client)>::type::RemoteType>::RPCId::func, &std::decay<decltype(client)>::type::RemoteType::func, __VA_ARGS__)
 
 #define CALLGENERICRPC(client, func, params) \
 	(client)._callgenericrpc(func, params)
