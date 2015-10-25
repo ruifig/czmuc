@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="crazygaze">
+      <UniqueIdentifier>{a6b09182-fd3a-40c1-82bc-e30c7d145f3a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crazygaze\net">
+      <UniqueIdentifier>{7b94ada1-7df4-40c1-961f-2e46a6389fd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crazygaze\rpc">
+      <UniqueIdentifier>{a630ea69-f7ce-4333-90b8-f6987a27b0ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crazygaze\net\details">
+      <UniqueIdentifier>{1f5dc2a6-6855-4895-a3a7-ab74701232b3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\source\crazygaze\config.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\targetver.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Any.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\czlib.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\StringUtils.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\ChunkBuffer.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\FNVHash.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Semaphore.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\SharedQueue.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\ScopeGuard.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\net\TCPSocket.h">
+      <Filter>crazygaze\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\net\CompletionPort.h">
+      <Filter>crazygaze\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h">
+      <Filter>crazygaze\net\details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\czlibPCH.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\czlibPCH.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCUtils.h">
+      <Filter>crazygaze\rpc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\TypeTraits.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\net\TCPServer.h">
+      <Filter>crazygaze\net</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\crazygaze\Any.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\czlib.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\StringUtils.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\ChunkBuffer.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp">
+      <Filter>crazygaze\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp">
+      <Filter>crazygaze\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Semaphore.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp">
+      <Filter>crazygaze\net\details</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\czlibPCH.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
+      <Filter>crazygaze\net</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
