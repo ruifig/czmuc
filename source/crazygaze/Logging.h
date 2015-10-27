@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <mutex>
+#include <vector>
 
 namespace cz
 {

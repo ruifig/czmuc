@@ -9,6 +9,9 @@
 
 #pragma once
 
+#include <queue>
+#include <mutex>
+
 namespace cz
 {
 
