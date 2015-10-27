@@ -140,6 +140,9 @@
     <ClInclude Include="..\source\crazygaze\Random.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\RingBuffer.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -197,6 +200,9 @@
       <Filter>crazygaze</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\Random.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\RingBuffer.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
   </ItemGroup>

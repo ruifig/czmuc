@@ -273,13 +273,11 @@ namespace cz
 
 	UTF8String::Data::~Data()
 	{
-		if (mBuf)
-			delete[] mBuf;
 	}
 
 	void UTF8String::Data::_init()
 	{
-		mBuf = nullptr;
+		mBuf.reset();
 		mQuickBuf[0] = 0;
 		mStringLengthCodePoints = 0;
 		mStringLengthBytes = 0;
@@ -301,10 +299,7 @@ namespace cz
 		if (this==&other)
 			CZ_UNEXPECTED();
 
-		if (mBuf)
-			delete[] mBuf;
-
-		mBuf = other.mBuf;
+		mBuf = std::move(other.mBuf);
 		mStringLengthCodePoints = other.mStringLengthCodePoints;
 		mStringLengthBytes = other.mStringLengthBytes;
 		mBufferSize = other.mBufferSize;
@@ -327,7 +322,7 @@ namespace cz
 
 	const char* UTF8String::Data::getReadPointer() const
 	{
-		return (mBuf) ? mBuf : mQuickBuf;
+		return (mBuf) ? mBuf.get() : mQuickBuf;
 	}
 
 	char* UTF8String::Data::getWritePointer(int writeSizeBytes, bool keepData)
@@ -336,32 +331,29 @@ namespace cz
 		if (writeSizeBytes<=QUICKBUF_SIZE)
 		{
 			// mBuf size should always be bigger than the quick buffer, otherwise we wouldn't be using it
-			return (mBuf) ? mBuf : mQuickBuf;
+			return (mBuf) ? mBuf.get() : mQuickBuf;
 		}
 		else
 		{
 			if (mBuf && mBufferSize>=writeSizeBytes)
 			{
-				return mBuf;
+				return mBuf.get();
 			}
 			else
 			{
-				char* newBuf = new char[writeSizeBytes];
+				auto newBuf = std::make_unique<char[]>(writeSizeBytes);
 				if (keepData)
 				{
-					memcpy(newBuf, (mBuf) ? mBuf : mQuickBuf, mStringLengthBytes+1); // +1 to copy the 0 at the end
+					memcpy(newBuf.get(), (mBuf) ? mBuf.get() : mQuickBuf, mStringLengthBytes+1); // +1 to copy the 0 at the end
 				}
 				else
 				{
 					newBuf[0] = 0;
 				}
 
-				// Delete current buffer, and set as the new one
-				if (mBuf)
-					delete[] mBuf;
-				mBuf = newBuf;
+				mBuf = std::move(newBuf);
 				mBufferSize = writeSizeBytes;
-				return mBuf;
+				return mBuf.get();
 			}
 		}
 	}
