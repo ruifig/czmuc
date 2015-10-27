@@ -479,7 +479,7 @@ namespace cz
 			void _docopy(const Data& other);
 			void _domove(Data&& other);
 			// Private to avoid use
-			char* mBuf; // allocated buffer. If it's NULL, it means we're using the quickBuf
+			std::unique_ptr<char[]> mBuf; // allocated buffer. If it's NULL, it means we're using the quickBuf
 			int mStringLengthCodePoints; // length of the string, in code points (NOT BYTES), excluding the 0 at the end
 			int mStringLengthBytes; // length of the string, in bytes, excluding the 0 at the end
 			int mBufferSize; // size of the allocated buffer, in bytes
