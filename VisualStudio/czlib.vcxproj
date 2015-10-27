@@ -37,6 +37,7 @@
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
+    <ClInclude Include="..\source\crazygaze\Random.h" />
     <ClInclude Include="..\source\crazygaze\rpc\BaseRPCProcessor.h" />
     <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h" />
@@ -74,6 +75,7 @@
     <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
+    <ClCompile Include="..\source\crazygaze\Random.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCChannel.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp" />
