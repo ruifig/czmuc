@@ -23,3 +23,6 @@ syntax: regexp
 ^lib/
 ^bin/
 ^CppDepend/CppDependOut
+
+# Remove this
+^source/TODO

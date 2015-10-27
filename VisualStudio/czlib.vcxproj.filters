@@ -17,6 +17,15 @@
     <Filter Include="crazygaze\net\details">
       <UniqueIdentifier>{1f5dc2a6-6855-4895-a3a7-ab74701232b3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="crazygaze\detail">
+      <UniqueIdentifier>{132b1c3c-4c65-4add-a3f5-05c7662e2dd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crazygaze\detail\utfcpp">
+      <UniqueIdentifier>{85d55c9f-49f3-49b1-822c-6642278c0394}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crazygaze\detail\utfcpp\utf8">
+      <UniqueIdentifier>{88ee5442-86ac-478c-a24f-090eedecd349}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\source\crazygaze\config.h">
@@ -95,6 +104,39 @@
     <ClInclude Include="..\source\crazygaze\rpc\BaseRPCProcessor.h">
       <Filter>crazygaze\rpc</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Guid.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\UTF8String.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8.h">
+      <Filter>crazygaze\detail\utfcpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h">
+      <Filter>crazygaze\detail\utfcpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h">
+      <Filter>crazygaze\detail\utfcpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\unchecked.h">
+      <Filter>crazygaze\detail\utfcpp\utf8</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Algorithm.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Logging.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Ticker.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Timer.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Filename.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -136,5 +178,23 @@
     <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp">
       <Filter>crazygaze\rpc</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Guid.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\UTF8String.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Logging.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Timer.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Filename.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODO.txt" />
   </ItemGroup>
 </Project>
