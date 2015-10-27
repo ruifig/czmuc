@@ -127,6 +127,16 @@ The difference between this and \link CZ_ASSERT \endlink is that it's suitable t
 	#define CZ_UNEXPECTED() ::cz::_doAssert(__FILE__, __LINE__, "Unexpected code path")
 #endif
 
+#define CZ_S8_MIN -128
+#define CZ_S8_MAX 127
+#define CZ_U8 MAX 255
+#define CZ_S16_MIN -32768
+#define CZ_S16_MAX 32767
+#define CZ_U16 MAX 65535
+#define CZ_S32_MIN (-2147483647-1)
+#define CZ_S32_MAX 2147483647
+#define CZ_U32_MAX 0xffffffff
+
 /*!
 	@}
 */
