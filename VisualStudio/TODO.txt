@@ -1,0 +1,4 @@
+
+
+- Replace typedefs with alias templates, as specified in "Effective Modern C++, Item9 (page 63).
+	- Page 66 has good stuff to simplify type traits

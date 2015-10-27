@@ -19,12 +19,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\source\crazygaze\Algorithm.h" />
     <ClInclude Include="..\source\crazygaze\Any.h" />
     <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
     <ClInclude Include="..\source\crazygaze\config.h" />
     <ClInclude Include="..\source\crazygaze\czlib.h" />
     <ClInclude Include="..\source\crazygaze\czlibPCH.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\unchecked.h" />
+    <ClInclude Include="..\source\crazygaze\Filename.h" />
     <ClInclude Include="..\source\crazygaze\FNVHash.h" />
+    <ClInclude Include="..\source\crazygaze\Guid.h" />
+    <ClInclude Include="..\source\crazygaze\Logging.h" />
     <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
@@ -43,7 +51,10 @@
     <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
     <ClInclude Include="..\source\crazygaze\StringUtils.h" />
     <ClInclude Include="..\source\crazygaze\targetver.h" />
+    <ClInclude Include="..\source\crazygaze\Ticker.h" />
+    <ClInclude Include="..\source\crazygaze\Timer.h" />
     <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
+    <ClInclude Include="..\source\crazygaze\UTF8String.h" />
     <ClInclude Include="..\source\czlibPCH.h" />
   </ItemGroup>
   <ItemGroup>
@@ -56,6 +67,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Filename.cpp" />
+    <ClCompile Include="..\source\crazygaze\Guid.cpp" />
+    <ClCompile Include="..\source\crazygaze\Logging.cpp" />
     <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
     <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp" />
@@ -65,6 +79,11 @@
     <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp" />
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
     <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
+    <ClCompile Include="..\source\crazygaze\Timer.cpp" />
+    <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODO.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4DEF60BC-547E-4AB1-B80D-D75B934AB3D6}</ProjectGuid>
@@ -129,6 +148,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -142,6 +162,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,6 +178,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -174,6 +196,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
