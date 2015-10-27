@@ -53,6 +53,7 @@
     <ClInclude Include="..\source\crazygaze\Semaphore.h" />
     <ClInclude Include="..\source\crazygaze\SharedFlag.h" />
     <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
+    <ClInclude Include="..\source\crazygaze\Singleton.h" />
     <ClInclude Include="..\source\crazygaze\StringUtils.h" />
     <ClInclude Include="..\source\crazygaze\targetver.h" />
     <ClInclude Include="..\source\crazygaze\Ticker.h" />
@@ -86,6 +87,7 @@
     <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp" />
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
     <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
+    <ClCompile Include="..\source\crazygaze\Singleton.cpp" />
     <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
     <ClCompile Include="..\source\crazygaze\Timer.cpp" />
     <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
