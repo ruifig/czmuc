@@ -96,5 +96,3 @@ namespace cz
 	}
 
 } // namespace cz
-
-#endif // _czAlgorithm_h_

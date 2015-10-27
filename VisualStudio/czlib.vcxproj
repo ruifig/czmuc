@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\source\crazygaze\Algorithm.h" />
     <ClInclude Include="..\source\crazygaze\Any.h" />
+    <ClInclude Include="..\source\crazygaze\AsyncCommandQueue.h" />
     <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
     <ClInclude Include="..\source\crazygaze\config.h" />
     <ClInclude Include="..\source\crazygaze\czlib.h" />
@@ -50,6 +51,7 @@
     <ClInclude Include="..\source\crazygaze\rpc\TCPChannel.h" />
     <ClInclude Include="..\source\crazygaze\ScopeGuard.h" />
     <ClInclude Include="..\source\crazygaze\Semaphore.h" />
+    <ClInclude Include="..\source\crazygaze\SharedFlag.h" />
     <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
     <ClInclude Include="..\source\crazygaze\StringUtils.h" />
     <ClInclude Include="..\source\crazygaze\targetver.h" />
@@ -61,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp" />
+    <ClCompile Include="..\source\crazygaze\AsyncCommandQueue.cpp" />
     <ClCompile Include="..\source\crazygaze\ChunkBuffer.cpp" />
     <ClCompile Include="..\source\crazygaze\czlib.cpp" />
     <ClCompile Include="..\source\crazygaze\czlibPCH.cpp">
@@ -82,6 +85,7 @@
     <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp" />
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
+    <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
     <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
     <ClCompile Include="..\source\crazygaze\Timer.cpp" />
     <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />

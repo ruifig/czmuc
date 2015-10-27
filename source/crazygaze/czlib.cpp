@@ -10,6 +10,7 @@
 #include "czlibPCH.h"
 #include "crazygaze/StringUtils.h"
 
+
 #if defined(_MSC_VER)
 extern "C" {
 	_CRTIMP void __cdecl _wassert(_In_z_ const wchar_t * _Message, _In_z_ const wchar_t *_File, _In_ unsigned _Line);
@@ -36,6 +37,15 @@ int cz_snprintf(char* buffer, int bufSize, const char* format, ...)
 
 namespace cz
 {
+
+static_assert(sizeof(s8) ==1, "Size mismatch");
+static_assert(sizeof(u8) ==1, "Size mismatch");
+static_assert(sizeof(s16)==2, "Size mismatch");
+static_assert(sizeof(u16)==2, "Size mismatch");
+static_assert(sizeof(s32)==4, "Size mismatch");
+static_assert(sizeof(u32)==4, "Size mismatch");
+static_assert(sizeof(s64)==8, "Size mismatch");
+static_assert(sizeof(u64)==8, "Size mismatch");
 
 void _doAssert(const char* file, int line, const char* fmt, ...)
 {

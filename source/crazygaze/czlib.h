@@ -137,6 +137,18 @@ The difference between this and \link CZ_ASSERT \endlink is that it's suitable t
 #define CZ_S32_MAX 2147483647
 #define CZ_U32_MAX 0xffffffff
 
+namespace cz
+{
+	typedef unsigned char u8;
+	typedef signed char s8;
+	typedef unsigned short u16;
+	typedef signed short s16;
+	typedef unsigned int u32;
+	typedef signed int s32;
+	typedef signed long long s64;
+	typedef unsigned long long u64;
+}
+
 /*!
 	@}
 */

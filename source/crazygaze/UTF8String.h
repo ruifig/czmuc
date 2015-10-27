@@ -13,6 +13,7 @@
 #include <iterator>
 #include <utility>
 #include <ostream>
+#include <memory>
 
 namespace cz
 {
