@@ -149,6 +149,9 @@
     <ClInclude Include="..\source\crazygaze\SharedFlag.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Singleton.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -215,6 +218,9 @@
       <Filter>crazygaze</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\SharedFlag.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Singleton.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
   </ItemGroup>
