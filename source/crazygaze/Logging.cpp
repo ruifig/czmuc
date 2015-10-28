@@ -13,6 +13,8 @@
 namespace cz
 {
 
+CZ_DEFINE_LOG_CATEGORY(logDefault)
+
 #if CZ_NO_LOGGING
 LogCategoryLogNone logNone;
 #endif

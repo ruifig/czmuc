@@ -79,6 +79,8 @@
 	#undef min
 #endif
 
+#include <assert.h>
+
 //
 // Assert
 //
@@ -125,7 +127,28 @@ The difference between this and \link CZ_ASSERT \endlink is that it's suitable t
 	#define CZ_CHECK(expression) if (!(expression)) { ::cz::_doAssert(__FILE__, __LINE__, #expression); }
 
 	#define CZ_UNEXPECTED() ::cz::_doAssert(__FILE__, __LINE__, "Unexpected code path")
+	#define CZ_UNEXPECTED_F(fmt, ...) ::cz::_doAssert(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
+
+struct ReentrantCheck
+{
+	ReentrantCheck(int* counter_)
+	{
+		counter = counter_;
+		CZ_ASSERT(*counter==0);
+		*counter++;
+	}
+	~ReentrantCheck()
+	{
+		counter--;
+	}
+
+	int *counter;
+};
+
+#define CHECK_REENTRANCE \
+	static int reentrance_check=0; \
+	ReentrantCheck reentrance_check_obj(&reentrance_check);
 
 #define CZ_S8_MIN -128
 #define CZ_S8_MAX 127

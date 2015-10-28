@@ -306,7 +306,10 @@ const ChunkBuffer& deserializeParameterPack(const ChunkBuffer& stream, Args&... 
 // Write operators
 //
 template<typename T>
-inline ChunkBuffer& operator << (ChunkBuffer& stream, T v) { stream.write(v); return stream; }
+inline ChunkBuffer& operator << (ChunkBuffer& stream, T v)
+{
+	stream.write(v); return stream;
+}
 ChunkBuffer& operator << (ChunkBuffer& stream, const std::string& v);
 ChunkBuffer& operator << (ChunkBuffer& stream, const char* v);
 ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Any &v);
@@ -314,6 +317,13 @@ template<typename T>
 ChunkBuffer& operator << (ChunkBuffer& stream, const std::vector<T>& v)
 {
 	return details::VectorSerialization<T>::serialize(stream, v);
+}
+template<typename A, typename B>
+ChunkBuffer& operator << (ChunkBuffer& stream, const std::pair<A,B>& v)
+{
+	stream << v.first;
+	stream << v.second;
+	return stream;
 }
 
 template<typename... Elements>
@@ -339,6 +349,13 @@ template<typename T>
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::vector<T>& v)
 {
 	return details::VectorSerialization<T>::deserialize(stream, v);
+}
+template<typename A, typename B>
+const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::pair<A,B>& v)
+{
+	stream >> v.first;
+	stream >> v.second;
+	return stream;
 }
 template<typename... Elements>
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::tuple<Elements...>& v)

@@ -49,13 +49,11 @@ static_assert(sizeof(u64)==8, "Size mismatch");
 
 void _doAssert(const char* file, int line, const char* fmt, ...)
 {
-	char buf1[1024];
-    char buf2[1024];
+	char buf[1024];
 	va_list args;
 	va_start(args, fmt);
-	cz_vsnprintf(buf1, 1024, fmt, args);
+	cz_vsnprintf(buf, 1024, fmt, args);
 	va_end(args);
-	cz_snprintf(buf2, 1024, "%s:%d: %s\n", file, line, buf1);
 
 	// TODO : Add some kind of cross-platform logging
 
@@ -64,7 +62,7 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 	    wchar_t wbuf[1024];
 	    wchar_t wfile[1024];
 
-	    mbstowcs(wbuf, buf1, 1024);
+	    mbstowcs(wbuf, buf, 1024);
 	    mbstowcs(wfile, file, 1024);
 
 	    _wassert(wbuf, wfile, line);

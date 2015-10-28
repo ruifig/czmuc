@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <locale>
+
 namespace cz
 {
 
