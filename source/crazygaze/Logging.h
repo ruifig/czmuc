@@ -106,6 +106,10 @@ extern LogCategoryLogNone logNone;
 
 #else
 
+#ifdef _MSC_VER
+#pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
+#endif
+
 #define CZ_DECLARE_LOG_CATEGORY(NAME, DEFAULT_VERBOSITY, COMPILETIME_VERBOSITY) \
 	extern class LogCategory##NAME : public ::cz::LogCategory<::cz::LogVerbosity::DEFAULT_VERBOSITY, ::cz::LogVerbosity::COMPILETIME_VERBOSITY> \
 	{ \

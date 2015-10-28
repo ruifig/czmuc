@@ -243,7 +243,7 @@ public:
 			out << cz::Any(std::forward<T>(r));
 		else
 			out << std::forward<T>(r);
-		auto res = reply.channel.send(std::move(out));
+		reply.channel.send(std::move(out));
 	}
 
 	template<typename T>

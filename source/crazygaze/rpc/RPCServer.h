@@ -170,6 +170,13 @@ protected:
 	LocalType& m_obj;
 };
 
+#define BROADCAST_CALLRPC(server, func, ...) \
+	(server).iterateClients([&](auto client) \
+	{ \
+		auto cl = static_cast<std::decay<decltype(server)>::type::ClientType*>(client); \
+		CALLRPC(*cl, func, __VA_ARGS__); \
+	})
+
 } // namespace rpc
 } // namespace cz
 
