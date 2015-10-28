@@ -27,9 +27,9 @@ void AsyncCommandQueue::tickImpl(bool wait)
 	if (todo==0 && wait)
 	{
 		std::function<void()> f;
-		//czDebug(ID_Log, "AsyncCommandQueue:%p:Going to sleep\n", this);
+		//CZ_LOG(logDefault, Log, "AsyncCommandQueue:%p:Going to sleep\n", this);
 		m_queue.wait_and_pop(f);
-		//czDebug(ID_Log, "AsyncCommandQueue:%p:Waking up\n", this);
+		//CZ_LOG(logDefault, Log, "AsyncCommandQueue:%p:Waking up\n", this);
 		f();
 		todo = m_queue.size();
 	}

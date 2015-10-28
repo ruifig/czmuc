@@ -30,7 +30,9 @@
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\unchecked.h" />
+    <ClInclude Include="..\source\crazygaze\File.h" />
     <ClInclude Include="..\source\crazygaze\Filename.h" />
+    <ClInclude Include="..\source\crazygaze\Filesystem.h" />
     <ClInclude Include="..\source\crazygaze\FNVHash.h" />
     <ClInclude Include="..\source\crazygaze\Guid.h" />
     <ClInclude Include="..\source\crazygaze\Logging.h" />
@@ -73,7 +75,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\source\crazygaze\File.cpp" />
     <ClCompile Include="..\source\crazygaze\Filename.cpp" />
+    <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
     <ClCompile Include="..\source\crazygaze\Guid.cpp" />
     <ClCompile Include="..\source\crazygaze\Logging.cpp" />
     <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />

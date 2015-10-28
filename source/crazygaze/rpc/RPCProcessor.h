@@ -202,20 +202,20 @@ public:
 	}
 	void processReceivedReply(RPCHeader hdr, const ChunkBuffer& in)
 	{
-		CZ_ASSERT(0 && "No type specified to receive RPC replies");
+		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
 	}
 
 protected:
 	virtual std::future<cz::Any> _callgenericrpc(Channel& channel, const char* func, const std::vector<cz::Any>& params) override
 	{
-		CZ_ASSERT(0 && "No type specified to receive RPC replies");
+		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
 		return std::future<cz::Any>();
 	}
 	virtual const BaseRPCInfo* getRPCInfo(RPCHeader hdr) override
 	{
-		CZ_ASSERT(0 && "No type specified to receive RPC replies");
+		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
 		return nullptr;
 	}
@@ -340,7 +340,7 @@ class InRPCProcessor<void> : public BaseInRPCProcessor
 public:
 	void processReceivedRPC(Channel& channel, RPCHeader hdr, const ChunkBuffer& in)
 	{
-		CZ_ASSERT(0 && "No local type specified to receive RPC calls");
+		CZ_UNEXPECTED_F("No local type specified to receive RPC calls");
 		throw std::logic_error("No local type specified to receive RPC calls");
 	}
 private:

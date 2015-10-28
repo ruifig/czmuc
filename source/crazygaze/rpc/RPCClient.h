@@ -56,6 +56,11 @@ public:
 		getOutProcessor()->setExceptionCallback(std::move(func));
 	}
 
+	void setOnDisconnected(std::function<void()> func)
+	{
+		m_onDisconnected = std::move(func);
+	}
+
 	auto _callgenericrpc(const char* func, const std::vector<cz::Any>& params)
 	{
 		return getOutProcessor()->_callgenericrpc(*m_channel.get(), func, params);
@@ -68,6 +73,7 @@ protected:
 
 	std::unique_ptr<Channel> m_channel;
 	std::shared_ptr<ClientUserData> m_userData;
+	std::function<void()> m_onDisconnected;
 };
 
 template<typename RemoteType_, typename LocalType_=void>
@@ -131,6 +137,8 @@ protected:
 
 	virtual void onDisconnected() override
 	{
+		if (m_onDisconnected)
+			m_onDisconnected();
 		m_outProcessor.shutdown();
 	}
 
