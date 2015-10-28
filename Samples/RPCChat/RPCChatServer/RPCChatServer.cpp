@@ -166,11 +166,7 @@ private:
 
 	void broadcastMsg(const std::string& from, const std::string& msg)
 	{
-		m_server->iterateClients([&](auto client)
-		{
-			auto cl = static_cast<ServerType::ClientType*>(client);
-			CALLRPC(*cl, onMsg, from, msg);
-		});
+		BROADCAST_CALLRPC(*m_server, onMsg, from, msg);
 	}
 
 	void sendSystemMsg(const std::string& msg, ClientInfo* recipient = nullptr)
@@ -178,14 +174,7 @@ private:
 		if (recipient)
 			CALLRPC(*recipient->client, onSystemMsg, msg);
 		else
-		{
-			m_server->iterateClients([&](auto client)
-			{
-				auto cl = static_cast<ServerType::ClientType*>(client);
-				CALLRPC(*cl, onSystemMsg, msg);
-			});
-		}
-
+			BROADCAST_CALLRPC(*m_server, onSystemMsg, msg);
 	}
 
 	ServerType* m_server = nullptr;
