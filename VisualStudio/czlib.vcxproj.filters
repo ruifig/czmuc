@@ -83,16 +83,7 @@
     <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h">
       <Filter>crazygaze\rpc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\rpc\RPCChannel.h">
-      <Filter>crazygaze\rpc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\source\crazygaze\rpc\RPCClient.h">
-      <Filter>crazygaze\rpc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\rpc\RPCProcessor.h">
-      <Filter>crazygaze\rpc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\source\crazygaze\rpc\TCPChannel.h">
       <Filter>crazygaze\rpc</Filter>
     </ClInclude>
     <ClInclude Include="..\source\crazygaze\rpc\RPCServer.h">
@@ -158,6 +149,15 @@
     <ClInclude Include="..\source\crazygaze\Filesystem.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\rpc\RPCConnection.h">
+      <Filter>crazygaze\rpc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\rpc\RPCTransport.h">
+      <Filter>crazygaze\rpc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\rpc\TCPTransport.h">
+      <Filter>crazygaze\rpc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -190,13 +190,7 @@
     <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
       <Filter>crazygaze\net</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\crazygaze\rpc\RPCChannel.cpp">
-      <Filter>crazygaze\rpc</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp">
-      <Filter>crazygaze\rpc</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp">
       <Filter>crazygaze\rpc</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\Guid.cpp">
@@ -234,6 +228,12 @@
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\Filesystem.cpp">
       <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp">
+      <Filter>crazygaze\rpc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp">
+      <Filter>crazygaze\rpc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

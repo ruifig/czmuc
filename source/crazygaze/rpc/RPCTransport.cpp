@@ -8,19 +8,19 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/rpc/RPCChannel.h"
-#include "crazygaze/rpc/RPCClient.h"
+#include "crazygaze/rpc/RPCTransport.h"
+#include "crazygaze/rpc/RPCConnection.h"
 
 namespace cz
 {
 namespace rpc
 {
 
-Channel::Channel()
+Transport::Transport()
 {
 }
 
-int Channel::hasFullRPC(const ChunkBuffer& in)
+int Transport::hasFullRPC(const ChunkBuffer& in)
 {
 	//
 	// Check if we have enough data in the buffer for a complete RPC message
@@ -37,29 +37,29 @@ int Channel::hasFullRPC(const ChunkBuffer& in)
 	return rpcSize;
 }
 
-void Channel::onReceivedData(const ChunkBuffer& in)
+void Transport::onReceivedData(const ChunkBuffer& in)
 {
 	if (m_owner)
 		m_owner->onReceivedData(in);
 }
 
-void Channel::onDisconnected()
+void Transport::onDisconnected()
 {
 	if (m_owner)
 		m_owner->onDisconnected();
 }
 
-void Channel::setOwner(BaseClient* owner)
+void Transport::setOwner(BaseConnection* owner)
 {
 	m_owner = owner;
 }
 
-void ServerChannel::setOnNewClient(std::function<void(std::unique_ptr<Channel>)> fn)
+void ServerTransport::setOnNewClient(std::function<void(std::unique_ptr<Transport>)> fn)
 {
 	m_onNewClient = std::move(fn);
 }
 
-void ServerChannel::setOnClientDisconnect(std::function<void(Channel*)> fn)
+void ServerTransport::setOnClientDisconnect(std::function<void(Transport*)> fn)
 {
 	m_onClientDisconnect = std::move(fn);
 }

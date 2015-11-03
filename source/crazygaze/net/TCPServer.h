@@ -19,11 +19,11 @@ namespace net
 
 class TCPServer;
 
-class TCPServerConnection
+class TCPServerClientInfo
 {
 public:
-	explicit TCPServerConnection(TCPServer* owner, std::unique_ptr<TCPSocket> socket);
-	virtual ~TCPServerConnection();
+	explicit TCPServerClientInfo(TCPServer* owner, std::unique_ptr<TCPSocket> socket);
+	virtual ~TCPServerClientInfo();
 	TCPSocket* getSocket();
 	void setSocket(std::unique_ptr<TCPSocket> socket);
 	TCPServer* getOwner();
@@ -43,7 +43,7 @@ protected:
 	std::unique_ptr<TCPSocket> m_socket;
 };
 
-typedef std::function<std::unique_ptr<TCPServerConnection>(class TCPServer*, std::unique_ptr<TCPSocket>)>
+typedef std::function<std::unique_ptr<TCPServerClientInfo>(class TCPServer*, std::unique_ptr<TCPSocket>)>
 	TCPServerClientInfoFactory;
 
 /*!
@@ -58,13 +58,13 @@ public:
 	TCPServer(int serverPort, int numIOThreads,
 		TCPServerClientInfoFactory clientInfoFactory = [](TCPServer* owner, std::unique_ptr<TCPSocket> socket)
 		{
-			return std::make_unique<TCPServerConnection>(owner, std::move(socket));
+			return std::make_unique<TCPServerClientInfo>(owner, std::move(socket));
 		},
 		uint32_t numPendingReads = 0, uint32_t pendingReadSize = 0);
 	TCPServer(int serverPort, CompletionPort& iocp,
 		TCPServerClientInfoFactory clientInfoFactory = [](TCPServer* owner, std::unique_ptr<TCPSocket> socket)
 		{
-			return std::make_unique<TCPServerConnection>(owner, std::move(socket));
+			return std::make_unique<TCPServerClientInfo>(owner, std::move(socket));
 		},
 		uint32_t numPendingReads = 0, uint32_t pendingReadSize = 0);
 	virtual ~TCPServer();
@@ -74,7 +74,7 @@ public:
 	void shutdown();
 	int getNumClients();
 
-	void removeClient(TCPServerConnection* client);
+	void removeClient(TCPServerClientInfo* client);
 
 private:
 
@@ -86,8 +86,8 @@ private:
 
 	std::unique_ptr<TCPServerSocket> m_listenSocket;
 	TCPServerClientInfoFactory m_clientInfoFactory;
-	friend TCPServerConnection;
-	std::unordered_map<TCPServerConnection*, std::unique_ptr<TCPServerConnection>> m_clients;
+	friend TCPServerClientInfo;
+	std::unordered_map<TCPServerClientInfo*, std::unique_ptr<TCPServerClientInfo>> m_clients;
 	void init(int serverPort, uint32_t numPendingReads, uint32_t pendingReadSize);
 
 	// TCPServerSocket callbacks

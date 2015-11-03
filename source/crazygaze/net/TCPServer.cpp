@@ -20,24 +20,24 @@ namespace net
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-TCPServerConnection::TCPServerConnection(TCPServer* owner, std::unique_ptr<TCPSocket> socket)
+TCPServerClientInfo::TCPServerClientInfo(TCPServer* owner, std::unique_ptr<TCPSocket> socket)
 	: m_owner(owner)
 {
 	setSocket(std::move(socket));
 	m_owner->m_clientsCount.increment();
 }
-TCPServerConnection::~TCPServerConnection()
+TCPServerClientInfo::~TCPServerClientInfo()
 {
 	m_socket.reset();
 	m_owner->m_clientsCount.decrement();
 }
 
-TCPSocket* TCPServerConnection::getSocket()
+TCPSocket* TCPServerClientInfo::getSocket()
 {
 	return m_socket.get();
 }
 
-void TCPServerConnection::setSocket(std::unique_ptr<TCPSocket> socket)
+void TCPServerClientInfo::setSocket(std::unique_ptr<TCPSocket> socket)
 {
 	m_socket = std::move(socket);
 
@@ -56,26 +56,26 @@ void TCPServerConnection::setSocket(std::unique_ptr<TCPSocket> socket)
 	});
 }
 
-TCPServer* TCPServerConnection::getOwner()
+TCPServer* TCPServerClientInfo::getOwner()
 {
 	return m_owner;
 }
 
-void TCPServerConnection::removeClient()
+void TCPServerClientInfo::removeClient()
 {
 	m_owner->removeClient(this);
 }
 
-void TCPServerConnection::onSocketReceive(const ChunkBuffer& buf)
+void TCPServerClientInfo::onSocketReceive(const ChunkBuffer& buf)
 {
 }
 
-void TCPServerConnection::onSocketShutdown(int code, const std::string &msg)
+void TCPServerClientInfo::onSocketShutdown(int code, const std::string &msg)
 {
 	removeClient();
 }
 
-void TCPServerConnection::onSocketSendCompleted()
+void TCPServerClientInfo::onSocketSendCompleted()
 {
 }
 
@@ -148,27 +148,6 @@ void TCPServer::shutdown()
 	// Moving the clients list to temporary list, so we don't end up calling the client
 	// destructors while holding the lock, as it can cause deadlock.
 	// The situation I got at some point was, due the inverse order threads end up locking mutexes:
-	//
-	// Thread 1, with the user code, shutting down the RPC objects
-	// Trys to lock TCPSocketData:	Tests_x64_Debug.exe!cz::TCPBaseSocketData::lock() Line 195	C++
-	// 							Tests_x64_Debug.exe!cz::TCPSocket::~TCPSocket() Line 994	C++
-	// 							Tests_x64_Debug.exe!cz::TCPServerConnection::~TCPServerConnection() Line 17	C++
-	// 							Tests_x64_Debug.exe!czrpc::TCPServerChannelClientInfo::~TCPServerChannelClientInfo() Line 155	C++
-	// Locks TCPServer::m_mtx:		Tests_x64_Debug.exe!cz::TCPServer::shutdown()
-	// 							Tests_x64_Debug.exe!czrpc::TCPServerChannel::~TCPServerChannel() Line 252	C++
-	// 							Tests_x64_Debug.exe!czrpc::Server<Calculator,void>::~Server<Calculator,void>() Line 29	C++
-	// 							Tests_x64_Debug.exe!SuiteRPC::TestIgnoredFutured::RunImpl::__l2::<lambda>() Line 252	C++
-	//
-	// 							
-	// Thread 2, servicing the ICOCP, removing a client because it disconnected
-	// Trys to lock TCPServer::m_mtx:	Tests_x64_Debug.exe!cz::TCPServerConnection::removeClient() Line 20	C++
-	// 								Tests_x64_Debug.exe!cz::TCPServerConnection::onSocketShutdown(cz::TCPSocket * socket, int code, const std::basic_string<char,std::char_traits<char>,std::allocator<char> > & msg) Line 26	C++
-	// 								Tests_x64_Debug.exe!cz::TCPSocketData::state_Disconnected(int code, const std::basic_string<char,std::char_traits<char>,std::allocator<char> > & reason) Line 483	C++
-	// 								Tests_x64_Debug.exe!cz::ReadOperation::onSuccess(unsigned int bytesTransfered) Line 652	C++
-	// Locks TCPSocketData:			Tests_x64_Debug.exe!cz::CompletionPort::runImpl() Line 838	C++
-	// 								Tests_x64_Debug.exe!cz::CompletionPort::run() Line 847	C++
-	// 								Tests_x64_Debug.exe!cz::CompletionPort::{ctor}::__l9::<lambda>() Line 760	C++
-	//
 	decltype(m_clients) tmp;
 	{
 		std::unique_lock<std::mutex> lk(m_mtx);
@@ -187,9 +166,9 @@ int TCPServer::getNumClients()
 	return static_cast<int>(m_clients.size());
 }
 
-void TCPServer::removeClient(TCPServerConnection* client)
+void TCPServer::removeClient(TCPServerClientInfo* client)
 {
-	std::unique_ptr<TCPServerConnection> info;
+	std::unique_ptr<TCPServerClientInfo> info;
 
 	// Only lock while we remove it from the map.
 	// We don't delete the clientinfo object while holding the lock, since calling unknown code while holding locks is

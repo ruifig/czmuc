@@ -9,7 +9,9 @@
 
 #pragma once
 
+#ifndef __clcpp_parse__
 #include "crazygaze/targetver.h"
+#endif
 
 #include <vector>
 #include <locale>
@@ -21,7 +23,6 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
-#include <set>
 #include <future>
 
 #include "crazygaze/czlib.h"

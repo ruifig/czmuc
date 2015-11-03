@@ -1,8 +1,8 @@
 //
 // Self contained RPC server
 //
-// The idea here is that instead of having the user specify the channel, the class itself
-// knows it's being used for RPCs, and knows about its clients, etc
+// The idea here is that instead of having the user specify the transport, the class itself
+// knows it's being used for RPCs, knows about its clients, etc
 //
 
 #pragma once
@@ -21,7 +21,7 @@ namespace testserver
 	public:
 		const char* getName();
 		std::vector<std::string> getClients();
-		typedef rpc::Client<void, SelfContainedServer> ClientType;
+		typedef rpc::Connection<void, SelfContainedServer> ClientType;
 		std::unique_ptr<class rpc::Server<SelfContainedServer>> m_rpc;
 	};
 }

@@ -10,12 +10,12 @@ using namespace cz;
 using namespace cz::net;
 using namespace cz::rpc;
 
-class ChatClient : public ChatClientInterface
+class ChatClient : public Service<ChatServerInterface>::ClientInterface
 {
 public:
 private:
 	//
-	// ChatClientInterface
+	// ClientInterface
 	//
 	virtual void onMsg(const std::string& user, const std::string& msg) override
 	{
@@ -43,7 +43,7 @@ int runChat(const std::string& name, const std::string& pass, const std::string&
 {
 	ChatClient chat;
 	CompletionPort iocp(1);
-	Client<ChatServerInterface, ChatClientInterface> client(std::make_unique<TCPChannel>(ip, port, iocp), chat);
+	Service<ChatServerInterface>::ClientConnection client(std::make_unique<TCPTransport>(ip, port, iocp), chat);
 	client.setExceptionCallback([](RPCHeader hr, const BaseRPCInfo& info, const std::string& msg)
 	{
 		printf("%s\n", msg.c_str());

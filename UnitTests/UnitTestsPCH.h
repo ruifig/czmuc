@@ -31,6 +31,6 @@
 #include "crazygaze/net/TCPSocket.h"
 #include "crazygaze/net/TCPServer.h"
 #include "crazygaze/rpc/RPCUtils.h"
-#include "crazygaze/rpc/RPCClient.h"
-#include "crazygaze/rpc/TCPChannel.h"
+#include "crazygaze/rpc/RPCConnection.h"
+#include "crazygaze/rpc/TCPTransport.h"
 #include "crazygaze/rpc/GenericRPC.h"

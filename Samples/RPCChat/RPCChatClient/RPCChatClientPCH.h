@@ -11,10 +11,8 @@
 #include <conio.h>
 #include "crazygaze/czlibPCH.h"
 #include "crazygaze/net/TCPSocket.h"
-#include "crazygaze/rpc/RPCClient.h"
+#include "crazygaze/rpc/RPCConnection.h"
 #include "crazygaze/rpc/RPCServer.h"
-#include "crazygaze/rpc/TCPChannel.h"
-#include "../RPCChatCommon/RPCChatCommon.h"
-#include "../RPCChatCommon/RPCChatServerInterface.h"
-#include "../RPCChatCommon/RPCChatClientInterface.h"
+#include "crazygaze/rpc/TCPTransport.h"
+#include "../RPCChatCommon/RPCChatInterface.h"
 

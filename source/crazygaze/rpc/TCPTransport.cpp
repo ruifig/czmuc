@@ -8,7 +8,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/rpc/TCPChannel.h"
+#include "crazygaze/rpc/TCPTransport.h"
 
 #ifndef NDEBUG
 	//#define LOG(fmt, ...) printf(fmt, ##__VA_ARGS__)
@@ -25,20 +25,20 @@ namespace cz
 namespace rpc
 {
 
-static void processRPCBuffer_InPlace(Channel* channel, const ChunkBuffer& buf)
+static void processRPCBuffer_InPlace(Transport* transport, const ChunkBuffer& buf)
 {
 	while (true)
 	{
 		//Sleep(rand() % 10); // #TODO Remove this
-		auto size = Channel::hasFullRPC(buf);
+		auto size = Transport::hasFullRPC(buf);
 		if (size == 0)
 			return; // Not enough data for an RPC yet
-		channel->onReceivedData(buf);
+		transport->onReceivedData(buf);
 	}
 }
 
 // #TODO : Remove all the unnecessary parameters that I was using for debugging
-static void processRPCBuffer(Channel* channel, const ChunkBuffer& buf, WorkQueue* rcvQueue,
+static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, WorkQueue* rcvQueue,
 							 cz::ZeroSemaphore* queuedOps)
 {
 	if (rcvQueue) // Put the required action in a queue, if the queue was provided
@@ -46,7 +46,7 @@ static void processRPCBuffer(Channel* channel, const ChunkBuffer& buf, WorkQueue
 		auto tmp = std::make_shared<ChunkBuffer>();
 		while (true)
 		{
-			auto size = Channel::hasFullRPC(buf);
+			auto size = Transport::hasFullRPC(buf);
 			if (size == 0)
 				break;
 
@@ -59,27 +59,27 @@ static void processRPCBuffer(Channel* channel, const ChunkBuffer& buf, WorkQueue
 		if (tmp->numBlocks())
 		{
 			// #TODO : Remove all the unnecessary parameters I was using for debugging
-			rcvQueue->emplace([channel, buf = std::move(tmp), queuedOps]() 
+			rcvQueue->emplace([transport, buf = std::move(tmp), queuedOps]() 
 			{
 				//Sleep(rand() % 10); // #TODO : Remove this
-				processRPCBuffer_InPlace(channel, *buf.get());
+				processRPCBuffer_InPlace(transport, *buf.get());
 				queuedOps->decrement();
 			});
 		}
 	}
 	else // Queue not provided, so execute right now
 	{
-		processRPCBuffer_InPlace(channel, buf);
+		processRPCBuffer_InPlace(transport, buf);
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// TCPChannel
+// TCPTransport
 //
 //////////////////////////////////////////////////////////////////////////
 
-TCPChannel::TCPChannel(const std::string& ip, int port, net::CompletionPort& iocp,
+TCPTransport::TCPTransport(const std::string& ip, int port, net::CompletionPort& iocp,
 					   WorkQueue* rcvQueue) : m_rcvQueue(rcvQueue)
 {
 	LOGENTRY();
@@ -101,7 +101,7 @@ TCPChannel::TCPChannel(const std::string& ip, int port, net::CompletionPort& ioc
 	LOGEXIT();
 }
 
-TCPChannel::~TCPChannel()
+TCPTransport::~TCPTransport()
 {
 	LOGENTRY();
 	m_socket.reset();
@@ -109,7 +109,7 @@ TCPChannel::~TCPChannel()
 	LOGEXIT();
 }
 
-void TCPChannel::onSocketReceive(const ChunkBuffer& buf)
+void TCPTransport::onSocketReceive(const ChunkBuffer& buf)
 {
 	if (m_rcvQueue)
 		m_queuedOps.increment();
@@ -117,19 +117,19 @@ void TCPChannel::onSocketReceive(const ChunkBuffer& buf)
 	processRPCBuffer(this, buf, m_rcvQueue, &m_queuedOps);
 }
 
-void TCPChannel::onSocketShutdown(int code, const std::string& msg)
+void TCPTransport::onSocketShutdown(int code, const std::string& msg)
 {
 	onDisconnected();
 }
 
-ChunkBuffer TCPChannel::prepareSend()
+ChunkBuffer TCPTransport::prepareSend()
 {
 	ChunkBuffer out;
 	auto pos = out.writeReserve(sizeof(uint32_t));
 	return std::move(out);
 }
 
-bool TCPChannel::send(ChunkBuffer&& data)
+bool TCPTransport::send(ChunkBuffer&& data)
 {
 	ChunkBuffer::WritePos pos;
 	pos.block = 0;
@@ -139,29 +139,29 @@ bool TCPChannel::send(ChunkBuffer&& data)
 	return m_socket->send(std::move(data));
 }
 
-const std::string& TCPChannel::getCustomID() const
+const std::string& TCPTransport::getCustomID() const
 {
 	return m_customID;
 }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// TCPServerChannelClientInfo
+// TCPServerConnection
 //
 //////////////////////////////////////////////////////////////////////////
 
-class TCPServerChannelConnection : public net::TCPServerConnection
+class TCPServerConnection : public net::TCPServerClientInfo
 {
 public:
-  TCPServerChannelConnection(net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket, class TCPServerChannel* channelOwner,
+  TCPServerConnection(net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket, class TCPServerTransport* transportOwner,
 							 WorkQueue* rcvQueue = nullptr)
-	  : net::TCPServerConnection(owner, std::move(socket)), m_channelOwner(channelOwner), m_rcvQueue(rcvQueue)
+	  : net::TCPServerClientInfo(owner, std::move(socket)), m_transportOwner(transportOwner), m_rcvQueue(rcvQueue)
 	{
 		LOGENTRY();
 		LOGEXIT();
 	}
 
-	virtual ~TCPServerChannelConnection()
+	virtual ~TCPServerConnection()
 	{
 		LOGENTRY();
 		waitToFinish();
@@ -173,7 +173,7 @@ protected:
 	{
 		LOGENTRY();
 		waitToFinish();
-		m_channelOwner->onClientRemoved(this);
+		m_transportOwner->onClientRemoved(this);
 		//cz::TCPServerConnection::removeClient();
 		LOGEXIT();
 	}
@@ -186,17 +186,17 @@ protected:
 	
 	virtual void onSocketReceive(const ChunkBuffer& buf) override
 	{
-		TCPServerConnection::onSocketReceive(buf); // Call base class
+		net::TCPServerClientInfo::onSocketReceive(buf); // Call base class
 
 		if (m_rcvQueue)
 			m_queuedOps.increment();
 		// #TODO : Remove all the unnecessary parameters I was using for debugging
-		processRPCBuffer(m_channel, buf, m_rcvQueue, &m_queuedOps);
+		processRPCBuffer(m_transport, buf, m_rcvQueue, &m_queuedOps);
 	}
 
-	friend class TCPServerChannel;
-	Channel* m_channel;
-	class TCPServerChannel* m_channelOwner;
+	friend class TCPServerTransport;
+	Transport* m_transport;
+	class TCPServerTransport* m_transportOwner;
 	WorkQueue* m_rcvQueue;
 	cz::ZeroSemaphore m_queuedOps;
 };
@@ -204,21 +204,21 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////
 //
-// TCPServerSideChannel
+// TCPServerSideTransport
 //
 //////////////////////////////////////////////////////////////////////////
 
-class TCPServerSideChannel : public Channel
+class TCPServerSideTransport : public Transport
 {
 public:
-	TCPServerSideChannel(TCPServerChannelConnection* clientInfo)
+	TCPServerSideTransport(TCPServerConnection* clientInfo)
 		: m_clientInfo(clientInfo)
 	{
 		LOGENTRY();
 		m_customID = m_clientInfo->getSocket()->getRemoteAddress().toString(true);
 		LOGEXIT();
 	}
-	virtual ~TCPServerSideChannel()
+	virtual ~TCPServerSideTransport()
 	{
 		LOGENTRY();
 		m_clientInfo->getOwner()->removeClient(m_clientInfo);
@@ -226,7 +226,6 @@ public:
 	}
 
 protected:
-	// czrpc::Channel interface
 	virtual ChunkBuffer prepareSend() override
 	{
 		ChunkBuffer out;
@@ -248,16 +247,16 @@ protected:
 		return m_customID;
 	}
 
-	TCPServerChannelConnection* m_clientInfo;
+	TCPServerConnection* m_clientInfo;
 	std::string m_customID;
 };
 
 //////////////////////////////////////////////////////////////////////////
 //
-// TCPServerChannel
+// TCPServerTransport
 //
 //////////////////////////////////////////////////////////////////////////
-TCPServerChannel::TCPServerChannel(int listenPort, net::CompletionPort& iocp,
+TCPServerTransport::TCPServerTransport(int listenPort, net::CompletionPort& iocp,
 								   WorkQueue* rcvQueue)
 	: m_tcpServer(listenPort, iocp, [this, rcvQueue](net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket)
 				  {
@@ -266,28 +265,28 @@ TCPServerChannel::TCPServerChannel(int listenPort, net::CompletionPort& iocp,
 {
 }
 
-TCPServerChannel::~TCPServerChannel()
+TCPServerTransport::~TCPServerTransport()
 {
 	m_tcpServer.shutdown();
 }
 
-std::unique_ptr<net::TCPServerConnection> TCPServerChannel::createConnection(
+std::unique_ptr<net::TCPServerClientInfo> TCPServerTransport::createConnection(
 	net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket,
 	WorkQueue* rcvQueue)
 {
-	auto clientInfo = std::make_unique<TCPServerChannelConnection>(owner, std::move(socket), this, rcvQueue);
-	auto channel = std::make_unique<TCPServerSideChannel>(clientInfo.get());
-	clientInfo->m_channel = channel.get();
-	m_onNewClient(std::move(channel));
+	auto clientInfo = std::make_unique<TCPServerConnection>(owner, std::move(socket), this, rcvQueue);
+	auto transport = std::make_unique<TCPServerSideTransport>(clientInfo.get());
+	clientInfo->m_transport = transport.get();
+	m_onNewClient(std::move(transport));
 	return std::move(clientInfo);
 }
 
-void TCPServerChannel::onClientRemoved(TCPServerChannelConnection* clientInfo)
+void TCPServerTransport::onClientRemoved(TCPServerConnection* clientInfo)
 {
-	m_onClientDisconnect(clientInfo->m_channel);
+	m_onClientDisconnect(clientInfo->m_transport);
 }
 
-int TCPServerChannel::getNumClients()
+int TCPServerTransport::getNumClients()
 {
 	return m_tcpServer.getNumClients();
 }

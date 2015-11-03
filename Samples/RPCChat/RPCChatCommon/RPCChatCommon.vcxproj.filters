@@ -21,20 +21,11 @@
     <ClInclude Include="RPCChatCommonPCH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RPCChatCommon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RPCChatClientInterface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RPCChatServerInterface.h">
+    <ClInclude Include="RPCChatInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RPCChatCommon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="RPCChatCommonPCH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

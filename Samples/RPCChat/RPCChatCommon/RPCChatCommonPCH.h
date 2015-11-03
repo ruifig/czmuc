@@ -7,6 +7,7 @@
 
 #include "crazygaze/czlibPCH.h"
 #include "crazygaze/rpc/RPCBase.h"
-#include "RPCChatServerInterface.h"
-#include "RPCChatClientInterface.h"
+#include "crazygaze/rpc/RPCConnection.h"
+#include "crazygaze/rpc/RPCServer.h"
+#include "RPCChatInterface.h"
 

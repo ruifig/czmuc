@@ -65,13 +65,13 @@ typedef std::function<void(RPCHeader, const BaseRPCInfo&, const std::string&)> E
 
 struct ReplyStream
 {
-	ReplyStream(RPCHeader hdr, class Channel& channel, class BaseInRPCProcessor& inrpc)
-		: hdr(hdr), channel(channel), inrpc(inrpc)
+	ReplyStream(RPCHeader hdr, class Transport& transport, class BaseInProcessor& inrpc)
+		: hdr(hdr), transport(transport), inrpc(inrpc)
 	{
 	}
 	RPCHeader hdr;
-	class Channel& channel;
-	class BaseInRPCProcessor& inrpc;
+	class Transport& transport;
+	class BaseInProcessor& inrpc;
 	template <typename T>
 	void write(T r)
 	{
@@ -156,10 +156,10 @@ class TableImpl : public BaseTable
 
 		CZ_ASSERT(rpcid == m_rpcs.size());
 		auto info = std::make_unique<Info>();
-		typedef ParamTuple<decltype(f)>::type Tuple;
+		using Tuple = typename ParamTuple<decltype(f)>::type;
 		info->name = name;
 		info->numParams = std::tuple_size<Tuple>::value;
-		info->hasReturnValue = !std::is_void<ResultOf<F>::type>::value;
+		info->hasReturnValue = !std::is_void<typename ResultOf<F>::type>::value;
 		info->dispatcher = [f](T& obj, const ChunkBuffer& in, ReplyStream& out)
 		{
 			Tuple params;
@@ -176,7 +176,7 @@ class TableImpl : public BaseTable
 				in >> params;
 			}
 
-			typedef ResultOf<F>::type ReturnType;
+			typedef typename ResultOf<F>::type ReturnType;
 			Dispatcher<ReturnType>::dispatch(out, obj, f, params);
 		};
 
@@ -207,6 +207,29 @@ class Table : public TableImpl<T>
 {
 	static_assert(sizeof(T) == 0, "You need to specialize for the type you need");
 };
+
+template <typename SERVER_INTERFACE>
+struct Service
+{
+	static_assert(sizeof(SERVER_INTERFACE) == 0, "You need to specialize for the required Server interface");
+};
+
+#define DEFINE_RPC_SERVICE(SERVER_INTERFACE, CLIENT_INTERFACE)                 \
+	namespace cz                                                               \
+	{                                                                          \
+	namespace rpc                                                              \
+	{                                                                          \
+	template <>                                                                \
+	struct Service<SERVER_INTERFACE>                                           \
+	{                                                                          \
+		using ServerInterface = SERVER_INTERFACE;                              \
+		using ClientInterface = CLIENT_INTERFACE;                              \
+		using ClientConnection = Connection<ServerInterface, ClientInterface>; \
+		using Server = Server<ServerInterface, ClientInterface>;               \
+		using ServerConnection = Connection<ClientInterface, ServerInterface>; \
+	};                                                                         \
+	}                                                                          \
+	}
 
 }  // namespace rpc
 }  // namespace cz

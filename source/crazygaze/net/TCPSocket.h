@@ -36,6 +36,30 @@ struct SocketAddress
 	explicit SocketAddress(const sockaddr_in& addr);
 	explicit SocketAddress(const char* ip, int port);
 
+
+	bool operator==( const SocketAddress& right ) const
+	{
+		return (ip.full == right.ip.full) && (port == right.port);
+	}
+	bool operator!=( const SocketAddress& right ) const
+	{
+		return (*this == right) == false;
+	}
+	bool operator > ( const SocketAddress& right ) const
+	{
+		if (port == right.port)
+			return ip.full > right.ip.full;
+		else
+			return port > right.port;
+	}
+	bool operator < ( const SocketAddress& right ) const
+	{
+		if (port == right.port)
+			return ip.full < right.ip.full;
+		else
+			return port < right.port;
+	}
+
   private:
 	void constructFrom(const sockaddr_in* sa);
 };

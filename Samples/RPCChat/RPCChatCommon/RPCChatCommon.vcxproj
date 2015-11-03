@@ -138,14 +138,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="RPCChatClientInterface.h" />
-    <ClInclude Include="RPCChatCommon.h" />
-    <ClInclude Include="RPCChatServerInterface.h" />
+    <ClInclude Include="RPCChatInterface.h" />
     <ClInclude Include="RPCChatCommonPCH.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RPCChatCommon.cpp" />
     <ClCompile Include="RPCChatCommonPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -81,6 +81,7 @@ struct ClassOfMethod<R (C::*) (Args...) const>
 //
 //////////////////////////////////////////////////////////////////////////
 // Based on: http://stackoverflow.com/questions/10766112/c11-i-can-go-from-multiple-args-to-tuple-but-can-i-go-from-tuple-to-multiple
+#ifndef __clcpp_parse__
 namespace detail
 {
 	template <typename F, typename Tuple, bool Done, int Total, int... N>
@@ -122,12 +123,18 @@ decltype(auto) call(F f, Tuple && t)
 	typedef typename std::decay<Tuple>::type ttype;
 	return detail::call_impl<F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
 }
+#else
+template <typename F, typename Tuple>
+int call(F f, Tuple && t);
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Calls a method on the specified object, unpacking the parameters from a tuple
 //
 //////////////////////////////////////////////////////////////////////////
 // Based on: http://stackoverflow.com/questions/10766112/c11-i-can-go-from-multiple-args-to-tuple-but-can-i-go-from-tuple-to-multiple
+#ifndef __clcpp_parse__
 namespace detail
 {
 	template <typename F, typename Tuple, bool Done, int Total, int... N>
@@ -171,6 +178,11 @@ decltype(auto) callmethod(typename ClassOfMethod<F>::type& obj, F f, Tuple && t)
 	return detail::callmethod_impl<F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(obj, f, std::forward<Tuple>(t));
 }
 
+#else
+template <typename F, typename Tuple>
+int callmethod(typename ClassOfMethod<F>::type& obj, F f, Tuple && t);
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Custom std::future::then implementation
@@ -192,6 +204,7 @@ std::future<typename std::result_of<Function(Args...)>::type> async_nonblocking(
 	return ret;
 }
 
+#ifndef __clcpp_parse__
 template <typename Fut, typename Work>
 decltype(auto) then(Fut f, Work w)
 {
@@ -205,5 +218,12 @@ decltype(auto) then_nonblocking(Fut f, Work w)
 	auto fptr = std::make_shared<std::decay<Fut>::type>(std::move(f));
 	return async_nonblocking([fptr = std::move(fptr), w = std::move(w)]{ w(fptr->get()); });
 }
+#else
+template <typename Fut, typename Work>
+std::future<void> then(Fut f, Work w);
+
+template <typename Fut, typename Work>
+std::future<void> then_nonblocking(Fut f, Work w);
+#endif
 
 } // namespace cz
