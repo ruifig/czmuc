@@ -20,13 +20,13 @@ namespace rpc
 
 typedef cz::SharedQueue<std::function<void()>> WorkQueue;
 
-class BaseClient;
+class BaseConnection;
 
-class Channel
+class Transport
 {
 public:
-	explicit Channel();
-	virtual ~Channel() {}
+	explicit Transport();
+	virtual ~Transport() {}
 	virtual ChunkBuffer prepareSend() = 0;
 	virtual bool send(ChunkBuffer&& data) = 0;
 	virtual const std::string& getCustomID() const = 0;
@@ -34,24 +34,24 @@ public:
 	void onReceivedData(const ChunkBuffer& in);
 	void onDisconnected();
 protected:
-	friend class BaseClient;
-	void setOwner(BaseClient* owner);
+	friend class BaseConnection;
+	void setOwner(BaseConnection* owner);
 private:
-	BaseClient* m_owner = nullptr;
+	BaseConnection* m_owner = nullptr;
 };
 
 
-class ServerChannel
+class ServerTransport
 {
 public:
-	ServerChannel() {}
-	virtual ~ServerChannel() {}
+	ServerTransport() {}
+	virtual ~ServerTransport() {}
 	virtual int getNumClients() = 0;
-	void setOnNewClient(std::function<void(std::unique_ptr<Channel>)> fn);
-	void setOnClientDisconnect(std::function<void(Channel*)> fn);
+	void setOnNewClient(std::function<void(std::unique_ptr<Transport>)> fn);
+	void setOnClientDisconnect(std::function<void(Transport*)> fn);
 protected:
-	std::function<void(std::unique_ptr<Channel>)> m_onNewClient;
-	std::function<void(Channel*)> m_onClientDisconnect;
+	std::function<void(std::unique_ptr<Transport>)> m_onNewClient;
+	std::function<void(Transport*)> m_onClientDisconnect;
 };
 
 } // namespace rpc

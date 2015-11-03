@@ -14,9 +14,9 @@ void work()
 	SelfContainedServer server;
 	server.init(iocp, 28000);
 
-	rpc::Client<SelfContainedServer> client1(std::make_unique<rpc::TCPChannel>("127.0.0.1", 28000, iocp));
+	rpc::Connection<SelfContainedServer> client1(std::make_unique<rpc::TCPTransport>("127.0.0.1", 28000, iocp));
 	// Another client, so we can get a vector of the clients, just to test
-	rpc::Client<SelfContainedServer> client2(std::make_unique<rpc::TCPChannel>("127.0.0.1", 28000, iocp));
+	rpc::Connection<SelfContainedServer> client2(std::make_unique<rpc::TCPTransport>("127.0.0.1", 28000, iocp));
 
 	// Test RPC
 	{

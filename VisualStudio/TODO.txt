@@ -1,4 +1,12 @@
 
+X - Create rpc::Service<T>
+X - Rename Client to Connection
+X - Rename Channel to Transport
+X - Rename TCPChannel to TCPTransport (Same for TCPServerTransport)
+
+X - Rename InRPCProcessor to InProcessor
+X - Rename OutRPCProcessor to OutProcessor
 
 - Replace typedefs with alias templates, as specified in "Effective Modern C++, Item9 (page 63).
 	- Page 66 has good stuff to simplify type traits
+

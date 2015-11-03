@@ -10,9 +10,7 @@ using namespace cz;
 using namespace cz::net;
 using namespace cz::rpc;
 
-typedef Server<ChatServerInterface, ChatClientInterface> ServerType;
-
-struct ClientInfo : public ClientUserData
+struct ClientInfo : public ConnectionUserData
 {
 	ClientInfo()
 	{
@@ -23,7 +21,7 @@ struct ClientInfo : public ClientUserData
 	{
 	}
 	uint32_t id=0;
-	ServerType::ClientType* client;
+	Service<ChatServerInterface>::ServerConnection* client;
 	std::string name;
 	bool admin = false;
 };
@@ -39,11 +37,11 @@ public:
 	void setRPCServer(Server<ChatServerInterface,ChatClientInterface>* server)
 	{
 		m_server = server;
-		m_server->setClientConnectCallback([this](BaseClient* client)
+		m_server->setClientConnectCallback([this](BaseConnection* client)
 		{
 			onClientConnect(client);
 		} );
-		m_server->setClientDisconnectCallback([this](BaseClient* client)
+		m_server->setClientDisconnectCallback([this](BaseConnection* client)
 		{
 			onClientDisconnect(client);
 		} );
@@ -124,7 +122,7 @@ private:
 	//
 	ClientInfo* getCurrent()
 	{
-		auto current = ServerType::ClientType::getCurrent();
+		auto current = Service<ChatServerInterface>::ServerConnection::getCurrent();
 		return std::static_pointer_cast<ClientInfo>(current->getUserData()).get();
 	}
 
@@ -146,14 +144,14 @@ private:
 		return info;
 	}
 
-	void onClientConnect(BaseClient* client)
+	void onClientConnect(BaseConnection* client)
 	{
 		auto info = std::make_shared<ClientInfo>();
-		info->client = static_cast<ServerType::ClientType*>(client);
-		printf("%s connected.\n", info->client->getChannel()->getCustomID().c_str());
+		info->client = static_cast<Service<ChatServerInterface>::ServerConnection*>(client);
+		printf("%s connected.\n", info->client->getTransport()->getCustomID().c_str());
 		client->setUserData(std::move(info));
 	}
-	void onClientDisconnect(BaseClient* client)
+	void onClientDisconnect(BaseConnection* client)
 	{
 		auto info = static_cast<ClientInfo*>(client->getUserData().get());
 		if (info->name != "")
@@ -161,12 +159,12 @@ private:
 			printf("User %s disconnected.\n", info->name.c_str());
 			sendSystemMsg(formatString("User %s disconnected", info->name.c_str()));
 		}
-		printf("%s disconnected.\n", info->client->getChannel()->getCustomID().c_str());
+		printf("%s disconnected.\n", info->client->getTransport()->getCustomID().c_str());
 	}
 
 	void broadcastMsg(const std::string& from, const std::string& msg)
 	{
-		BROADCAST_CALLRPC(*m_server, onMsg, from, msg);
+		BROADCAST_CALLRPC(*m_server, nullptr, onMsg, from, msg);
 	}
 
 	void sendSystemMsg(const std::string& msg, ClientInfo* recipient = nullptr)
@@ -174,13 +172,12 @@ private:
 		if (recipient)
 			CALLRPC(*recipient->client, onSystemMsg, msg);
 		else
-			BROADCAST_CALLRPC(*m_server, onSystemMsg, msg);
+			BROADCAST_CALLRPC(*m_server, nullptr, onSystemMsg, msg);
 	}
 
-	ServerType* m_server = nullptr;
+	Service<ChatServerInterface>::Server* m_server = nullptr;
 	//std::unordered_map<ClientType*, std::unique_ptr<ClientInfo>> m_clients;
 	WorkQueue& m_workQueue;
-
 };
 
 int main()
@@ -203,7 +200,7 @@ int main()
 			}
 		});
 
-		Server<ChatServerInterface, ChatClientInterface> server(chat, std::make_unique<TCPServerChannel>(28000, iocp, &workQueue));
+		Service<ChatServerInterface>::Server server(chat, std::make_unique<TCPServerTransport>(28000, iocp, &workQueue));
 		chat.setRPCServer(&server);
 		printf("Chat server running...\n");
 		printf("Press any key to exit\n");

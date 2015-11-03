@@ -45,12 +45,12 @@
     <ClInclude Include="..\source\crazygaze\rpc\BaseRPCProcessor.h" />
     <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCChannel.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCClient.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCTransport.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCConnection.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCProcessor.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCServer.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCUtils.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\TCPChannel.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\TCPTransport.h" />
     <ClInclude Include="..\source\crazygaze\ScopeGuard.h" />
     <ClInclude Include="..\source\crazygaze\Semaphore.h" />
     <ClInclude Include="..\source\crazygaze\SharedFlag.h" />
@@ -86,9 +86,9 @@
     <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
     <ClCompile Include="..\source\crazygaze\Random.cpp" />
     <ClCompile Include="..\source\crazygaze\RingBuffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCChannel.cpp" />
+    <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\TCPChannel.cpp" />
+    <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp" />
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
     <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
     <ClCompile Include="..\source\crazygaze\Singleton.cpp" />

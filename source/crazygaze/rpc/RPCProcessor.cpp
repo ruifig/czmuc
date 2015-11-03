@@ -15,15 +15,15 @@ namespace cz
 namespace rpc
 {
 
-BaseOutRPCProcessor::BaseOutRPCProcessor()
+BaseOutProcessor::BaseOutProcessor()
 {
 }
 
-BaseOutRPCProcessor::~BaseOutRPCProcessor()
+BaseOutProcessor::~BaseOutProcessor()
 {
 }
 
-void BaseOutRPCProcessor::processReceivedReply(RPCHeader hdr, const ChunkBuffer& in)
+void BaseOutProcessor::processReceivedReply(RPCHeader hdr, const ChunkBuffer& in)
 {
 	std::function<void(const ChunkBuffer&, RPCHeader)> f;
 
@@ -58,7 +58,7 @@ void BaseOutRPCProcessor::processReceivedReply(RPCHeader hdr, const ChunkBuffer&
 	f(in, hdr);
 }
 
-void BaseOutRPCProcessor::shutdown()
+void BaseOutProcessor::shutdown()
 {
 	std::unique_lock<std::mutex> lk(m_mtx);
 	// Clearing the replies, will cause any pending promises to be deleted, and thus cause "broken promises".

@@ -240,6 +240,23 @@ void ChunkBuffer::peek(void* data, unsigned size) const
 	}
 }
 
+bool ChunkBuffer::tryRead(std::string& dst) const
+{
+	int bufSize = calcSize();
+	int strSize;
+	if (!peek(strSize))
+		return false;
+	if (bufSize < static_cast<int>(sizeof(strSize)) + strSize)
+		return false;
+
+	dst.clear();
+	dst.reserve(strSize);
+	dst.append(strSize, 0);
+	read<int>(strSize);
+	read(&dst[0], strSize);
+	return true;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Write operators

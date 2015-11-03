@@ -19,6 +19,13 @@ CZ_DEFINE_LOG_CATEGORY(logDefault)
 LogCategoryLogNone logNone;
 #endif
 
+LogCategoryBase::LogCategoryBase(const char* name, LogVerbosity verbosity, LogVerbosity compileTimeVerbosity) : m_name(name)
+, m_verbosity(verbosity)
+, m_compileTimeVerbosity(compileTimeVerbosity)
+{
+
+}
+
 void LogCategoryBase::setVerbosity(LogVerbosity verbosity)
 {
 	// Take into considering the minimum compiled verbosity

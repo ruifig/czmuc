@@ -136,7 +136,7 @@ struct ReentrantCheck
 	{
 		counter = counter_;
 		CZ_ASSERT(*counter==0);
-		*counter++;
+		++(*counter);
 	}
 	~ReentrantCheck()
 	{

@@ -55,11 +55,11 @@ private:
 	class Queue : public std::queue<Block, std::deque<Block>>
 	{
 	public:
-		auto& container()
+		decltype(c)& container()
 		{
 			return this->c;
 		}
-		const auto& container() const
+		const decltype(c)& container() const
 		{
 			return this->c;
 		}
@@ -154,22 +154,7 @@ public:
 		return true;
 	}
 
-	bool tryRead(std::string& dst) const
-	{
-		int bufSize = calcSize();
-		int strSize;
-		if (!peek(strSize))
-			return false;
-		if (bufSize < static_cast<int>(sizeof(strSize)) + strSize)
-			return false;
-
-		dst.clear();
-		dst.reserve(strSize);
-		dst.append(strSize, 0);
-		read<int>(strSize);
-		read(&dst[0], strSize);
-		return true;
-	}
+	bool tryRead(std::string& dst) const;
 
 };
 
@@ -340,7 +325,8 @@ ChunkBuffer& operator << (ChunkBuffer& stream, const std::tuple<Elements...>& v)
 // 
 template<typename T>
 inline const ChunkBuffer& operator >> (const ChunkBuffer& stream, T& v) {
-	stream.read(v); return stream;
+	stream.read(v);
+	return stream;
 }
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::string& v);
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Any &v);
@@ -360,8 +346,8 @@ const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::pair<A,B>& v)
 template<typename... Elements>
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::tuple<Elements...>& v)
 {
-	typedef std::remove_reference<decltype(v)>::type TupleType;
-	return details::TupleSerialization<std::decay<decltype(v)>::type, std::tuple_size<TupleType>::value==0 , 0>::deserialize(stream, v);
+	using TupleType = typename std::remove_reference<decltype(v)>::type;
+	return details::TupleSerialization<TupleType, std::tuple_size<TupleType>::value == 0, 0>::deserialize(stream, v);
 }
 
 } // namespace cz

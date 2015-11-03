@@ -30,23 +30,15 @@ enum class LogVerbosity : uint8_t
 class LogCategoryBase
 {
 public:
-	LogCategoryBase(const char* name, LogVerbosity verbosity, LogVerbosity compileTimeVerbosity)
-		: m_name(name)
-		, m_verbosity(verbosity)
-		, m_compileTimeVerbosity(compileTimeVerbosity)
-	{
-	}
-
+	LogCategoryBase(const char* name, LogVerbosity verbosity, LogVerbosity compileTimeVerbosity);
 	__forceinline const std::string& getName() const
 	{
 		return m_name;
 	}
-
 	__forceinline bool isSuppressed(LogVerbosity verbosity) const
 	{
 		return verbosity > m_verbosity;
 	}
-
 	void setVerbosity(LogVerbosity verbosity);
 
 protected:
@@ -66,7 +58,7 @@ public:
 	// Compile time verbosity
 	enum
 	{
-		CompileTimeVerbosity  = COMPILETIME
+		CompileTimeVerbosity  = (int)COMPILETIME
 	};
 
 private:

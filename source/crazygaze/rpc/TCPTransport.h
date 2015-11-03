@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "crazygaze/rpc/RPCChannel.h"
-#include "crazygaze/rpc/RPCClient.h"
+#include "crazygaze/rpc/RPCTransport.h"
+#include "crazygaze/rpc/RPCConnection.h"
 #include "crazygaze/rpc/RPCServer.h"
 #include "crazygaze/net/TCPSocket.h"
 #include "crazygaze/net/TCPServer.h"
@@ -20,16 +20,17 @@ namespace cz
 namespace rpc
 {
 
-class TCPChannel : public Channel
+class TCPTransport : public Transport
 {
 public:
-  TCPChannel(const std::string& ip, int port, net::CompletionPort& iocp,
+  TCPTransport(const std::string& ip, int port, net::CompletionPort& iocp,
 			WorkQueue* rcvQueue = nullptr);
-  virtual ~TCPChannel();
+  virtual ~TCPTransport();
 
+#include "crazygaze/czlibPCH.h"
 protected:
 	//
-	// Channel interface
+	// Transport interface
 	virtual ChunkBuffer prepareSend() override;
 	virtual bool send(ChunkBuffer&& data) override;
 	virtual const std::string& getCustomID() const override;
@@ -40,24 +41,22 @@ protected:
 	void onSocketReceive(const ChunkBuffer& buf);
 	void onSocketShutdown(int code, const std::string& msg);
 
-	//! If this is a client side channel, we created the socket, and we control the lifetime
+	//! If this is a client side transport, we created the socket, and we control the lifetime
 	std::unique_ptr<net::TCPSocket> m_socket;
 	std::string m_customID;
 	WorkQueue* m_rcvQueue;
 	cz::ZeroSemaphore m_queuedOps;
 };
 
-class TCPServerChannelConnection;
-
-class TCPServerChannel : public ServerChannel
+class TCPServerTransport : public ServerTransport
 {
 public:
-	TCPServerChannel(int listenPort, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
-	virtual ~TCPServerChannel();
-	void onClientRemoved(TCPServerChannelConnection* clientInfo);
+	TCPServerTransport(int listenPort, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
+	virtual ~TCPServerTransport();
+	void onClientRemoved(class TCPServerConnection* clientInfo);
 protected:
 	virtual int getNumClients() override;
-	std::unique_ptr<net::TCPServerConnection> createConnection(net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket,
+	std::unique_ptr<net::TCPServerClientInfo> createConnection(net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket,
 		WorkQueue* rcvQueue);
 	net::TCPServer m_tcpServer;
 };

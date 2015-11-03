@@ -49,10 +49,10 @@ private:
 	TCPSocket m_socket;
 };
 
-struct EchoServerConnection : public TCPServerConnection
+struct EchoServerConnection : public TCPServerClientInfo
 {
 	explicit EchoServerConnection(TCPServer* owner, std::unique_ptr<TCPSocket> socket, int waitMs=0)
-		: TCPServerConnection(owner, std::move(socket))
+		: TCPServerClientInfo(owner, std::move(socket))
 		, waitMs(waitMs)
 	{
 	}
@@ -60,7 +60,7 @@ struct EchoServerConnection : public TCPServerConnection
 	virtual void onSocketReceive(const ChunkBuffer& buf) override
 	{
 		// Call base class
-		TCPServerConnection::onSocketReceive(buf);
+		TCPServerClientInfo::onSocketReceive(buf);
 
 		std::string str;
 		if (!buf.tryRead(str))
@@ -188,11 +188,11 @@ TEST(TestScalability)
 TEST(BigData)
 {
 	printf("*** %s ***\n", this->m_details.testName);
-	class BigDataServerConnection : public TCPServerConnection
+	class BigDataServerConnection : public TCPServerClientInfo
 	{
 	public:
 		explicit BigDataServerConnection(TCPServer* owner, std::unique_ptr<TCPSocket> socket)
-			: TCPServerConnection(owner, std::move(socket))
+			: TCPServerClientInfo(owner, std::move(socket))
 		{
 			m_timer.Start();
 		}
@@ -204,7 +204,7 @@ TEST(BigData)
 		}
 		virtual void onSocketReceive(const ChunkBuffer& buf) override
 		{
-			TCPServerConnection::onSocketReceive(buf); // Call base class
+			TCPServerClientInfo::onSocketReceive(buf); // Call base class
 
 			unsigned char tmp[4096*10];
 			auto size = buf.calcSize();
@@ -235,7 +235,7 @@ TEST(BigData)
 		UnitTest::Timer m_timer;
 	};
 
-	class Client
+	class Connection
 	{
 	public:
 		enum
@@ -243,7 +243,7 @@ TEST(BigData)
 			kMinimumPendingSend = 1024 * 1014 * 5
 		};
 
-		Client(CompletionPort& iocp, const char* ip, int port, uint64_t transferSize)
+		Connection(CompletionPort& iocp, const char* ip, int port, uint64_t transferSize)
 			: m_socket(iocp, BIGDATATEST_PENDINGREADS_COUNT, BIGDATATEST_PENDINGREADS_SIZE), m_transferSize(transferSize)
 		{
 
@@ -292,7 +292,7 @@ TEST(BigData)
 
 		}
 
-		~Client()
+		~Connection()
 		{
 			// Wait for all the data to be transfered (which finished the thread)
 			m_sendThread.join();
@@ -329,7 +329,7 @@ TEST(BigData)
 		{
 			CompletionPort iocp(1);
 			size = (uint64_t)1000 * 1000 * 200;
-			Client client(iocp, "127.0.0.1", serverPort, size);
+			Connection client(iocp, "127.0.0.1", serverPort, size);
 		}
 		auto ms = t.GetTimeInMs();
 		printf("(%lld bytes) %.2fMB transfered in %.2f ms. %fmbps/sec\n", size, size / (1000.0 * 1000.0), ms, ((size*8) / (1000.0 * 1000.0)) / (ms / 1000.0));

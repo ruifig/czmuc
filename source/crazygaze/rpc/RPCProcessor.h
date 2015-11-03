@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/rpc/RPCChannel.h"
+#include "crazygaze/rpc/RPCTransport.h"
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/Semaphore.h"
 #include "crazygaze/Any.h"
@@ -19,11 +19,11 @@ namespace cz
 namespace rpc
 {
 
-class BaseOutRPCProcessor
+class BaseOutProcessor
 {
 public:
-	BaseOutRPCProcessor();
-	virtual ~BaseOutRPCProcessor();
+	BaseOutProcessor();
+	virtual ~BaseOutProcessor();
 
 	void processReceivedReply(RPCHeader hdr, const ChunkBuffer& in);
 	void shutdown();
@@ -32,7 +32,7 @@ public:
 		m_exceptionCallback = std::move(func);
 	}
 
-	virtual std::future<cz::Any> _callgenericrpc(Channel& channel, const char* func, const std::vector<cz::Any>& params) = 0;
+	virtual std::future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) = 0;
 
 protected:
 	virtual const BaseRPCInfo* getRPCInfo(RPCHeader hdr) = 0;
@@ -50,10 +50,10 @@ protected:
 	template<typename ResultType>
 	struct ReplyInfo
 	{
-		BaseOutRPCProcessor& outer;
+		BaseOutProcessor& outer;
 		std::shared_ptr<std::promise<ResultType>> pr;
 		RPCHeader hdr;
-		ReplyInfo(BaseOutRPCProcessor& outer, RPCHeader hdr) : outer(outer), hdr(hdr)
+		ReplyInfo(BaseOutProcessor& outer, RPCHeader hdr) : outer(outer), hdr(hdr)
 		{
 			pr = std::make_shared<std::promise<ResultType>>();
 
@@ -94,10 +94,10 @@ protected:
 	template<>
 	struct ReplyInfo<void>
 	{
-		BaseOutRPCProcessor& outer;
+		BaseOutProcessor& outer;
 		std::promise<void> pr;
 		RPCHeader hdr;
-		ReplyInfo(BaseOutRPCProcessor& outer, RPCHeader hdr)
+		ReplyInfo(BaseOutProcessor& outer, RPCHeader hdr)
 			: outer(outer), hdr(hdr)
 		{
 		}
@@ -118,16 +118,17 @@ protected:
 	template<typename T>
 	struct RemoveFuture
 	{
-		typedef typename T type;
+		typedef T type;
 	};
 	template<typename T>
 	struct RemoveFuture<std::future<T>>
 	{
-		typedef typename T type;
+		typedef T type;
 	};
 
+#ifndef __clcpp_parse__
 	template<class F, typename... Args>
-	auto _callrpcImpl(Channel& channel, uint32_t rpcid, F f, Args&&... args)
+	auto _callrpcImpl(Transport& transport, uint32_t rpcid, F f, Args&&... args)
 	{
 		typedef std::tuple<typename Decay<Args>::type...> ArgsTuple;
 		typedef ParamTuple<decltype(f)>::type FuncParamsTuple;
@@ -136,7 +137,7 @@ protected:
 			std::is_same<FuncParamsTuple, ArgsTuple>::value,
 			"RPC and specified parameters mismatch.");
 
-		ChunkBuffer out = channel.prepareSend();
+		ChunkBuffer out = transport.prepareSend();
 
 		RPCHeader hdr;
 		hdr.bits.counter = ++m_replyIdCounter;
@@ -145,11 +146,15 @@ protected:
 		out << hdr.all;
 		serializeParameterPack(out, std::forward<Args>(args)...);
 		// If the send fails, we need to remove the reply from the reply map
-		if (channel.send(std::move(out)))
+		if (transport.send(std::move(out)))
 			return replyInfo.success();
 		else
 			return replyInfo.error();
 	}
+#else
+	template<class F, typename... Args>
+	auto _callrpcImpl(Transport& transport, uint32_t rpcid, F f, Args&&... args) -> std::future<decltype(f(std::forward<Args>(args)...))>;
+#endif
 
 	uint32_t m_replyIdCounter = 0;
 	std::mutex m_mtx;
@@ -158,30 +163,37 @@ protected:
 };
 
 template<typename T>
-class OutRPCProcessor : public BaseOutRPCProcessor
+class OutProcessor : public BaseOutProcessor
 {
 public:
 	typedef T Type;
-	OutRPCProcessor()
+	OutProcessor()
 	{
 	}
 
+
+#ifndef __clcpp_parse__
 	template<class F, typename... Args>
-	auto _callrpc(Channel& channel, uint32_t rpcid, F f, Args&&... args)
+	auto _callrpc(Transport& transport, uint32_t rpcid, F f, Args&&... args)
 	{
 		static_assert(
 			std::is_member_function_pointer<decltype(f)>::value &&
 			std::is_base_of<ClassOfMethod<F>::type, Type>::value,
 			"Not a member function of the wrapped class");
 		CZ_ASSERT(m_tbl.isValid(rpcid));
-		return _callrpcImpl(channel, rpcid, std::forward<F>(f), std::forward<Args>(args)...);
+		return _callrpcImpl(transport, rpcid, std::forward<F>(f), std::forward<Args>(args)...);
 	}
+#else
+	template<class F, typename... Args>
+	auto _callrpc(Transport& transport, uint32_t rpcid, F f, Args&&... args) 
+				-> std::future<decltype(f(std::forward<Args>(args)...))>;
+#endif
 
 protected:
 
-	virtual std::future<cz::Any> _callgenericrpc(Channel& channel, const char* func, const std::vector<cz::Any>& params) override
+	virtual std::future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
 	{
-		return _callrpcImpl(channel, uint32_t(decltype(m_tbl)::RPCId::genericRPC), &_genericRPCDummy, func, params);
+		return _callrpcImpl(transport, uint32_t(decltype(m_tbl)::RPCId::genericRPC), &_genericRPCDummy, func, params);
 	}
 
 	virtual const BaseRPCInfo* getRPCInfo(RPCHeader hdr) override
@@ -194,7 +206,7 @@ protected:
 
 // Template specialization for void, so we don't try to use it
 template<>
-class OutRPCProcessor<void> : public BaseOutRPCProcessor
+class OutProcessor<void> : public BaseOutProcessor
 {
 public:
 	void shutdown()
@@ -207,24 +219,35 @@ public:
 	}
 
 protected:
-	virtual std::future<cz::Any> _callgenericrpc(Channel& channel, const char* func, const std::vector<cz::Any>& params) override
+#pragma warning(push)
+// warning C4702: unreachable code
+#pragma warning(disable:4702)
+	virtual std::future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
 	{
 		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
 		return std::future<cz::Any>();
 	}
+#pragma warning(pop)
+
+#pragma warning(push)
+// warning C4702: unreachable code
+#pragma warning(disable:4702)
 	virtual const BaseRPCInfo* getRPCInfo(RPCHeader hdr) override
 	{
 		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
+		// warning C4702: unreachable code
+		#pragma warning( suppress : 4702 )
 		return nullptr;
 	}
+#pragma warning(pop)
 };
 
-class BaseInRPCProcessor
+class BaseInProcessor
 {
 public:
-	~BaseInRPCProcessor()
+	~BaseInProcessor()
 	{
 		m_futureRepliesCount.wait();
 	}
@@ -233,7 +256,7 @@ public:
 	template<typename T>
 	void processReply(const ReplyStream& reply, T r)
 	{
-		ChunkBuffer out = reply.channel.prepareSend();
+		ChunkBuffer out = reply.transport.prepareSend();
 		RPCHeader hdr;
 		hdr.bits.isReply = true;
 		hdr.bits.success = true;
@@ -243,7 +266,7 @@ public:
 			out << cz::Any(std::forward<T>(r));
 		else
 			out << std::forward<T>(r);
-		reply.channel.send(std::move(out));
+		reply.transport.send(std::move(out));
 	}
 
 	template<typename T>
@@ -270,26 +293,30 @@ public:
 
 	virtual void dispatchReceived(uint32_t rpcid, const ChunkBuffer& in, ReplyStream& replyStream) = 0;
 
-	void processReceivedRPC(Channel& channel, RPCHeader hdr, const ChunkBuffer& in)
+#ifndef __clcpp_parse__
+	void processReceivedRPC(Transport& transport, RPCHeader hdr, const ChunkBuffer& in)
 	{
 		try
 		{
-			ReplyStream replyStream(hdr, channel, *this);
+			ReplyStream replyStream(hdr, transport, *this);
 			dispatchReceived(hdr.bits.rpcid, in, replyStream);
 		}
 		catch (std::exception& e)
 		{
-			ChunkBuffer out = channel.prepareSend();
+			ChunkBuffer out = transport.prepareSend();
 			RPCHeader outhdr(0);
 			outhdr.bits.isReply = true;
 			outhdr.bits.success = false;
 			outhdr.setKey(hdr.key());
 			out << outhdr.all;
 			out << e.what();
-			auto res = channel.send(std::move(out));
+			auto res = transport.send(std::move(out));
 			CZ_ASSERT(res);
 		}
 	}
+#else
+	void processReceivedRPC(Transport& transport, RPCHeader hdr, const ChunkBuffer& in);
+#endif
 
 
 protected:
@@ -305,20 +332,20 @@ protected:
 };
 
 template<typename T>
-class InRPCProcessor : public BaseInRPCProcessor
+class InProcessor : public BaseInProcessor
 {
 public:
 	typedef T Type;
 
-	explicit InRPCProcessor(Type& obj) : m_obj(obj) { }
+	explicit InProcessor(Type& obj) : m_obj(obj) { }
 
-	InRPCProcessor(InRPCProcessor&& other)
+	InProcessor(InProcessor&& other)
 		: m_obj(std::move(other.m_obj))
 		, m_tbl(std::move(other.m_tbl))
 	{
 	}
 
-	~InRPCProcessor()
+	~InProcessor()
 	{
 	}
 
@@ -335,10 +362,10 @@ protected:
 
 // Specialization so we don't use a void type
 template<>
-class InRPCProcessor<void> : public BaseInRPCProcessor
+class InProcessor<void> : public BaseInProcessor
 {
 public:
-	void processReceivedRPC(Channel& channel, RPCHeader hdr, const ChunkBuffer& in)
+	void processReceivedRPC(Transport& transport, RPCHeader hdr, const ChunkBuffer& in)
 	{
 		CZ_UNEXPECTED_F("No local type specified to receive RPC calls");
 		throw std::logic_error("No local type specified to receive RPC calls");
