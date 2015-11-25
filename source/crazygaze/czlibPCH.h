@@ -24,6 +24,8 @@
 #include <mutex>
 #include <unordered_map>
 #include <future>
+#include <condition_variable>
+
 
 #include "crazygaze/czlib.h"
 

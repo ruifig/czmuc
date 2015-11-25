@@ -34,6 +34,7 @@
     <ClInclude Include="..\source\crazygaze\Filename.h" />
     <ClInclude Include="..\source\crazygaze\Filesystem.h" />
     <ClInclude Include="..\source\crazygaze\FNVHash.h" />
+    <ClInclude Include="..\source\crazygaze\Future.h" />
     <ClInclude Include="..\source\crazygaze\Guid.h" />
     <ClInclude Include="..\source\crazygaze\Logging.h" />
     <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
