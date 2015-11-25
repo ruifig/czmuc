@@ -274,19 +274,6 @@ public:
 		return m_data->then(std::move(w));
 	}
 
-	/*
-	template<typename R>
-	Future<R> then(std::function<R(const Future&)> w)
-	{
-		if (!m_data)
-			throw FutureError(FutureError::Code::NoState);
-
-		auto ft = makeReadyFuture<R>(w(Future(m_data)));
-		return ft;
-		//return m_data->then(std::move(w));
-	}
-	*/
-
 private:
 	std::shared_ptr<details::FutureData<T>> m_data;
 };
