@@ -174,6 +174,11 @@ SocketAddress::SocketAddress(const char* ip_, int port_)
 	port = port_;
 }
 
+SocketAddress::SocketAddress(const std::string& ip_, int port_)
+{
+	inet_pton(AF_INET, ip_.c_str(), &ip.full);
+	port = port_;
+}
 
 //////////////////////////////////////////////////////////////////////////
 //

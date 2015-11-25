@@ -43,9 +43,9 @@ int runChat(const std::string& name, const std::string& pass, const std::string&
 {
 	ChatClient chat;
 	CompletionPort iocp(1);
-	Service<ChatServerInterface>::ClientConnection client(std::make_unique<TCPTransport>(ip, port, iocp), chat);
-	client.setExceptionCallback([](RPCHeader hr, const BaseRPCInfo& info, const std::string& msg)
-	{
+	Service<ChatServerInterface>::ClientConnection client(
+	    std::make_unique<TCPTransport>(net::SocketAddress(ip, port), iocp), chat);
+	client.setExceptionCallback([](RPCHeader hr, const BaseRPCInfo& info, const std::string& msg) {
 		printf("%s\n", msg.c_str());
 		exit(1);
 	});

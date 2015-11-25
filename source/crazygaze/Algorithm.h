@@ -39,7 +39,7 @@ namespace cz
 		return cz::find(c, v)!=c.end();
 	}
 	template<typename C, typename F>
-	auto exists_if(C& c, const F& f) -> decltype(c.begin())
+	bool exists_if(C& c, const F& f)
 	{
 		return std::find_if(c.begin(), c.end(), f)!=c.end();
 	}

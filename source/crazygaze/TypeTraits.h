@@ -209,14 +209,14 @@ template <typename Fut, typename Work>
 decltype(auto) then(Fut f, Work w)
 {
 	auto fptr = std::make_shared<std::decay<Fut>::type>(std::move(f));
-	return std::async([fptr = std::move(fptr), w = std::move(w)]{ w(fptr->get()); });
+	return std::async([fptr = std::move(fptr), w = std::move(w)]{ return w(fptr->get()); });
 }
 
 template <typename Fut, typename Work>
 decltype(auto) then_nonblocking(Fut f, Work w)
 {
 	auto fptr = std::make_shared<std::decay<Fut>::type>(std::move(f));
-	return async_nonblocking([fptr = std::move(fptr), w = std::move(w)]{ w(fptr->get()); });
+	return async_nonblocking([fptr = std::move(fptr), w = std::move(w)]{ return w(fptr->get()); });
 }
 #else
 template <typename Fut, typename Work>

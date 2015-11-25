@@ -18,6 +18,14 @@ namespace cz
 	{
 	public:
 		bool isValid() const;
+		bool operator! () const
+		{
+			return !isValid();
+		}
+		operator bool() const
+		{
+			return isValid();
+		}
 	protected:
 		friend class SharedFlagOwner; 
 		std::shared_ptr<bool> m_flag;

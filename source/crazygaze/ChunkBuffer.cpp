@@ -282,6 +282,14 @@ ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Any &v)
 	return v.saveToStream(stream);
 }
 
+ChunkBuffer& operator << (ChunkBuffer& stream, const cz::AnyTree &v)
+{
+	stream << v.name;
+	stream << v.data;
+	stream << v.children;
+	return stream;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Read operators
@@ -302,6 +310,14 @@ const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::string& v)
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Any &v)
 {
 	return v.readFromStream(stream);
+}
+
+const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::AnyTree &v)
+{
+	stream >> v.name;
+	stream >> v.data;
+	stream >> v.children;
+	return stream;
 }
 
 void details::ParameterPack::serialize(ChunkBuffer& stream)
