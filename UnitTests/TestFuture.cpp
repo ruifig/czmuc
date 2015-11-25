@@ -131,6 +131,64 @@ TEST(Future_Exceptions_BrokenPromise_NoState)
 		t.join();
 }
 
+//
+// Test continuations, by setting the value at the end
+TEST(Future_Continuations_1)
+{
+	Promise<std::string> pr;
+	auto ft1 = pr.get_future();
 
+	auto ft2 = ft1.then([&](Future<std::string>& ft)
+	{
+		CHECK_EQUAL("Hello", ft.get());
+		return 1;
+	});
+
+	auto ft3 = ft1.then([&](Future<std::string>& ft)
+	{
+		CHECK_EQUAL("Hello", ft.get());
+		return 2;
+	});
+
+	auto ft4 = ft2.then([&](Future<int>& ft)
+	{
+		return ft.get() + 10;
+	});
+
+	pr.set_value("Hello");
+	CHECK_EQUAL(1, ft2.get());
+	CHECK_EQUAL(2, ft3.get());
+	CHECK_EQUAL(11, ft4.get());
+}
+
+//
+// Test continuations, by setting the value at the beginning
+TEST(Future_Continuations_2)
+{
+	Promise<std::string> pr;
+	auto ft1 = pr.get_future();
+	pr.set_value("Hello");
+
+	auto ft2 = ft1.then([&](Future<std::string>& ft)
+	{
+		CHECK_EQUAL("Hello", ft.get());
+		return 1;
+	});
+
+	auto ft3 = ft1.then([&](Future<std::string>& ft)
+	{
+		CHECK_EQUAL("Hello", ft.get());
+		return 2;
+	});
+
+	auto ft4 = ft2.then([&](Future<int>& ft)
+	{
+		return ft.get() + 10;
+	});
+
+	CHECK_EQUAL(1, ft2.get());
+	CHECK_EQUAL(2, ft3.get());
+	CHECK_EQUAL(11, ft4.get());
+}
 
 }
