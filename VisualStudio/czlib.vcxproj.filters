@@ -158,6 +158,9 @@
     <ClInclude Include="..\source\crazygaze\rpc\TCPTransport.h">
       <Filter>crazygaze\rpc</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Future.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
