@@ -233,24 +233,7 @@ struct AnyTree
 	std::string name;
 	Any data;
 	std::vector<AnyTree> children;
+
 };
-
-template<typename Stream>
-const Stream& operator >> (const Stream& stream, cz::AnyTree &v)
-{
-	stream >> v.name;
-	stream >> v.data;
-	stream >> v.children;
-	return stream;
-}
-
-template<typename Stream>
-Stream& operator << (Stream& stream, const cz::AnyTree &v)
-{
-	stream << v.name;
-	stream << v.data;
-	stream << v.children;
-	return stream;
-}
 
 }  // namespace cz

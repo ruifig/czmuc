@@ -19,9 +19,11 @@ namespace cz
 namespace rpc
 {
 
+class BaseConnection;
 struct ConnectionUserData
 {
 	virtual ~ConnectionUserData() { }
+	BaseConnection* con = nullptr;
 };
 
 class BaseConnection
@@ -50,6 +52,7 @@ public:
 	void setUserData(std::shared_ptr<ConnectionUserData> userData)
 	{
 		m_userData = std::move(userData);
+		m_userData->con = this;
 	}
 
 	const std::shared_ptr<ConnectionUserData>& getUserData()
@@ -94,8 +97,10 @@ public:
 	typedef RemoteType_ RemoteType;
 	typedef LocalType_ LocalType;
 	explicit Connection(std::unique_ptr<Transport> transport)
-		: BaseConnection(std::move(transport))
+	    : BaseConnection(std::move(transport))
 	{
+		static_assert(std::is_void<LocalType>::value,
+		              "Need to specify a local object for this type of Connection.Use the other constructor");
 	}
 
 	template<typename U=LocalType_>

@@ -35,4 +35,4 @@ public:
 	REGISTERRPC(onSystemMsg)
 #include "crazygaze/rpc/RPCGenerate.h"
 
-DEFINE_RPC_SERVICE(ChatServerInterface, ChatClientInterface)
+DECLARE_RPC_SERVICE(ChatServerInterface, ChatClientInterface)

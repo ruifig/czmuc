@@ -23,12 +23,13 @@ namespace rpc
 class TCPTransport : public Transport
 {
 public:
-  TCPTransport(const std::string& ip, int port, net::CompletionPort& iocp,
-			WorkQueue* rcvQueue = nullptr);
+  TCPTransport(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
+  TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
   virtual ~TCPTransport();
 
-#include "crazygaze/czlibPCH.h"
 protected:
+
+	void init(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
 	//
 	// Transport interface
 	virtual ChunkBuffer prepareSend() override;

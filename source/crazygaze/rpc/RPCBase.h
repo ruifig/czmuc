@@ -214,22 +214,16 @@ struct Service
 	static_assert(sizeof(SERVER_INTERFACE) == 0, "You need to specialize for the required Server interface");
 };
 
-#define DEFINE_RPC_SERVICE(SERVER_INTERFACE, CLIENT_INTERFACE)                 \
-	namespace cz                                                               \
-	{                                                                          \
-	namespace rpc                                                              \
-	{                                                                          \
+#define DECLARE_RPC_SERVICE(SERVER_INTERFACE, CLIENT_INTERFACE)                \
 	template <>                                                                \
-	struct Service<SERVER_INTERFACE>                                           \
+	struct cz::rpc::Service<SERVER_INTERFACE>                                  \
 	{                                                                          \
 		using ServerInterface = SERVER_INTERFACE;                              \
 		using ClientInterface = CLIENT_INTERFACE;                              \
 		using ClientConnection = Connection<ServerInterface, ClientInterface>; \
 		using Server = Server<ServerInterface, ClientInterface>;               \
 		using ServerConnection = Connection<ClientInterface, ServerInterface>; \
-	};                                                                         \
-	}                                                                          \
-	}
+	};
 
 }  // namespace rpc
 }  // namespace cz

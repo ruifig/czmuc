@@ -79,8 +79,26 @@ static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, WorkQ
 //
 //////////////////////////////////////////////////////////////////////////
 
-TCPTransport::TCPTransport(const std::string& ip, int port, net::CompletionPort& iocp,
+TCPTransport::TCPTransport(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue)
+{
+	init(ip, port, iocp, rcvQueue);
+}
+
+TCPTransport::TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp,
 					   WorkQueue* rcvQueue) : m_rcvQueue(rcvQueue)
+{
+	init(address.toString(false), address.port, iocp, rcvQueue);
+}
+
+TCPTransport::~TCPTransport()
+{
+	LOGENTRY();
+	m_socket.reset();
+	m_queuedOps.wait();
+	LOGEXIT();
+}
+
+void TCPTransport::init(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue /*= nullptr*/)
 {
 	LOGENTRY();
 	m_socket = std::make_unique<net::TCPSocket>(iocp);
@@ -94,18 +112,11 @@ TCPTransport::TCPTransport(const std::string& ip, int port, net::CompletionPort&
 	});
 
 	auto res = m_socket->connect(ip, port);
+
 	// #TODO If connect failed, handle it properly
 	if (!res.get())
 		throw std::runtime_error("Could not connect to server socket");
 	m_customID = m_socket->getRemoteAddress().toString(true);
-	LOGEXIT();
-}
-
-TCPTransport::~TCPTransport()
-{
-	LOGENTRY();
-	m_socket.reset();
-	m_queuedOps.wait();
 	LOGEXIT();
 }
 

@@ -298,6 +298,7 @@ inline ChunkBuffer& operator << (ChunkBuffer& stream, T v)
 ChunkBuffer& operator << (ChunkBuffer& stream, const std::string& v);
 ChunkBuffer& operator << (ChunkBuffer& stream, const char* v);
 ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Any &v);
+ChunkBuffer& operator << (ChunkBuffer& stream, const cz::AnyTree &v);
 template<typename T>
 ChunkBuffer& operator << (ChunkBuffer& stream, const std::vector<T>& v)
 {
@@ -330,6 +331,7 @@ inline const ChunkBuffer& operator >> (const ChunkBuffer& stream, T& v) {
 }
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::string& v);
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Any &v);
+const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::AnyTree &v);
 
 template<typename T>
 const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::vector<T>& v)

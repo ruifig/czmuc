@@ -11,6 +11,7 @@
 
 #include "crazygaze/czlib.h"
 #include <string>
+#include "crazygaze/ChunkBuffer.h"
 
 namespace cz
 {
@@ -65,24 +66,8 @@ namespace cz
 		uint32_t a,b,c,d;
 	};
 
-	template<typename Stream>
-	const Stream& operator >> (const Stream& stream, cz::Guid& v)
-	{
-        stream >> v.a;
-        stream >> v.b;
-        stream >> v.c;
-        stream >> v.d;
-        return stream;
-	}
-	template<typename Stream>
-	Stream& operator << (Stream& stream, const cz::Guid& v)
-	{
-        stream << v.a;
-        stream << v.b;
-        stream << v.c;
-        stream << v.d;
-        return stream;
-	}
+	const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Guid& v);
+	ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Guid& v);
 
 	/*!
 		@}

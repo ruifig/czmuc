@@ -69,4 +69,23 @@ namespace cz
 
 		return false;
 	}
+
+	const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Guid& v)
+	{
+        stream >> v.a;
+        stream >> v.b;
+        stream >> v.c;
+        stream >> v.d;
+        return stream;
+	}
+
+	ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Guid& v)
+	{
+        stream << v.a;
+        stream << v.b;
+        stream << v.c;
+        stream << v.d;
+        return stream;
+	}
+
 } // namespace cz
