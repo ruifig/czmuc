@@ -13,6 +13,7 @@
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/Semaphore.h"
 #include "crazygaze/Any.h"
+#include "crazygaze/Future.h"
 
 namespace cz
 {
@@ -32,7 +33,7 @@ public:
 		m_exceptionCallback = std::move(func);
 	}
 
-	virtual std::future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) = 0;
+	virtual Future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) = 0;
 
 protected:
 	virtual const BaseRPCInfo* getRPCInfo(RPCHeader hdr) = 0;
@@ -51,11 +52,11 @@ protected:
 	struct ReplyInfo
 	{
 		BaseOutProcessor& outer;
-		std::shared_ptr<std::promise<ResultType>> pr;
+		std::shared_ptr<Promise<ResultType>> pr;
 		RPCHeader hdr;
 		ReplyInfo(BaseOutProcessor& outer, RPCHeader hdr) : outer(outer), hdr(hdr)
 		{
-			pr = std::make_shared<std::promise<ResultType>>();
+			pr = std::make_shared<Promise<ResultType>>();
 
 			std::unique_lock<std::mutex> lk(outer.m_mtx);
 			// NOTE: Capturing outer as a pointer, so it doesn't get copied into the lambda.
@@ -76,7 +77,7 @@ protected:
 				}
 			};
 		}
-		std::future<ResultType> error()
+		Future<ResultType> error()
 		{
 			auto ft = pr->get_future();
 			{
@@ -85,7 +86,7 @@ protected:
 			}
 			return ft;
 		}
-		std::future<ResultType> success()
+		Future<ResultType> success()
 		{
 			return pr->get_future();
 		}
@@ -95,20 +96,20 @@ protected:
 	struct ReplyInfo<void>
 	{
 		BaseOutProcessor& outer;
-		std::promise<void> pr;
+		Promise<void> pr;
 		RPCHeader hdr;
 		ReplyInfo(BaseOutProcessor& outer, RPCHeader hdr)
 			: outer(outer), hdr(hdr)
 		{
 		}
-		std::future<void> error()
+		Future<void> error()
 		{
 			std::string err("RPC Call failed");
 			outer.m_exceptionCallback(hdr, *outer.getRPCInfo(hdr), err);
 			pr.set_exception(std::make_exception_ptr(std::runtime_error(err)));
 			return pr.get_future();
 		}
-		std::future<void> success()
+		Future<void> success()
 		{
 			pr.set_value();
 			return pr.get_future();
@@ -121,7 +122,7 @@ protected:
 		typedef T type;
 	};
 	template<typename T>
-	struct RemoveFuture<std::future<T>>
+	struct RemoveFuture<Future<T>>
 	{
 		typedef T type;
 	};
@@ -153,7 +154,7 @@ protected:
 	}
 #else
 	template<class F, typename... Args>
-	auto _callrpcImpl(Transport& transport, uint32_t rpcid, F f, Args&&... args) -> std::future<decltype(f(std::forward<Args>(args)...))>;
+	auto _callrpcImpl(Transport& transport, uint32_t rpcid, F f, Args&&... args) -> Future<decltype(f(std::forward<Args>(args)...))>;
 #endif
 
 	uint32_t m_replyIdCounter = 0;
@@ -186,12 +187,12 @@ public:
 #else
 	template<class F, typename... Args>
 	auto _callrpc(Transport& transport, uint32_t rpcid, F f, Args&&... args) 
-				-> std::future<decltype(f(std::forward<Args>(args)...))>;
+				-> Future<decltype(f(std::forward<Args>(args)...))>;
 #endif
 
 protected:
 
-	virtual std::future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
+	virtual Future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
 	{
 		return _callrpcImpl(transport, uint32_t(decltype(m_tbl)::RPCId::genericRPC), &_genericRPCDummy, func, params);
 	}
@@ -222,11 +223,11 @@ protected:
 #pragma warning(push)
 // warning C4702: unreachable code
 #pragma warning(disable:4702)
-	virtual std::future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
+	virtual Future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
 	{
 		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
-		return std::future<cz::Any>();
+		return Future<cz::Any>();
 	}
 #pragma warning(pop)
 
@@ -270,25 +271,36 @@ public:
 	}
 
 	template<typename T>
-	void processReply(const ReplyStream& reply, std::future<T> r)
+	void processReply(const ReplyStream& reply, Future<T> r)
 	{
 		m_futureRepliesCount.increment();
 
-		std::unique_lock<std::mutex> lk(m_mtx);
-		// Clear up any finished futures
-		m_futureRepliesDone.clear();
-
-		m_futureReplies[reply.hdr.key()] = then(std::move(r), [this, reply](T v)
+		//
+		// Setup the continuation without holding the lock, since if it executes in situ, it will mess up.
+		// So we setup the continuation, and add the resulting future to the map later
+		auto ft = r.then([this, reply](Future<T>& r)
 		{
-			processReply(reply, std::forward<T>(v));
+			processReply(reply, r.get());
 			{
 				std::unique_lock<std::mutex> lk(m_mtx);
-				auto it = m_futureReplies.find(reply.hdr.key());
-				m_futureRepliesDone[reply.hdr.key()] = std::move(it->second);
-				m_futureReplies.erase(it);
+				// Delay the future removal
+				m_futureRepliesDone.push(reply.hdr.key());
 			}
-			m_futureRepliesCount.decrement();
 		});
+
+		std::unique_lock<std::mutex> lk(m_mtx);
+		m_futureReplies[reply.hdr.key()] = std::move(ft);
+		// Clear up any finished futures
+		// This is necessary, because the continuations can execute in situ, and will mess up because the mutex
+		// is not recursive. Therefore, we delay the deletion of completed futures 
+		while(m_futureRepliesDone.size())
+		{
+			uint32_t key = m_futureRepliesDone.front();
+			m_futureRepliesDone.pop();
+			auto it = m_futureReplies.find(key);
+			m_futureReplies.erase(it);
+			m_futureRepliesCount.decrement();
+		}
 	}
 
 	virtual void dispatchReceived(uint32_t rpcid, const ChunkBuffer& in, ReplyStream& replyStream) = 0;
@@ -322,11 +334,12 @@ public:
 protected:
 
 	std::mutex m_mtx;
-	std::unordered_map<uint32_t, std::future<void>> m_futureReplies;
+	std::unordered_map<uint32_t, Future<void>> m_futureReplies;
+
 	//! This is used to put in future replies that completed.
 	// It's necessary, since deleting the futures from inside the continuation itself will result in a deadlock because
 	// a future's destructor will block until its value is set.
-	std::unordered_map<uint32_t, std::future<void>> m_futureRepliesDone;
+	std::queue<uint32_t> m_futureRepliesDone;
 
 	cz::ZeroSemaphore m_futureRepliesCount;
 };

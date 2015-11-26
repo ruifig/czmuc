@@ -43,7 +43,6 @@
     <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
     <ClInclude Include="..\source\crazygaze\Random.h" />
     <ClInclude Include="..\source\crazygaze\RingBuffer.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\BaseRPCProcessor.h" />
     <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h" />
     <ClInclude Include="..\source\crazygaze\rpc\RPCTransport.h" />

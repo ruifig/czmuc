@@ -76,7 +76,7 @@ public:
 		return getOutProcessor()->_callgenericrpc(*m_transport.get(), func, params);
 	}
 #else
-	std::future<cz::Any> _callgenericrpc(const char* func, const std::vector<cz::Any>& params);
+	Future<cz::Any> _callgenericrpc(const char* func, const std::vector<cz::Any>& params);
 #endif
 
 protected:
@@ -133,7 +133,7 @@ public:
 	}
 #else
 	template<class F, typename... Args>
-	auto _callrpc(uint32_t rpcid, F f, Args&&... args) -> std::future<decltype(f(std::forward<Args>(args)...))>;
+	auto _callrpc(uint32_t rpcid, F f, Args&&... args) -> Future<decltype(f(std::forward<Args>(args)...))>;
 #endif
 
 	static Connection* getCurrent()

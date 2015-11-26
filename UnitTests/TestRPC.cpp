@@ -71,6 +71,7 @@ public:
 		return a / b;
 	}
 
+	/*
 	std::future<int> slowSum(int a, int b)
 	{
 		return std::async(std::launch::async, [=]
@@ -78,6 +79,13 @@ public:
 			Sleep(10);
 			return a + b;}
 		);
+	}
+	*/
+	Future<int> slowSum(int a, int b)
+	{
+		Promise<int> pr;
+		pr.set_value(a + b);
+		return pr.get_future();
 	}
 
 	std::vector<int> primeNumbers()
@@ -163,8 +171,8 @@ public:
 	}
 
 	mutable std::string m_text;
-	std::future<int> m_doFunc1Ret;
-	std::promise<std::string> m_doFunc3;
+	Future<int> m_doFunc1Ret;
+	Promise<std::string> m_doFunc3;
 };
 
 #define RPCTABLE_CLASS RPCTest
@@ -230,7 +238,6 @@ void RPCTest::doFunc2(const std::string& v)
 
 SUITE(RPC)
 {
-
 TEST(Simple)
 {
 	Semaphore serverRunning, finish;
@@ -340,7 +347,7 @@ TEST(VariousParameters)
 			auto res4 = CALLRPC(rpcClient, addStrings1, std::string("Hi "), std::string("There"));
 
 			// Check if a return type of const char* is treated as std::string
-			static_assert(std::is_same<decltype(res1.get()), std::string>::value, "Wrong type");
+			static_assert(std::is_same<std::decay<decltype(res1.get())>::type, std::string>::value, "Wrong type");
 
 			CHECK_EQUAL(std::string("Hi There"), res1.get());
 			CHECK_EQUAL(std::string("Hi There"), res2.get());
@@ -477,6 +484,7 @@ TEST(Inheritance)
 	waitForQueueToFinish();
 }
 
+
 TEST(ConnectFailure)
 {
 	CompletionPort iocp(1);
@@ -564,6 +572,7 @@ TEST(ConnectionDropped)
 	});
 	// wait for the server to be running
 	serverRunning.wait();
+	Sleep(1);
 
 	auto clientThread = std::thread([&]()
 	{
@@ -576,7 +585,7 @@ TEST(ConnectionDropped)
 
 		// Now, calling the RPC should fail
 		auto res = CALLRPC(client, addStrings1, "Hi ", "There");
-		CHECK_THROW(res.get(), std::future_error);
+		CHECK_THROW(res.get(), FutureError);
 	});
 
 	clientThread.join();
@@ -736,6 +745,7 @@ TEST(GenericRPC)
 	serverThread.join();
 	waitForQueueToFinish();
 }
+
 
 }
 

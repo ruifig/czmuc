@@ -411,23 +411,20 @@ public:
 		return Future<T>(m_data);
 	}
 
-	template<typename U = T>
-	typename std::enable_if<!std::is_same<U,void>::value, void>::type
-	set_value(T val)
+	void set_value(T val)
 	{
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		m_data->set_value(std::move(val));
 	}
-
-	template<typename U = T>
-	typename std::enable_if<std::is_same<U,void>::value, void>::type
-	set_value()
+	
+	void set_exception(std::exception_ptr p)
 	{
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
-		m_data->set_value();
+		m_data->set_exception(std::move(p));
 	}
+
 private:
 	std::shared_ptr<details::FutureData<T>> m_data;
 };
@@ -488,6 +485,13 @@ public:
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		m_data->set_value(true);
+	}
+
+	void set_exception(std::exception_ptr p)
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		m_data->set_exception(std::move(p));
 	}
 private:
 	std::shared_ptr<details::FutureData<bool>> m_data;
