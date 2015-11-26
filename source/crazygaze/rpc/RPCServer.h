@@ -39,8 +39,6 @@ public:
 	}
 	virtual ~BaseServer()
 	{
-		// First destroy this, so it does any necessary blocks to finish any callbacks we might have running on other threads
-		m_serverTransport.reset();
 	}
 
 	void setClientConnectCallback(std::function<void(BaseConnection*)> func)
@@ -95,12 +93,18 @@ public:
 		return nullptr;
 	}
 protected:
+
 	typedef std::unordered_map<const Transport*, std::unique_ptr<BaseConnection>> ClientMap;
 	std::unique_ptr<ServerTransport> m_serverTransport;
 	std::mutex m_mtx;
 	ClientMap m_clients;
 	std::function<void(BaseConnection*)> m_clientConnectCallback = [](BaseConnection*) {} ;
 	std::function<void(BaseConnection*)> m_clientDisconnectCallback = [](BaseConnection*) {};
+
+	void destroy()
+	{
+		m_serverTransport.reset();
+	}
 
 	void onNewClient(std::unique_ptr<Transport> transport)
 	{
@@ -155,6 +159,7 @@ public:
 
 	virtual ~Server()
 	{
+		destroy();
 	}
 
 	static ClientType* castClient(BaseConnection* client)

@@ -261,6 +261,13 @@ TEST(Future_void_exceptions)
 
 	{
 		Promise<void> pr;
+		pr.set_exception(std::make_exception_ptr(std::logic_error("Error")));
+		checkFutureErrorCode(FutureError::Code::PromiseAlreadySatisfied, [&] {pr.set_value();});
+		CHECK_THROW(pr.get_future().get(), std::logic_error);
+	}
+
+	{
+		Promise<void> pr;
 		auto ft = pr.get_future();
 		auto t = std::thread([pr=std::move(pr)]
 		{

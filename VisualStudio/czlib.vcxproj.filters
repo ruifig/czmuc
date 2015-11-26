@@ -92,9 +92,6 @@
     <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h">
       <Filter>crazygaze\rpc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\rpc\BaseRPCProcessor.h">
-      <Filter>crazygaze\rpc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\Guid.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
