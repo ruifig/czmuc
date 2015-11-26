@@ -61,11 +61,75 @@ private:
 //
 template<typename T> class Future;
 template<typename T> class Promise;
-template<typename T>
-Future<T> makeReadyFuture(T&& v);
 
 namespace details
 {
+
+	template<typename T> class FutureData;
+
+	template<typename T>
+	struct Result
+	{
+		enum class Type
+		{
+			None,
+			Value,
+			Exception
+		};
+		union
+		{
+			T val;
+			//Continuation m_continuation;
+			std::exception_ptr exc;
+		};
+		mutable Type type = Type::None;
+
+		Result() { }
+		~Result()
+		{
+			switch (type)
+			{
+			case Type::None:
+				break;
+			case Type::Value:
+				val.~T();
+				break;
+			case Type::Exception:
+				exc.~exception_ptr();
+				break;
+			};
+		}
+
+		bool is_ready() const { return type != Type::None; }
+		void set_value(T v)
+		{
+			assert(type == Type::None);
+			new (&val) T(std::move(v));
+			type = Type::Value;
+		}
+		void set_exception(std::exception_ptr p)
+		{
+			assert(type == Type::None);
+			new (&exc) std::exception_ptr(std::move(p));
+			type = Type::Exception;
+		}
+
+		const T& get() const
+		{
+			switch (type)
+			{
+			case Type::None:
+				throw FutureError(FutureError::Code::NoState);
+			case Type::Value:
+				return val;
+			case Type::Exception:
+				std::rethrow_exception(exc);
+			default:
+				assert(0 && "Unexpected");
+				throw std::exception("Unexpected");
+			}
+		}
+	};
 
 	template<typename T>
 	class FutureData : public std::enable_shared_from_this<FutureData<T>>
@@ -126,29 +190,6 @@ namespace details
 			m_cond.notify_all();
 		}
 
-		template<typename Cont>
-		auto then(Cont w) -> Future<decltype(w(Future<T>()))>
-		{
-			std::unique_lock<std::mutex> lk(m_mtx);
-			using WT = decltype(w(Future<T>()));
-
-			if (m_result.is_ready())
-			{
-				// Unlock before calling the continuation, since it's unknown code
-				lk.unlock();
-				return makeReadyFuture<WT>(w(Future<T>(this->shared_from_this())));
-			}
-
-			Promise<WT> pr;
-			auto ft = pr.get_future();
-			m_continuations.push_back(
-				[this, pr=std::move(pr), w=std::move(w)]() mutable
-			{
-				pr.set_value(w(Future<T>(this->shared_from_this())));
-			});
-			return ft;
-		}
-
 		void prAcquire()
 		{
 			std::unique_lock<std::mutex> lk(m_mtx);
@@ -165,72 +206,61 @@ namespace details
 			}
 		}
 
-	private:
+		template< typename Cont, typename OuterFt>
+		auto thenImpl(Cont w, OuterFt outerFt)
+			-> typename std::enable_if<!std::is_void<decltype(w(outerFt))>::value, Future<decltype(w(outerFt))>>::type
+		{
+			std::unique_lock<std::mutex> lk(m_mtx);
+			using WT = decltype(w(outerFt));
+
+			if (m_result.is_ready())
+			{
+				// Unlock before calling the continuation, since it's unknown code
+				lk.unlock();
+				return Future<WT>::makeReady(w(std::forward<OuterFt>(outerFt)));
+			}
+
+			Promise<WT> pr;
+			auto ft = pr.get_future();
+			m_continuations.push_back(
+				[outerFt = std::move(outerFt), pr = std::move(pr), w = std::move(w)]() mutable
+			{
+				pr.set_value(w(std::forward<OuterFt>(outerFt)));
+			});
+			return ft;
+		}
+
+		template< typename Cont, typename OuterFt>
+		auto thenImpl(Cont w, OuterFt outerFt)
+			-> typename std::enable_if<std::is_void<decltype(w(outerFt))>::value, Future<decltype(w(outerFt))>>::type
+		{
+			std::unique_lock<std::mutex> lk(m_mtx);
+			using WT = decltype(w(outerFt));
+
+			if (m_result.is_ready())
+			{
+				// Unlock before calling the continuation, since it's unknown code
+				lk.unlock();
+				w(std::forward<OuterFt>(outerFt));
+				return Future<WT>::makeReady();
+			}
+
+			Promise<WT> pr;
+			auto ft = pr.get_future();
+			m_continuations.push_back(
+				[outerFt = std::move(outerFt), pr = std::move(pr), w = std::move(w)]() mutable
+			{
+				w(std::forward<OuterFt>(outerFt));
+				pr.set_value();
+			});
+			return ft;
+		}
+		
+	protected:
+
 		mutable std::mutex m_mtx;
 		mutable std::condition_variable m_cond;
-		struct Result
-		{
-			enum class Type
-			{
-				None,
-				Value,
-				Exception
-			};
-			union
-			{
-				T val;
-				//Continuation m_continuation;
-				std::exception_ptr exc;
-			};
-			mutable Type type = Type::None;
-
-			Result() { }
-			~Result()
-			{
-				switch (type)
-				{
-				case Type::None:
-					break;
-				case Type::Value:
-					val.~T();
-					break;
-				case Type::Exception:
-					exc.~exception_ptr();
-					break;
-				};
-			}
-
-			bool is_ready() const { return type != Type::None; }
-			void set_value(T v)
-			{
-				assert(type == Type::None);
-				new (&val) T(std::move(v));
-				type = Type::Value;
-			}
-			void set_exception(std::exception_ptr p)
-			{
-				assert(type == Type::None);
-				new (&exc) std::exception_ptr(std::move(p));
-				type = Type::Exception;
-			}
-
-			const T& get() const
-			{
-				switch (type)
-				{
-				case Type::None:
-					throw FutureError(FutureError::Code::NoState);
-				case Type::Value:
-					return val;
-				case Type::Exception:
-					std::rethrow_exception(exc);
-				default:
-					assert(0 && "Unexpected");
-					throw std::exception("Unexpected");
-				}
-			}
-
-		} m_result;
+		Result<T> m_result;
 		unsigned m_prCount = 0;
 		std::vector<std::function<void()>> m_continuations;
 	};
@@ -271,19 +301,64 @@ public:
 	{
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
-		return m_data->then(std::move(w));
+		return m_data->thenImpl(std::forward<Cont>(w), *this);
+	}
+
+	static Future makeReady(T v)
+	{
+		return Future(std::make_shared<details::FutureData<T>>(std::move(v)));
 	}
 
 private:
 	std::shared_ptr<details::FutureData<T>> m_data;
 };
 
-template<typename T>
-Future<T> makeReadyFuture(T&& v)
+template<>
+class Future<void>
 {
-	auto data = std::make_shared<details::FutureData<T>>(std::forward<T>(v));
-	return Future<T>(std::move(data));
-}
+public:
+	Future() {}
+	Future(std::shared_ptr<details::FutureData<bool>> data) : m_data(std::move(data)) { }
+	Future(Future&& other) : m_data(std::move(other.m_data)) { };
+	Future(const Future& rhs) : m_data(rhs.m_data) { }
+	~Future() { }
+
+	Future& operator=(const Future& rhs)
+	{
+		m_data = rhs.m_data;
+		return *this;
+	}
+
+	Future& operator=(Future&& rhs)
+	{
+		m_data = std::move(rhs.m_data);
+		return *this;
+	}
+
+	void get() const
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		m_data->get();
+		return;
+	}
+
+	template<typename Cont>
+	auto then(Cont w)
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		return m_data->thenImpl(std::forward<Cont>(w), *this);
+	}
+
+	static Future makeReady()
+	{
+		return Future(std::make_shared<details::FutureData<bool>>(true));
+	}
+
+private:
+	std::shared_ptr<details::FutureData<bool>> m_data;
+};
 
 template<typename T>
 class Promise
@@ -314,7 +389,7 @@ public:
 
 	Promise& operator=(const Promise& rhs)
 	{
-		if (m_data != &rhs.m_data)
+		if (m_data != rhs.m_data)
 		{
 			m_data = rhs.m_data;
 			if (m_data)
@@ -336,14 +411,86 @@ public:
 		return Future<T>(m_data);
 	}
 
-	void set_value(T val)
+	template<typename U = T>
+	typename std::enable_if<!std::is_same<U,void>::value, void>::type
+	set_value(T val)
 	{
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		m_data->set_value(std::move(val));
 	}
+
+	template<typename U = T>
+	typename std::enable_if<std::is_same<U,void>::value, void>::type
+	set_value()
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		m_data->set_value();
+	}
 private:
 	std::shared_ptr<details::FutureData<T>> m_data;
+};
+
+template<>
+class Promise<void>
+{
+public:
+	Promise()
+	{
+		m_data = std::make_shared<details::FutureData<bool>>();
+		m_data->prAcquire();
+	}
+
+	~Promise()
+	{
+		if (m_data)
+			m_data->prRelease();
+	}
+
+	Promise(const Promise& rhs)
+		: m_data(rhs.m_data)
+	{
+		m_data->prAcquire();
+	}
+
+	Promise(Promise&& rhs)
+		: m_data(std::move(rhs.m_data))
+	{
+	}
+
+	Promise& operator=(const Promise& rhs)
+	{
+		if (m_data != rhs.m_data)
+		{
+			m_data = rhs.m_data;
+			if (m_data)
+				m_data->prAcquire();
+		}
+		return *this;
+	}
+
+	Promise& operator=(Promise&& rhs)
+	{
+		m_data = std::move(rhs.m_data);
+		return *this;
+	}
+
+	Future<void> get_future()
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		return Future<void>(m_data);
+	}
+
+	void set_value()
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		m_data->set_value(true);
+	}
+private:
+	std::shared_ptr<details::FutureData<bool>> m_data;
 };
 
 }
