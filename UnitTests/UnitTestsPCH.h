@@ -28,6 +28,7 @@
 #include "crazygaze/TypeTraits.h"
 #include "crazygaze/Any.h"
 #include "crazygaze/Future.h"
+#include "crazygaze/Semaphore.h"
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/net/TCPSocket.h"
 #include "crazygaze/net/TCPServer.h"

@@ -30,7 +30,7 @@ TEST(Future_Async)
 	{
 		// Wait for the main thread be ready to wait on the future, so we can measure the time
 		checkpoint1.wait();
-		UnitTest::TimeHelpers::SleepMs(100);
+		UnitTest::TimeHelpers::SleepMs(50);
 		pr.set_value("Hello");
 	});
 
@@ -39,7 +39,7 @@ TEST(Future_Async)
 	auto res = ft1.get();
 	auto t2 = timer.GetTimeInMs();
 	CHECK_EQUAL(std::string("Hello"), res);
-	CHECK_CLOSE(100, t2 - t1, 10);
+	CHECK_CLOSE(50, t2 - t1, 5);
 	t.join();
 }
 
@@ -138,7 +138,7 @@ TEST(Future_Continuations_1)
 	Promise<std::string> pr;
 	auto ft1 = pr.get_future();
 
-	auto ft2 = ft1.then([&](Future<std::string>& ft)
+	auto ft2 = ft1.then([&](Future<std::string>& ft) -> int
 	{
 		CHECK_EQUAL("Hello", ft.get());
 		return 1;
@@ -189,6 +189,87 @@ TEST(Future_Continuations_2)
 	CHECK_EQUAL(1, ft2.get());
 	CHECK_EQUAL(2, ft3.get());
 	CHECK_EQUAL(11, ft4.get());
+}
+
+
+TEST(Future_void)
+{
+	// Simple
+	{
+		Promise<void> pr;
+		auto ft = pr.get_future();
+		pr.set_value();
+		ft.get();
+	}
+
+	// Check async
+	{
+		UnitTest::Timer timer;
+		timer.Start();
+		Promise<void> pr;
+		auto ft1 = pr.get_future();
+		Semaphore checkpoint1;
+		auto t = std::thread([&checkpoint1, pr = std::move(pr)]() mutable
+		{
+			// Wait for the main thread be ready to wait on the future, so we can measure the time
+			checkpoint1.wait();
+			UnitTest::TimeHelpers::SleepMs(50);
+			pr.set_value();
+		});
+
+		checkFutureErrorCode(FutureError::Code::NoState, [&] {pr.set_value();});
+
+		checkpoint1.notify();
+		auto t1 = timer.GetTimeInMs();
+		ft1.get();
+		auto t2 = timer.GetTimeInMs();
+		CHECK_CLOSE(50, t2 - t1, 5);
+		t.join();
+	}
+}
+
+TEST(Future_void_Continuations)
+{
+	Promise<void> pr;
+	auto ft1 = pr.get_future();
+	bool ft1Done = false, ft2Done = false;
+	auto ft2 = ft1.then([&ft1Done](Future<void>& ft)
+	{
+		ft1Done = true;
+	});
+
+	auto ft3 = ft2.then([&ft2Done](Future<void>& ft)
+	{
+		ft2Done = true;
+		return 1;
+	});
+
+	pr.set_value();
+
+	CHECK(ft1Done);
+	CHECK(ft2Done);
+	CHECK_EQUAL(1, ft3.get());
+}
+
+TEST(Future_void_exceptions)
+{
+	{
+		Promise<void> pr;
+		pr.set_value();
+		checkFutureErrorCode(FutureError::Code::PromiseAlreadySatisfied, [&] {pr.set_value();});
+	}
+
+	{
+		Promise<void> pr;
+		auto ft = pr.get_future();
+		auto t = std::thread([pr=std::move(pr)]
+		{
+		});
+		checkFutureErrorCode(FutureError::Code::NoState, [&] {pr.set_value();});
+		checkFutureErrorCode(FutureError::Code::NoState, [&] {pr.get_future();});
+		t.join();
+		checkFutureErrorCode(FutureError::Code::BrokenPromise, [&] {ft.get();});
+	}
 }
 
 }
