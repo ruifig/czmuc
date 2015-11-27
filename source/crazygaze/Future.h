@@ -56,6 +56,28 @@ private:
 };
 
 
+#ifdef __clcpp_parse__
+
+template<typename T>
+class Future
+{
+public:
+
+};
+
+template<typename T>
+class Promise
+{
+public:
+	template<typename U>
+	void set_value(U v);
+	void set_value();
+	void set_exception(std::exception_ptr p);
+	Future<T> get_future();
+};
+
+#else
+
 //
 // Forward declarations
 //
@@ -64,6 +86,7 @@ template<typename T> class Promise;
 
 namespace details
 {
+
 
 	template<typename T> class FutureData;
 
@@ -129,6 +152,22 @@ namespace details
 				throw std::exception("Unexpected");
 			}
 		}
+
+		T&& getMove()
+		{
+			switch (type)
+			{
+			case Type::None:
+				throw FutureError(FutureError::Code::NoState);
+			case Type::Value:
+				return std::move(val);
+			case Type::Exception:
+				std::rethrow_exception(exc);
+			default:
+				assert(0 && "Unexpected");
+				throw std::exception("Unexpected");
+			}
+		}
 	};
 
 	template<typename T>
@@ -161,6 +200,13 @@ namespace details
 				wait();
 		    return m_result.get();
 	    }
+
+		T&& getMove()
+		{
+			if (!m_result.is_ready())
+				wait();
+		    return std::move(m_result.getMove());
+		}
 
 		void set_value(T v)
 		{
@@ -264,6 +310,7 @@ namespace details
 		unsigned m_prCount = 0;
 		std::vector<std::function<void()>> m_continuations;
 	};
+
 }
 
 template<typename T>
@@ -294,6 +341,19 @@ public:
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		return m_data->get();
+	}
+
+	
+	/*! Similar to get, but moves out the value.
+	* This is NOT thread safe.
+	* Being not thread safe should not be a problem, since in the cases you want to move out
+	* the value, you don't want to be sharing the state with other futures anyway.
+	*/
+	T&& getMove()
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		return std::move(m_data->getMove());
 	}
 
 	template<typename Cont>
@@ -496,6 +556,10 @@ public:
 private:
 	std::shared_ptr<details::FutureData<bool>> m_data;
 };
+
+#endif
+
+
 
 }
 
