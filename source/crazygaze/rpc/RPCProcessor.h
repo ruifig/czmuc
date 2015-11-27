@@ -278,7 +278,7 @@ public:
 		//
 		// Setup the continuation without holding the lock, since if it executes in situ, it will mess up.
 		// So we setup the continuation, and add the resulting future to the map later
-		auto ft = r.then([this, reply](Future<T>& r)
+		auto ft = r.then([this, reply](const Future<T>& r)
 		{
 			processReply(reply, r.get());
 			{

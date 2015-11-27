@@ -144,7 +144,7 @@ TEST(Future_Continuations_1)
 		return 1;
 	});
 
-	auto ft3 = ft1.then([&](Future<std::string>& ft)
+	auto ft3 = ft1.then([&](auto& ft) // Trying with generic lambda (so I don't need to type the parameter type)
 	{
 		CHECK_EQUAL("Hello", ft.get());
 		return 2;
@@ -278,5 +278,20 @@ TEST(Future_void_exceptions)
 		checkFutureErrorCode(FutureError::Code::BrokenPromise, [&] {ft.get();});
 	}
 }
+
+TEST(Future_getMove)
+{
+	Promise<std::string> pr;
+	auto ft1 = pr.get_future();
+	auto ft2 = pr.get_future();
+	pr.set_value("Hello");
+
+	auto s = ft1.getMove();
+	CHECK_EQUAL("Hello", s);
+	// The string was moved out, so should be empty now
+	CHECK_EQUAL("", ft1.get());
+	CHECK_EQUAL("", ft2.get());
+}
+
 
 }
