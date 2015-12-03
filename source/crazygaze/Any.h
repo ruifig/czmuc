@@ -14,9 +14,6 @@
 namespace cz
 {
 
-/*
-Used to hold parameters passed for server console commands
-*/
 class Any
 {
   public:

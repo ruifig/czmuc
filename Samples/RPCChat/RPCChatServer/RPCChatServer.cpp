@@ -148,7 +148,7 @@ private:
 	{
 		auto info = std::make_shared<ClientInfo>();
 		info->client = static_cast<Service<ChatServerInterface>::ServerConnection*>(client);
-		printf("%s connected.\n", info->client->getTransport()->getCustomID().c_str());
+		printf("%s connected.\n", info->client->getTransport()->getPropertyAsString("peer_addr"));
 		client->setUserData(std::move(info));
 	}
 	void onClientDisconnect(BaseConnection* client)
@@ -159,7 +159,7 @@ private:
 			printf("User %s disconnected.\n", info->name.c_str());
 			sendSystemMsg(formatString("User %s disconnected", info->name.c_str()));
 		}
-		printf("%s disconnected.\n", info->client->getTransport()->getCustomID().c_str());
+		printf("%s disconnected.\n", info->client->getTransport()->getPropertyAsString("peer_addr"));
 	}
 
 	void broadcastMsg(const std::string& from, const std::string& msg)

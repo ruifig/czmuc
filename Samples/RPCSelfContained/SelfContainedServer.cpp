@@ -34,13 +34,13 @@ void SelfContainedServer::init(net::CompletionPort& iocp, int listeningPort)
 	
 	m_rpc->setClientConnectCallback([](rpc::BaseConnection* client)
 	{
-		printf("Client connected: %s\n", client->getTransport()->getCustomID().c_str());
+		printf("Client connected: %s\n", client->getTransport()->getPropertyAsString("peer_addr"));
 		client->setUserData(std::make_shared<ClientInfo>());
 	});
 
 	m_rpc->setClientDisconnectCallback([](rpc::BaseConnection* client)
 	{
-		printf("Client connected: %s\n", client->getTransport()->getCustomID().c_str());
+		printf("Client disconnected: %s\n", client->getTransport()->getPropertyAsString("peer_addr"));
 	});
 }
 
@@ -57,7 +57,7 @@ std::vector<std::string> SelfContainedServer::getClients()
 	std::vector<std::string> v;
 	m_rpc->iterateClients([&](auto client)
 	{
-		v.push_back(client->getTransport()->getCustomID());
+		v.push_back(client->getTransport()->getPropertyAsString("peer_addr"));
 	});
 	return v;
 }

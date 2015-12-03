@@ -20,6 +20,14 @@ Transport::Transport()
 {
 }
 
+const char* Transport::getPropertyAsString(const char* name) const
+{
+	auto it = m_properties.find(name);
+	if (it == m_properties.end())
+		return "";
+	return it->second.convertToString();
+}
+
 int Transport::hasFullRPC(const ChunkBuffer& in)
 {
 	//

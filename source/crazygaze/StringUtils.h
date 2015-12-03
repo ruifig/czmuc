@@ -15,7 +15,7 @@ namespace cz
 {
 
     void stringSplitIntoLines(const char* textbuffer, int buffersize, std::vector<std::string> *lines);
-	void splitString(const char* str, char delimiter, std::vector<std::string> &tokens);
+	std::vector<std::string> splitString(const char* str, char delimiter);
     bool notSpace(int a);
 
 	/*! Checks if a string ends with another substring */

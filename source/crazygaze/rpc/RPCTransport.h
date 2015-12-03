@@ -29,13 +29,29 @@ public:
 	virtual ~Transport() {}
 	virtual ChunkBuffer prepareSend() = 0;
 	virtual bool send(ChunkBuffer&& data) = 0;
-	virtual const std::string& getCustomID() const = 0;
+	
+	template<typename T>
+	bool getProperty(const char* name, T& dst ) const
+	{
+		auto it = m_properties.find(name);
+		if (it == m_properties.end())
+			return false;
+		return it->second.getAs<T>(dst);
+	}
+	const char* getPropertyAsString(const char* name) const;
+	template<typename T>
+	void setProperty(const char* name, const T& val)
+	{
+		m_properties[name] = Any(val);
+	}
+
 	static int hasFullRPC(const ChunkBuffer& in);
 	void onReceivedData(const ChunkBuffer& in);
 	void onDisconnected();
 protected:
 	friend class BaseConnection;
 	void setOwner(BaseConnection* owner);
+	std::unordered_map<std::string, Any> m_properties; // For any custom properties derived classes my want to pass to the user
 private:
 	BaseConnection* m_owner = nullptr;
 };
