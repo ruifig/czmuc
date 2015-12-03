@@ -9,9 +9,9 @@ bool notSpace(int a)
     return !(a==' ' || a=='\t' || a==0xA || a==0xD);
 }
 
-void splitString(const char* str, char delimiter, std::vector<std::string> &tokens)
+std::vector<std::string> splitString(const char* str, char delimiter)
 {
-	tokens.clear();
+	std::vector<std::string> tokens;
 
 	while(*str!=0)
 	{
@@ -27,6 +27,8 @@ void splitString(const char* str, char delimiter, std::vector<std::string> &toke
 		while(*str!=0 && *str==delimiter)
 			str++;
 	}
+
+	return tokens;
 }
 
 void stringSplitIntoLines(const char* textbuffer, int buffersize, std::vector<std::string> *lines)
@@ -79,7 +81,7 @@ const char* formatString(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	char *str= formatStringVA(format, args);
+	const char *str= formatStringVA(format, args);
 	va_end(args);
 	return str;
 }

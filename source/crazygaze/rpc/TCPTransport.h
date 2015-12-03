@@ -34,7 +34,6 @@ protected:
 	// Transport interface
 	virtual ChunkBuffer prepareSend() override;
 	virtual bool send(ChunkBuffer&& data) override;
-	virtual const std::string& getCustomID() const override;
 
 	//
 	// TCPSocket callbacks

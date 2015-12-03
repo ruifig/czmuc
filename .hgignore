@@ -10,6 +10,7 @@ syntax: glob
 *.pdb
 *.idb
 *.aps
+*.opendb
 
 #
 # Note: Patterns using the regexp syntax can be rooted with the prefix ^

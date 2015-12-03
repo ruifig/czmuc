@@ -85,7 +85,7 @@ TCPTransport::TCPTransport(const char* ip, int port, net::CompletionPort& iocp, 
 }
 
 TCPTransport::TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp,
-					   WorkQueue* rcvQueue) : m_rcvQueue(rcvQueue)
+					   WorkQueue* rcvQueue)
 {
 	init(address.toString(false), address.port, iocp, rcvQueue);
 }
@@ -101,6 +101,7 @@ TCPTransport::~TCPTransport()
 void TCPTransport::init(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue /*= nullptr*/)
 {
 	LOGENTRY();
+	m_rcvQueue = rcvQueue;
 	m_socket = std::make_unique<net::TCPSocket>(iocp);
 	m_socket->setOnReceive([this](const ChunkBuffer& buf)
 	{
@@ -148,11 +149,6 @@ bool TCPTransport::send(ChunkBuffer&& data)
 	uint32_t size = data.calcSize();
 	data.writeAt(pos, static_cast<uint32_t>(size - sizeof(size)));
 	return m_socket->send(std::move(data));
-}
-
-const std::string& TCPTransport::getCustomID() const
-{
-	return m_customID;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -226,7 +222,9 @@ public:
 		: m_clientInfo(clientInfo)
 	{
 		LOGENTRY();
-		m_customID = m_clientInfo->getSocket()->getRemoteAddress().toString(true);
+		setProperty("peer_ip", m_clientInfo->getSocket()->getRemoteAddress().toString(false));
+		setProperty("peer_port", m_clientInfo->getSocket()->getRemoteAddress().port);
+		setProperty("peer_addr", m_clientInfo->getSocket()->getRemoteAddress().toString(true));
 		LOGEXIT();
 	}
 	virtual ~TCPServerSideTransport()
@@ -253,13 +251,7 @@ protected:
 		return m_clientInfo->getSocket()->send(std::move(data));
 	}
 
-	virtual const std::string& getCustomID() const override
-	{
-		return m_customID;
-	}
-
 	TCPServerConnection* m_clientInfo;
-	std::string m_customID;
 };
 
 //////////////////////////////////////////////////////////////////////////
