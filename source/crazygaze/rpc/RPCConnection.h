@@ -52,7 +52,8 @@ public:
 	void setUserData(std::shared_ptr<ConnectionUserData> userData)
 	{
 		m_userData = std::move(userData);
-		m_userData->con = this;
+		if (m_userData)
+			m_userData->con = this;
 	}
 
 	const std::shared_ptr<ConnectionUserData>& getUserData()

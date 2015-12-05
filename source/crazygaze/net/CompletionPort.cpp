@@ -141,6 +141,25 @@ void CompletionPort::run()
 	runImpl();
 }
 
+WSAInstance::WSAInstance()
+{
+	WORD wVersionRequested = MAKEWORD(2, 2);
+	WSADATA wsaData;
+	int err = WSAStartup(wVersionRequested, &wsaData);
+	if (err != 0)
+		throw std::runtime_error(getLastWin32ErrorMsg());
+	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
+	{
+		WSACleanup();
+		throw std::runtime_error("Could not find a usable version of Winsock.dll");
+	}
+}
+
+WSAInstance::~WSAInstance()
+{
+	WSACleanup();
+}
+
 } // namespace net
 } // namespace cz
 

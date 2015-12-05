@@ -14,6 +14,7 @@
 #include "crazygaze/Semaphore.h"
 #include "crazygaze/Any.h"
 #include "crazygaze/Future.h"
+#include "crazygaze/Logging.h"
 
 namespace cz
 {
@@ -323,7 +324,8 @@ public:
 			out << outhdr.all;
 			out << e.what();
 			auto res = transport.send(std::move(out));
-			CZ_ASSERT(res);
+			if (!res)
+				CZ_LOG(logDefault, Log, "Failed to send RPC reply. Ignoring failure.");
 		}
 	}
 #else

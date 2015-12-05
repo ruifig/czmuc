@@ -79,7 +79,6 @@ static const char* getLastWin32ErrorMsg(int err = 0)
 	return buf;
 }
 
-
 // #TODO Delete these when not needed
 static std::vector<std::string> logs;
 void logStr(const char* str)
@@ -935,12 +934,13 @@ bool TCPSocket::send(ChunkBuffer&& data)
 {
 	if (m_data->state != SocketState::Connected)
 		return false;
-	if (data.numBlocks() == 0)
+	auto toSend = data.calcSize();
+	if (toSend==0)
 		return true;
 
 	auto op = std::make_unique<WriteOperation>(std::move(data), m_data);
 
-	LOG("%p: Sending %d bytes\n", this, op->data.calcSize());
+	LOG("%p: Sending %d bytes\n", this, toSend);
 	DWORD bytesSent = 0;
 	int res = WSASend(m_data->socket.get(), &op->wsabufs[0], static_cast<DWORD>(op->wsabufs.size()), &bytesSent, 0,
 					  &op->overlapped, NULL);
@@ -948,6 +948,7 @@ bool TCPSocket::send(ChunkBuffer&& data)
 
 	if (res == 0)  // Send operation completed immediately, so nothing else to do
 	{
+		CZ_ASSERT(bytesSent == toSend);
 		op.release();
 		return true;
 	}
