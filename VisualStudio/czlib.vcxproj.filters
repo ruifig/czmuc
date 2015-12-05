@@ -158,6 +158,9 @@
     <ClInclude Include="..\source\crazygaze\Future.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Parameters.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -234,6 +237,9 @@
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp">
       <Filter>crazygaze\rpc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Parameters.cpp">
+      <Filter>crazygaze</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

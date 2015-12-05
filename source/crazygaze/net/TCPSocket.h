@@ -60,6 +60,11 @@ struct SocketAddress
 			return port < right.port;
 	}
 
+	bool isValid() const
+	{
+		return !(port == 0 && ip.full == 0);
+	}
+
   private:
 	void constructFrom(const sockaddr_in* sa);
 };

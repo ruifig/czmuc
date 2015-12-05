@@ -210,30 +210,25 @@ namespace details
 
 		void set_value(T v)
 		{
-			std::unique_lock<std::mutex> lk(m_mtx);
-			if (m_result.is_ready())
-				throw FutureError(FutureError::Code::PromiseAlreadySatisfied);
-			m_result.set_value(std::move(v));
-			m_cond.notify_all();
-			if (m_continuations.size())
 			{
-				// Unlock before calling the continuations, so we don't call unknown code while holding the lock
-				// This means the the continuations vector cannot be changed. This is fine, since per design,
-				// when calling "then", if the result if ready, it will call the continuation right away, and not
-				// add anything to the continuations vector
-				lk.unlock();
-				for (auto&& c : m_continuations)
-					c();
+				std::unique_lock<std::mutex> lk(m_mtx);
+				if (m_result.is_ready())
+					throw FutureError(FutureError::Code::PromiseAlreadySatisfied);
+				m_result.set_value(std::move(v));
 			}
+			onReady(); // Call this when NOT holding the lock
 		}
 
 		void set_exception(std::exception_ptr p)
 		{
-			std::unique_lock<std::mutex> lk(m_mtx);
-			if (m_result.is_ready())
-				throw FutureError(FutureError::Code::PromiseAlreadySatisfied);
-			m_result.set_exception(std::move(p));
-			m_cond.notify_all();
+			{
+				std::unique_lock<std::mutex> lk(m_mtx);
+				if (m_result.is_ready())
+					throw FutureError(FutureError::Code::PromiseAlreadySatisfied);
+				m_result.set_exception(std::move(p));
+				m_cond.notify_all();
+			}
+			onReady(); // Call this when NOT holding the lock
 		}
 
 		void prAcquire()
@@ -303,6 +298,15 @@ namespace details
 		}
 		
 	protected:
+
+		// This is called after setting the result to ready.
+		// Should NOT be called when holding the lock
+		void onReady()
+		{
+			m_cond.notify_all();
+			for (auto&& c : m_continuations)
+				c();
+		}
 
 		mutable std::mutex m_mtx;
 		mutable std::condition_variable m_cond;

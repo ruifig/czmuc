@@ -15,6 +15,14 @@ namespace cz
 namespace net
 {
 
+// Instead of having a function to initialize the library, I call WSAStartup and WSACleanup as
+// required, since they can be called several times
+struct WSAInstance
+{
+	WSAInstance();
+	~WSAInstance();
+};
+
 class CompletionPort;
 
 struct CompletionPortOperationBaseData : public std::enable_shared_from_this<CompletionPortOperationBaseData>
@@ -57,7 +65,9 @@ class CompletionPort
 	HANDLE m_port;
 	friend struct CompletionPortOperation;
 
-	// #TODO Replace this with a ZeroSempahore?
+	WSAInstance wsa;
+
+	// #TODO Replace this with a ZeroSemaphore?
 	std::atomic_int m_queuedCount = 0;
 };
 

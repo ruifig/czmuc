@@ -41,6 +41,7 @@
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
+    <ClInclude Include="..\source\crazygaze\Parameters.h" />
     <ClInclude Include="..\source\crazygaze\Random.h" />
     <ClInclude Include="..\source\crazygaze\RingBuffer.h" />
     <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
@@ -84,6 +85,7 @@
     <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
+    <ClCompile Include="..\source\crazygaze\Parameters.cpp" />
     <ClCompile Include="..\source\crazygaze\Random.cpp" />
     <ClCompile Include="..\source\crazygaze\RingBuffer.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp" />
