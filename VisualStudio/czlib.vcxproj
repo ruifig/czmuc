@@ -36,6 +36,7 @@
     <ClInclude Include="..\source\crazygaze\FNVHash.h" />
     <ClInclude Include="..\source\crazygaze\Future.h" />
     <ClInclude Include="..\source\crazygaze\Guid.h" />
+    <ClInclude Include="..\source\crazygaze\Json.h" />
     <ClInclude Include="..\source\crazygaze\Logging.h" />
     <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
@@ -80,6 +81,7 @@
     <ClCompile Include="..\source\crazygaze\Filename.cpp" />
     <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
     <ClCompile Include="..\source\crazygaze\Guid.cpp" />
+    <ClCompile Include="..\source\crazygaze\Json.cpp" />
     <ClCompile Include="..\source\crazygaze\Logging.cpp" />
     <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
     <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />

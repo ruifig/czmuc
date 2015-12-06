@@ -161,6 +161,9 @@
     <ClInclude Include="..\source\crazygaze\Parameters.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Json.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -239,6 +242,9 @@
       <Filter>crazygaze\rpc</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\Parameters.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Json.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
   </ItemGroup>

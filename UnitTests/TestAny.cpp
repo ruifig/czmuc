@@ -65,6 +65,8 @@ TEST(Params)
 	CHECK_EQUAL("Hello", std::get<3>(t2));
 	CHECK_EQUAL("World", std::get<4>(t2));
 	CHECK_ARRAY_EQUAL(a, std::get<5>(t2), 4);
+
+	std::to_string(10);
 }
 
 }

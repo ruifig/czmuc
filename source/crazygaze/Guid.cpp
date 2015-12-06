@@ -9,6 +9,7 @@
 
 #include "czlibPCH.h"
 #include "crazygaze/Guid.h"
+#include "crazygaze/Json.h"
 
 namespace cz
 {
@@ -86,6 +87,11 @@ namespace cz
         stream << v.c;
         stream << v.d;
         return stream;
+	}
+
+	std::string to_json(const Guid& v)
+	{
+		return to_json(v.toString());
 	}
 
 } // namespace cz

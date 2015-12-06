@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include "RPCBase.h"
+
 namespace cz
 {
 namespace rpc
@@ -24,6 +26,7 @@ class GenericRPCClass
 
 } // namespace rpc
 } // namespace cz
+
 
 #define RPCTABLE_CLASS cz::rpc::GenericRPCClass
 #define RPCTABLE_CONTENTS

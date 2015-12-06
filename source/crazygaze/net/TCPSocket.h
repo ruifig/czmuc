@@ -160,4 +160,8 @@ class TCPSocket
 };
 
 } // namespace net
+
+
+std::string to_json(const net::SocketAddress& val);
+
 } // namespace cz

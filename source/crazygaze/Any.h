@@ -10,6 +10,7 @@
 #pragma once
 
 #include <vector>
+#include "crazygaze/Json.h"
 
 namespace cz
 {
@@ -231,7 +232,9 @@ struct AnyTree
 	std::string name;
 	Any data;
 	std::vector<AnyTree> children;
-
 };
+
+std::string to_json(const Any& val);
+std::string to_json(const AnyTree& val);
 
 }  // namespace cz

@@ -207,6 +207,17 @@ Any& Any::operator=(Any&& other)
 	return *this;
 }
 
+std::string to_json(const Any& val)
+{
+	return to_json(val.convertToString());
+}
+
+std::string to_json(const AnyTree& val)
+{
+	std::string res = "{" + to_json(val.name) + ":" + to_json(val.data);
+	res += ", \"children\" : " + to_json(val.children);
+	return std::move(res);
+}
 
 } // namespace cz
 

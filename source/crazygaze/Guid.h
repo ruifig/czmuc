@@ -69,6 +69,8 @@ namespace cz
 	const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Guid& v);
 	ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Guid& v);
 
+	std::string to_json(const Guid& v);
+
 	/*!
 		@}
 	*/

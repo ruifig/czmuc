@@ -274,8 +274,7 @@ TEST(Simple)
 
 		std::vector<int> v{ 2,3,5 };
 		CHECK_ARRAY_EQUAL(v, res5.get(), (int)v.size());
-		CHECK(res6.get().getType() == cz::Any::kNone);
-
+		CHECK(res6.get() == to_json(v));
 	});
 
 	clientThread.join();
@@ -702,7 +701,7 @@ TEST(GenericRPC)
 		params.push_back(Any(2));
 
 		auto res1 = CALLGENERICRPC(calcClient, "add", params);
-		CHECK_EQUAL(3, convertAny<int>(res1.get()));
+		CHECK_EQUAL("3", res1.get());
 
 		checkRPCThrow(CALLGENERICRPC(calcClient, "addd", params), "Unknown RPC (addd)");
 
@@ -715,14 +714,14 @@ TEST(GenericRPC)
 
 		// Test generic RPC with future
 		auto res2 = CALLGENERICRPC(calcClient, "slowSum", params);
-		CHECK_EQUAL(3, convertAny<int>(res2.get()));
+		CHECK_EQUAL("3", res2.get());
 
 		{
 			std::vector<Any> params;
 			params.push_back(Any(1));
 			params.push_back(Any(2));
 			auto res = CALLGENERICRPC(calcClient, "add", params);
-			CHECK_EQUAL(3, convertAny<int>(res.get()));
+			CHECK_EQUAL("3", res.get());
 		}
 
 		{
