@@ -35,6 +35,7 @@ struct SocketAddress
 	explicit SocketAddress(const sockaddr& addr);
 	explicit SocketAddress(const sockaddr_in& addr);
 	explicit SocketAddress(const char* ip, int port);
+	explicit SocketAddress(const char* ipAndPort);
 	explicit SocketAddress(const std::string& ip, int port);
 
 	bool operator==( const SocketAddress& right ) const

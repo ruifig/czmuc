@@ -88,6 +88,11 @@ bool Any::asUnsignedInteger(unsigned int& v) const
 {
 	if (m_type==kUnsignedInteger)
 	{
+		v = m_uinteger;
+		return true;
+	}
+	else if (m_type==kInteger)
+	{
 		v = m_integer;
 		return true;
 	}

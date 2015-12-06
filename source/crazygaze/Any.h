@@ -30,6 +30,7 @@ class Any
 	template<typename T>
 	explicit Any(const T& v) : m_type(kNone)
 	{
+		static_assert(0, "No conversion available");
 	}
 
 	enum Type
