@@ -15,6 +15,7 @@
 #include "crazygaze/Any.h"
 #include "crazygaze/Future.h"
 #include "crazygaze/Logging.h"
+#include "crazygaze/Json.h"
 
 namespace cz
 {
@@ -34,16 +35,16 @@ public:
 		m_exceptionCallback = std::move(func);
 	}
 
-	virtual Future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) = 0;
+	virtual Future<std::string> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) = 0;
 
 protected:
 	virtual const BaseRPCInfo* getRPCInfo(RPCHeader hdr) = 0;
 
 	// This is necessary just so that we have a function with this signature, to make it easier to code support
 	// for console commands.
-	static cz::Any _genericRPCDummy(const char* func, const std::vector<cz::Any>& params)
+	static std::string _genericRPCDummy(const char* func, const std::vector<cz::Any>& params)
 	{
-		return cz::Any(false);
+		return std::string();
 	}
 
 	template<typename U>
@@ -193,7 +194,7 @@ public:
 
 protected:
 
-	virtual Future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
+	virtual Future<std::string> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
 	{
 		return _callrpcImpl(transport, uint32_t(decltype(m_tbl)::RPCId::genericRPC), &_genericRPCDummy, func, params);
 	}
@@ -224,11 +225,11 @@ protected:
 #pragma warning(push)
 // warning C4702: unreachable code
 #pragma warning(disable:4702)
-	virtual Future<cz::Any> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
+	virtual Future<std::string> _callgenericrpc(Transport& transport, const char* func, const std::vector<cz::Any>& params) override
 	{
 		CZ_UNEXPECTED_F("No type specified to receive RPC replies");
 		throw std::logic_error("No type specified to receive RPC replies");
-		return Future<cz::Any>();
+		return Future<std::string>();
 	}
 #pragma warning(pop)
 
@@ -265,7 +266,7 @@ public:
 		hdr.setKey(reply.hdr.key());
 		out << hdr.all;
 		if (reply.hdr.isGenericRPC())
-			out << cz::Any(std::forward<T>(r));
+			out << to_json(std::forward<T>(r));
 		else
 			out << std::forward<T>(r);
 		reply.transport.send(std::move(out));

@@ -3,6 +3,7 @@
 #include "crazygaze/Semaphore.h"
 #include "crazygaze/net/details/TCPSocketDebug.h"
 #include "crazygaze/StringUtils.h"
+#include "crazygaze/Json.h"
 
 #pragma comment(lib, "ws2_32.lib")
 // Disable deprecation warnings
@@ -1036,4 +1037,10 @@ SocketWrapper& SocketWrapper::operator=(SocketWrapper&& other)
 }
 
 } // namespace net
+
+std::string to_json(const net::SocketAddress& val)
+{
+	return to_json(val.toString(true));
+}
+
 } // namespace cz
