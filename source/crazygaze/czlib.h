@@ -140,7 +140,7 @@ struct ReentrantCheck
 	}
 	~ReentrantCheck()
 	{
-		counter--;
+		--(*counter);
 	}
 
 	int *counter;

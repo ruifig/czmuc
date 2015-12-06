@@ -173,6 +173,25 @@ SocketAddress::SocketAddress(const char* ip_, int port_)
 	port = port_;
 }
 
+SocketAddress::SocketAddress(const char* ipAndPort)
+{
+	auto ptr = ipAndPort;
+	char* ip_ = getTemporaryString();
+	while(*ptr)
+	{
+		if (*ptr == ':' || *ptr == '|')
+		{
+			ip_[ptr-ipAndPort] = 0;
+			inet_pton(AF_INET, ip_, &ip.full);
+			port = std::atoi(ptr+1);
+			return;
+		}
+		ip_[ptr - ipAndPort] = *ptr++;
+	}
+
+	throw std::runtime_error("String is not a valid IP:PORT");
+}
+
 SocketAddress::SocketAddress(const std::string& ip_, int port_)
 {
 	inet_pton(AF_INET, ip_.c_str(), &ip.full);
