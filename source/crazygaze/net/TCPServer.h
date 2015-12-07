@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include "crazygaze/net/TCPSocket.h"
 #include "crazygaze/Semaphore.h"
 

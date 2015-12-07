@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include <vector>
 #include "crazygaze/Json.h"
 

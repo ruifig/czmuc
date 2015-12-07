@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include <mutex>
 #include <vector>
 

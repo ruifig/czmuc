@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include "crazygaze/rpc/RPCBase.h"
 #include "crazygaze/rpc/RPCTransport.h"
 #include "crazygaze/rpc/RPCConnection.h"

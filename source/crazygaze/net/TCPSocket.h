@@ -6,6 +6,7 @@ other connection requests are denied. Ideally, we should have a couple of accept
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/net/details/TCPSocketDebug.h"
 #include "crazygaze/net/CompletionPort.h"

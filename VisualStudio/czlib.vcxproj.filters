@@ -170,6 +170,9 @@
     <ClInclude Include="..\source\crazygaze\WindowsConsole.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Filetime.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -257,6 +260,9 @@
       <Filter>crazygaze</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\WindowsConsole.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Filetime.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
   </ItemGroup>

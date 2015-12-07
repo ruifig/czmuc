@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include "crazygaze/rpc/RPCTransport.h"
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/Semaphore.h"
