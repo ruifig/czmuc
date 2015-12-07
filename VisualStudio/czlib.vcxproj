@@ -36,6 +36,7 @@
     <ClInclude Include="..\source\crazygaze\FNVHash.h" />
     <ClInclude Include="..\source\crazygaze\Future.h" />
     <ClInclude Include="..\source\crazygaze\Guid.h" />
+    <ClInclude Include="..\source\crazygaze\IniFile.h" />
     <ClInclude Include="..\source\crazygaze\Json.h" />
     <ClInclude Include="..\source\crazygaze\Logging.h" />
     <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
@@ -64,6 +65,7 @@
     <ClInclude Include="..\source\crazygaze\Timer.h" />
     <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
     <ClInclude Include="..\source\crazygaze\UTF8String.h" />
+    <ClInclude Include="..\source\crazygaze\WindowsConsole.h" />
     <ClInclude Include="..\source\czlibPCH.h" />
   </ItemGroup>
   <ItemGroup>
@@ -81,6 +83,7 @@
     <ClCompile Include="..\source\crazygaze\Filename.cpp" />
     <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
     <ClCompile Include="..\source\crazygaze\Guid.cpp" />
+    <ClCompile Include="..\source\crazygaze\IniFile.cpp" />
     <ClCompile Include="..\source\crazygaze\Json.cpp" />
     <ClCompile Include="..\source\crazygaze\Logging.cpp" />
     <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
@@ -99,6 +102,7 @@
     <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
     <ClCompile Include="..\source\crazygaze\Timer.cpp" />
     <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
+    <ClCompile Include="..\source\crazygaze\WindowsConsole.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />
@@ -172,6 +176,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -186,6 +193,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -204,6 +214,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -222,6 +235,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
