@@ -33,6 +33,7 @@
     <ClInclude Include="..\source\crazygaze\File.h" />
     <ClInclude Include="..\source\crazygaze\Filename.h" />
     <ClInclude Include="..\source\crazygaze\Filesystem.h" />
+    <ClInclude Include="..\source\crazygaze\Filetime.h" />
     <ClInclude Include="..\source\crazygaze\FNVHash.h" />
     <ClInclude Include="..\source\crazygaze\Future.h" />
     <ClInclude Include="..\source\crazygaze\Guid.h" />
@@ -82,6 +83,7 @@
     <ClCompile Include="..\source\crazygaze\File.cpp" />
     <ClCompile Include="..\source\crazygaze\Filename.cpp" />
     <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
+    <ClCompile Include="..\source\crazygaze\Filetime.cpp" />
     <ClCompile Include="..\source\crazygaze\Guid.cpp" />
     <ClCompile Include="..\source\crazygaze\IniFile.cpp" />
     <ClCompile Include="..\source\crazygaze\Json.cpp" />

@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include "crazygaze/Filename.h"
 #include "crazygaze/Singleton.h"
 

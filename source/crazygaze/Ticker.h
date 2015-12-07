@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include <functional>
 
 namespace cz

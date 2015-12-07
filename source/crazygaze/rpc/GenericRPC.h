@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "crazygaze/czlib.h"
 #include "RPCBase.h"
 
 namespace cz
