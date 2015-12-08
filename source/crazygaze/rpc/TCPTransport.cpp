@@ -117,7 +117,9 @@ void TCPTransport::init(const char* ip, int port, net::CompletionPort& iocp, Wor
 	// #TODO If connect failed, handle it properly
 	if (!res.get())
 		throw std::runtime_error("Could not connect to server socket");
-	m_customID = m_socket->getRemoteAddress().toString(true);
+	setProperty("peer_ip", m_socket->getRemoteAddress().toString(false));
+	setProperty("peer_port", m_socket->getRemoteAddress().port);
+	setProperty("peer_addr", m_socket->getRemoteAddress().toString(true));
 	LOGEXIT();
 }
 

@@ -44,7 +44,6 @@ protected:
 
 	//! If this is a client side transport, we created the socket, and we control the lifetime
 	std::unique_ptr<net::TCPSocket> m_socket;
-	std::string m_customID;
 	WorkQueue* m_rcvQueue;
 	cz::ZeroSemaphore m_queuedOps;
 };

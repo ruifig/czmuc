@@ -164,6 +164,7 @@
     <ClCompile Include="TestRPC.cpp" />
     <ClCompile Include="TestRPCTraits.cpp" />
     <ClCompile Include="TestTCPSocket.cpp" />
+    <ClCompile Include="TestThreadingUtils.cpp" />
     <ClCompile Include="UnitTests.cpp" />
     <ClCompile Include="UnitTestsPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

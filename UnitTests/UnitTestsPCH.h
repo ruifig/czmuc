@@ -30,6 +30,7 @@
 #include "crazygaze/Future.h"
 #include "crazygaze/Semaphore.h"
 #include "crazygaze/ChunkBuffer.h"
+#include "crazygaze/ThreadingUtils.h"
 #include "crazygaze/net/TCPSocket.h"
 #include "crazygaze/net/TCPServer.h"
 #include "crazygaze/rpc/RPCUtils.h"

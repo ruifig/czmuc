@@ -153,7 +153,7 @@ namespace details
 			}
 		}
 
-		T&& getMove()
+		T getMove()
 		{
 			switch (type)
 			{
@@ -201,7 +201,7 @@ namespace details
 		    return m_result.get();
 	    }
 
-		T&& getMove()
+		T getMove()
 		{
 			if (!m_result.is_ready())
 				wait();
@@ -353,7 +353,7 @@ public:
 	* Being not thread safe should not be a problem, since in the cases you want to move out
 	* the value, you don't want to be sharing the state with other futures anyway.
 	*/
-	T&& getMove()
+	T getMove()
 	{
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
@@ -366,6 +366,13 @@ public:
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		return m_data->thenImpl(std::forward<Cont>(w), *this);
+	}
+
+	bool is_ready() const
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		return m_data->is_ready();
 	}
 
 	static Future makeReady(T v)
@@ -413,6 +420,13 @@ public:
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		return m_data->thenImpl(std::forward<Cont>(w), *this);
+	}
+
+	bool is_ready() const
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		return m_data->is_ready();
 	}
 
 	static Future makeReady()
