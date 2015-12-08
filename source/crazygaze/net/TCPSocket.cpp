@@ -174,7 +174,17 @@ SocketAddress::SocketAddress(const char* ip_, int port_)
 	port = port_;
 }
 
+SocketAddress::SocketAddress(const std::string& ipAndPort)
+{
+	constructFrom(ipAndPort.c_str());
+}
+
 SocketAddress::SocketAddress(const char* ipAndPort)
+{
+	constructFrom(ipAndPort);
+}
+
+void SocketAddress::constructFrom(const char* ipAndPort)
 {
 	auto ptr = ipAndPort;
 	char* ip_ = getTemporaryString();

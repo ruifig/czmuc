@@ -62,6 +62,7 @@
     <ClInclude Include="..\source\crazygaze\Singleton.h" />
     <ClInclude Include="..\source\crazygaze\StringUtils.h" />
     <ClInclude Include="..\source\crazygaze\targetver.h" />
+    <ClInclude Include="..\source\crazygaze\ThreadingUtils.h" />
     <ClInclude Include="..\source\crazygaze\Ticker.h" />
     <ClInclude Include="..\source\crazygaze\Timer.h" />
     <ClInclude Include="..\source\crazygaze\TypeTraits.h" />

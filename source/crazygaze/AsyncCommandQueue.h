@@ -27,6 +27,11 @@ public:
 	// To be called by any thread that wishes to send commands to the queue
 	void send( std::function<void()>&& f);
 
+	SharedQueue<std::function<void()>>& getQueue()
+	{
+		return m_queue;
+	}
+
 protected:
 	/*!
 	 * \param wait If there are no commands available, it will block and wait

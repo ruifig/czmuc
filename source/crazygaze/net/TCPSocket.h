@@ -36,6 +36,7 @@ struct SocketAddress
 	explicit SocketAddress(const sockaddr& addr);
 	explicit SocketAddress(const sockaddr_in& addr);
 	explicit SocketAddress(const char* ip, int port);
+	explicit SocketAddress(const std::string& ipAndPort);
 	explicit SocketAddress(const char* ipAndPort);
 	explicit SocketAddress(const std::string& ip, int port);
 
@@ -69,6 +70,7 @@ struct SocketAddress
 
   private:
 	void constructFrom(const sockaddr_in* sa);
+	void constructFrom(const char* ipAndPort);
 };
 
 void initializeSocketsLib();
