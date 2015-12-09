@@ -28,7 +28,6 @@ void BaseOutProcessor::processReceivedReply(RPCHeader hdr, const ChunkBuffer& in
 	std::function<void(const ChunkBuffer&, RPCHeader)> f;
 
 	auto rpcInfo = getRPCInfo(hdr);
-	CZ_ASSERT(rpcInfo->hasReturnValue || hdr.bits.success==false);
 
 	// Find the reply information
 	{

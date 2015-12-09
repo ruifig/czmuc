@@ -137,7 +137,7 @@ class TCPSocket
 	*/
 	explicit TCPSocket(CompletionPort& iocp, uint32_t numPendingReads = 0, uint32_t pendingReadSize = 0);
 	~TCPSocket();
-
+	void shutdown();
 	void setOnReceive(std::function<void(const ChunkBuffer&)> fn);
 	void setOnShutdown(std::function<void(int, const std::string&)> fn);
 	void setOnSendCompleted(std::function<void()> fn);
@@ -158,6 +158,7 @@ class TCPSocket
   protected:
 	void createSocket();
 
+	bool m_destroyed = false;
 	std::shared_ptr<TCPSocketData> m_data;
 	std::shared_ptr<TCPSocketUserData> m_userData;
 };

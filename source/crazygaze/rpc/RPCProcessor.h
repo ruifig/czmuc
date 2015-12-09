@@ -51,38 +51,51 @@ protected:
 	template<typename U>
 	friend struct ReplyInfo;
 
+	template<typename T> struct SetValue
+	{
+		static void set(const ChunkBuffer& in, Promise<T>& pr)
+		{
+			T ret;
+			in >> ret;
+			pr.set_value(std::move(ret));
+		}
+	};
+	template<> struct SetValue<void>
+	{
+		static void set(const ChunkBuffer& in, Promise<void>& pr)
+		{
+			pr.set_value();
+		}
+	};
+
 	template<typename ResultType>
 	struct ReplyInfo
 	{
 		BaseOutProcessor& outer;
-		std::shared_ptr<Promise<ResultType>> pr;
+		Promise<ResultType> pr;
 		RPCHeader hdr;
 		ReplyInfo(BaseOutProcessor& outer, RPCHeader hdr) : outer(outer), hdr(hdr)
 		{
-			pr = std::make_shared<Promise<ResultType>>();
-
 			std::unique_lock<std::mutex> lk(outer.m_mtx);
 			// NOTE: Capturing outer as a pointer, so it doesn't get copied into the lambda.
-			outer.m_replies[hdr.key()] = [outer{&outer}, pr{ pr }](const ChunkBuffer& in, RPCHeader hdr)
+			outer.m_replies[hdr.key()] = [outer{&outer}, pr=this->pr](const ChunkBuffer& in, RPCHeader hdr) mutable
 			{
 				if (hdr.bits.success)
 				{
-					ResultType ret;
-					in >> ret;
-					pr->set_value(std::move(ret));
+					SetValue<ResultType>::set(in, pr);
 				}
 				else
 				{
 					std::string err;
 					in >> err;
 					outer->m_exceptionCallback(hdr, *outer->getRPCInfo(hdr), err);
-					pr->set_exception(std::make_exception_ptr(std::runtime_error(err)));
+					pr.set_exception(std::make_exception_ptr(std::runtime_error(err)));
 				}
 			};
 		}
 		Future<ResultType> error()
 		{
-			auto ft = pr->get_future();
+			auto ft = pr.get_future();
 			{
 				std::unique_lock<std::mutex> lk(outer.m_mtx);
 				outer.m_replies.erase(hdr.key());
@@ -91,30 +104,6 @@ protected:
 		}
 		Future<ResultType> success()
 		{
-			return pr->get_future();
-		}
-	};
-
-	template<>
-	struct ReplyInfo<void>
-	{
-		BaseOutProcessor& outer;
-		Promise<void> pr;
-		RPCHeader hdr;
-		ReplyInfo(BaseOutProcessor& outer, RPCHeader hdr)
-			: outer(outer), hdr(hdr)
-		{
-		}
-		Future<void> error()
-		{
-			std::string err("RPC Call failed");
-			outer.m_exceptionCallback(hdr, *outer.getRPCInfo(hdr), err);
-			pr.set_exception(std::make_exception_ptr(std::runtime_error(err)));
-			return pr.get_future();
-		}
-		Future<void> success()
-		{
-			pr.set_value();
 			return pr.get_future();
 		}
 	};
@@ -256,7 +245,6 @@ public:
 		m_futureRepliesCount.wait();
 	}
 
-
 	template<typename T>
 	void processReply(const ReplyStream& reply, T r)
 	{
@@ -272,6 +260,28 @@ public:
 			out << std::forward<T>(r);
 		reply.transport.send(std::move(out));
 	}
+	void processReply(const ReplyStream& reply)
+	{
+		ChunkBuffer out = reply.transport.prepareSend();
+		RPCHeader hdr;
+		hdr.bits.isReply = true;
+		hdr.bits.success = true;
+		hdr.setKey(reply.hdr.key());
+		out << hdr.all;
+		if (reply.hdr.isGenericRPC())
+			out << to_json("");
+		reply.transport.send(std::move(out));
+	}
+
+	template<typename T>
+	void processFutureReply(const ReplyStream& reply, const Future<T>& ft)
+	{
+		processReply(reply, ft.get());
+	}
+	void processFutureReply(const ReplyStream& reply, const Future<void>& ft)
+	{
+		processReply(reply);
+	}
 
 	template<typename T>
 	void processReply(const ReplyStream& reply, Future<T> r)
@@ -283,7 +293,8 @@ public:
 		// So we setup the continuation, and add the resulting future to the map later
 		auto ft = r.then([this, reply](const Future<T>& r)
 		{
-			processReply(reply, r.get());
+			processFutureReply(reply, r);
+
 			{
 				std::unique_lock<std::mutex> lk(m_mtx);
 				// Delay the future removal
