@@ -93,6 +93,7 @@ TCPTransport::TCPTransport(const net::SocketAddress& address, net::CompletionPor
 TCPTransport::~TCPTransport()
 {
 	LOGENTRY();
+	m_socket->shutdown();
 	m_socket.reset();
 	m_queuedOps.wait();
 	LOGEXIT();

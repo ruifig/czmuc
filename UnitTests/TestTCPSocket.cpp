@@ -22,6 +22,11 @@ public:
 		CHECK(m_socket.connect(ip, port).get());
 	}
 
+	~EchoClient()
+	{
+		m_socket.shutdown();
+	}
+
 	void send()
 	{
 		ChunkBuffer buf;
@@ -300,6 +305,8 @@ TEST(BigData)
 			// First remove us as a socket listener, so we don't get any notification when our member variables are being
 			// destroyed
 			m_socket.resetCallbacks();
+
+			m_socket.shutdown();
 		}
 
 		void onSocketSendCompleted()

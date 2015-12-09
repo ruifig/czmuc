@@ -28,6 +28,7 @@ TCPServerClientInfo::TCPServerClientInfo(TCPServer* owner, std::unique_ptr<TCPSo
 }
 TCPServerClientInfo::~TCPServerClientInfo()
 {
+	m_socket->shutdown();
 	m_socket.reset();
 	m_owner->m_clientsCount.decrement();
 }

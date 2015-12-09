@@ -542,6 +542,8 @@ AcceptOperation::~AcceptOperation()
 	// Delete our pending accept socket before signaling that there are no more Accept operations,
 	// so that there is no chance of our accept socket having the last strong reference to the CompletionPort,
 	// and trying it to delete from here
+	if (acceptSocket)
+		acceptSocket->shutdown();
 	acceptSocket.reset();
 	auto data = getSharedData();
 	data->pendingAcceptsCount.decrement();
@@ -867,7 +869,7 @@ TCPSocket::TCPSocket(CompletionPort& iocp, uint32_t numPendingReads, uint32_t pe
 	LOG("TCPSocket %p: Exit\n", this);
 }
 
-TCPSocket::~TCPSocket()
+void TCPSocket::shutdown()
 {
 	LOG("~TCPSocket %p: Enter\n", this);
 
@@ -904,7 +906,14 @@ TCPSocket::~TCPSocket()
 	}
 
 	debugData.socketDestroyed(this);
+
+	m_userData.reset();
 	LOG("~TCPSocket %p: Exit\n", this);
+}
+TCPSocket::~TCPSocket()
+{
+	auto s = m_data->state;
+	CZ_ASSERT(m_data->state == SocketState::Disconnected);
 }
 
 void TCPSocket::resetCallbacks()

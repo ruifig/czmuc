@@ -33,7 +33,7 @@ namespace cz
 	{
 	private:
 		mutable details::AsyncVarData<T> m_data;
-		void trySync() const
+		void sync(bool wait) const
 		{
 			if (m_data.dirty)
 			{
@@ -41,7 +41,9 @@ namespace cz
 				// This is so that the reader doesn't block if any writers are still holding the lock.
 				// This can happen, since readers can do multiple writes before we do a read.
 				std::unique_lock<std::mutex> lk(m_data.mtx, std::defer_lock);
-				if (!lk.try_lock())
+				if (wait)
+					lk.lock();
+				else if (!lk.try_lock())
 					return;
 
 				if (KEEP_UPDATE)
@@ -92,9 +94,9 @@ namespace cz
 			return Writer(m_data);
 		}
 
-		const T& get() const
+		const T& get(bool wait=false) const
 		{
-			trySync();
+			sync(wait);
 			return m_data.val;
 		}
 

@@ -176,6 +176,9 @@
     <ClInclude Include="..\source\crazygaze\ThreadingUtils.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Expected.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -268,6 +271,7 @@
     <ClCompile Include="..\source\crazygaze\Filetime.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\RPCBase.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />

@@ -30,6 +30,7 @@
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\unchecked.h" />
+    <ClInclude Include="..\source\crazygaze\Expected.h" />
     <ClInclude Include="..\source\crazygaze\File.h" />
     <ClInclude Include="..\source\crazygaze\Filename.h" />
     <ClInclude Include="..\source\crazygaze\Filesystem.h" />
@@ -96,6 +97,7 @@
     <ClCompile Include="..\source\crazygaze\Parameters.cpp" />
     <ClCompile Include="..\source\crazygaze\Random.cpp" />
     <ClCompile Include="..\source\crazygaze\RingBuffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\rpc\RPCBase.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp" />

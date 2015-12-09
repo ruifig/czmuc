@@ -78,6 +78,7 @@ struct ReplyStream
 	{
 		inrpc.processReply(*this, std::forward<T>(r));
 	}
+	void write(); // For void RPCs
 };
 
 class BaseTable
@@ -119,6 +120,7 @@ class TableImpl : public BaseTable
 		static void dispatch(ReplyStream& out, OBJ& obj, F& f, const Tuple& params)
 		{
 			callmethod(obj, f, params);
+			out.write();
 		}
 	};
 
