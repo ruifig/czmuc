@@ -47,6 +47,7 @@ public:
 	}
 
 	static int hasFullRPC(const ChunkBuffer& in);
+	static RPCHeader peekRPCHeader(const ChunkBuffer& in);
 	void onReceivedData(const ChunkBuffer& in);
 	void onDisconnected();
 protected:

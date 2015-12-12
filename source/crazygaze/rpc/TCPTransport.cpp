@@ -25,52 +25,36 @@ namespace cz
 namespace rpc
 {
 
-static void processRPCBuffer_InPlace(Transport* transport, const ChunkBuffer& buf)
-{
-	while (true)
-	{
-		//Sleep(rand() % 10); // #TODO Remove this
-		auto size = Transport::hasFullRPC(buf);
-		if (size == 0)
-			return; // Not enough data for an RPC yet
-		transport->onReceivedData(buf);
-	}
-}
-
 // #TODO : Remove all the unnecessary parameters that I was using for debugging
 static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, WorkQueue* rcvQueue,
 							 cz::ZeroSemaphore* queuedOps)
 {
-	if (rcvQueue) // Put the required action in a queue, if the queue was provided
+	while(true)
 	{
-		auto tmp = std::make_shared<ChunkBuffer>();
-		while (true)
-		{
-			auto size = Transport::hasFullRPC(buf);
-			if (size == 0)
-				break;
+		auto size = Transport::hasFullRPC(buf);
+		if (size == 0)
+			return; // Not enough data for an RPC yet
 
-			auto ptr = std::unique_ptr<char[]>(new char[sizeof(size) + size]);
-			memcpy(ptr.get(), &size, sizeof(size));
-			buf.read(ptr.get() + sizeof(size), size);
-			tmp->writeBlock(std::move(ptr), sizeof(size)+size, sizeof(size)+size);
+		RPCHeader hdr = Transport::peekRPCHeader(buf);
+		if (hdr.bits.isReply || rcvQueue==nullptr) // Replies are executed right here, in the network thread
+		{
+			transport->onReceivedData(buf);
 		}
-
-		if (tmp->numBlocks())
+		else // RPC calls need to be executed in whatever queue the user specified
 		{
-			// #TODO : Remove all the unnecessary parameters I was using for debugging
-			rcvQueue->emplace([transport, buf = std::move(tmp), queuedOps]() 
+			auto tmp = std::make_shared<ChunkBuffer>();
+			auto ptr = std::unique_ptr<char[]>(new char[size]);
+			buf.read(ptr.get(), size);
+			tmp->writeBlock(std::move(ptr), size, size);
+			queuedOps->increment();
+			rcvQueue->emplace([transport, buf = std::move(tmp), queuedOps]()
 			{
-				//Sleep(rand() % 10); // #TODO : Remove this
-				processRPCBuffer_InPlace(transport, *buf.get());
+				transport->onReceivedData(*buf);
 				queuedOps->decrement();
 			});
 		}
 	}
-	else // Queue not provided, so execute right now
-	{
-		processRPCBuffer_InPlace(transport, buf);
-	}
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -126,9 +110,6 @@ void TCPTransport::init(const char* ip, int port, net::CompletionPort& iocp, Wor
 
 void TCPTransport::onSocketReceive(const ChunkBuffer& buf)
 {
-	if (m_rcvQueue)
-		m_queuedOps.increment();
-	// #TODO : Remove all the unnecessary parameters I was using for debugging
 	processRPCBuffer(this, buf, m_rcvQueue, &m_queuedOps);
 }
 
@@ -197,10 +178,6 @@ protected:
 	virtual void onSocketReceive(const ChunkBuffer& buf) override
 	{
 		net::TCPServerClientInfo::onSocketReceive(buf); // Call base class
-
-		if (m_rcvQueue)
-			m_queuedOps.increment();
-		// #TODO : Remove all the unnecessary parameters I was using for debugging
 		processRPCBuffer(m_transport, buf, m_rcvQueue, &m_queuedOps);
 	}
 
