@@ -22,9 +22,9 @@ namespace cz
 template<typename T>
 class SharedQueue
 {
-	std::queue<T> queue_;
-	mutable std::mutex m_;
-	std::condition_variable data_cond_;
+	std::queue<T> m_queue;
+	mutable std::mutex m_mtx;
+	std::condition_variable m_data_cond;
 
 	// These are not allowed
 	SharedQueue& operator=(const SharedQueue&) = delete;
@@ -37,40 +37,40 @@ public:
 	template<typename A1>
 	void emplace(A1 &&a1)
 	{
-		std::lock_guard<std::mutex> lock(m_);
-		queue_.emplace(std::forward<A1>(a1));
-		data_cond_.notify_one();
+		std::lock_guard<std::mutex> lock(m_mtx);
+		m_queue.emplace(std::forward<A1>(a1));
+		m_data_cond.notify_one();
 	}
 	template<typename A1, typename A2>
 	void emplace(A1 &&a1, A2 &&a2)
 	{
-		std::lock_guard<std::mutex> lock(m_);
-		queue_.emplace(std::forward<A1>(a1), std::forward<A2>(a2));
-		data_cond_.notify_one();
+		std::lock_guard<std::mutex> lock(m_mtx);
+		m_queue.emplace(std::forward<A1>(a1), std::forward<A2>(a2));
+		m_data_cond.notify_one();
 	}
 	template<typename A1, typename A2, typename A3>
 	void emplace(A1 &&a1, A2 &&a2, A3 &&a3)
 	{
-		std::lock_guard<std::mutex> lock(m_);
-		queue_.emplace(std::forward<A1>(a1), std::forward<A2>(a2), std::forward<A3>(a3));
-		data_cond_.notify_one();
+		std::lock_guard<std::mutex> lock(m_mtx);
+		m_queue.emplace(std::forward<A1>(a1), std::forward<A2>(a2), std::forward<A3>(a3));
+		m_data_cond.notify_one();
 	}
 
 	template<typename T>
 	void push(T&& item){
-		std::lock_guard<std::mutex> lock(m_);
-		queue_.push(std::forward<T>(item));
-		data_cond_.notify_one();
+		std::lock_guard<std::mutex> lock(m_mtx);
+		m_queue.push(std::forward<T>(item));
+		m_data_cond.notify_one();
 	}
 
 	/// \return immediately, with true if successful retrieval
 	bool try_and_pop(T& popped_item){
-		std::lock_guard<std::mutex> lock(m_);
-		if (queue_.empty()){
+		std::lock_guard<std::mutex> lock(m_mtx);
+		if (m_queue.empty()){
 			return false;
 		}
-		popped_item = std::move(queue_.front());
-		queue_.pop();
+		popped_item = std::move(m_queue.front());
+		m_queue.pop();
 		return true;
 	}
 
@@ -88,30 +88,38 @@ public:
 	 */
 	bool try_and_popAll(std::queue<T>& dest)
 	{
-		std::lock_guard<std::mutex> lock(m_);
-		dest = std::move(queue_);
+		std::lock_guard<std::mutex> lock(m_mtx);
+		dest = std::move(m_queue);
 		return dest.size()!=0;
 	}
 
 	// Try to retrieve, if no items, wait till an item is available and try again
 	void wait_and_pop(T& popped_item){
-		std::unique_lock<std::mutex> lock(m_); // note: unique_lock is needed for std::condition_variable::wait
-		while (queue_.empty())
-		{ //                       The 'while' loop below is equal to
-			data_cond_.wait(lock);  //data_cond_.wait(lock, [](bool result){return !queue_.empty();});
-		}
-		popped_item = std::move(queue_.front());
-		queue_.pop();
+		std::unique_lock<std::mutex> lock(m_mtx);
+		m_data_cond.wait(lock, [this] { return !m_queue.empty();});
+		popped_item = std::move(m_queue.front());
+		m_queue.pop();
+	}
+
+	// Try to retrieve, if no items, wait till an item is available and try again
+	bool wait_and_pop(T& popped_item, int timeoutMs){
+		std::unique_lock<std::mutex> lock(m_mtx);
+		if (!m_data_cond.wait(lock, std::chrono::milliseconds(timeoutMs), [this] { return !m_queue.empty();}))
+			return false;
+
+		popped_item = std::move(m_queue.front());
+		m_queue.pop();
+		return true;
 	}
 
 	bool empty() const{
-		std::lock_guard<std::mutex> lock(m_);
-		return queue_.empty();
+		std::lock_guard<std::mutex> lock(m_mtx);
+		return m_queue.empty();
 	}
 
 	unsigned size() const{
-		std::lock_guard<std::mutex> lock(m_);
-		return static_cast<unsigned>(queue_.size());
+		std::lock_guard<std::mutex> lock(m_mtx);
+		return static_cast<unsigned>(m_queue.size());
 	}
 };
 
