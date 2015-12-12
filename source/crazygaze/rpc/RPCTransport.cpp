@@ -45,6 +45,14 @@ int Transport::hasFullRPC(const ChunkBuffer& in)
 	return rpcSize;
 }
 
+RPCHeader Transport::peekRPCHeader(const ChunkBuffer& in)
+{
+	RPCHeader hdr;
+	auto ok = in.peek(hdr.all);
+	CZ_ASSERT(ok);
+	return hdr;
+}
+
 void Transport::onReceivedData(const ChunkBuffer& in)
 {
 	if (m_owner)
