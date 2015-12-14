@@ -23,6 +23,7 @@
     <ClInclude Include="..\source\crazygaze\Any.h" />
     <ClInclude Include="..\source\crazygaze\AsyncCommandQueue.h" />
     <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
+    <ClInclude Include="..\source\crazygaze\Concurrent.h" />
     <ClInclude Include="..\source\crazygaze\config.h" />
     <ClInclude Include="..\source\crazygaze\czlib.h" />
     <ClInclude Include="..\source\crazygaze\czlibPCH.h" />

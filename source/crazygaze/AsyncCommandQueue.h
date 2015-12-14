@@ -27,7 +27,7 @@ public:
 	// To be called by any thread that wishes to send commands to the queue
 	void send( std::function<void()>&& f);
 
-	SharedQueue<std::function<void()>>& getQueue()
+	WorkQueue& getQueue()
 	{
 		return m_queue;
 	}
@@ -38,7 +38,7 @@ protected:
 	 */
 	void tickImpl(bool wait);
 
-	SharedQueue< std::function<void()> > m_queue;
+	WorkQueue m_queue;
 };
 
 
