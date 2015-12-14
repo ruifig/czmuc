@@ -123,14 +123,16 @@ public:
 				auto timeout = std::max(double(0), interval - timer.seconds());
 				std::function<void()> f;
 
-				if (m_q.wait_and_pop(f, static_cast<int>(timeout * 1000)))
+				auto timeoutMs = static_cast<int>(clip(timeout * 1000, double(0), double(std::numeric_limits<int>::max()-1)));
+				if (m_q.wait_and_pop(f, timeoutMs))
 					f();
 
 				if (timeout<=0)
 				{
-					auto delta = timer.seconds();
+					double delta = timer.seconds();
 					timer.reset();
-					interval = m_t.tick(static_cast<TickReturnType>(std::max(eps,delta)));
+					interval = m_t.tick(static_cast<TickReturnType>(std::max((double)eps,delta)));
+					interval = clip(interval, double(0), double(std::numeric_limits<int>::max()));
 				}
 			}
 		});
