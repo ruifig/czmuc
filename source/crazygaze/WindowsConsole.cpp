@@ -167,7 +167,7 @@ void WindowsConsole::log(const char* file, int line, const LogCategoryBase* cate
 		setTextColour(CONSOLE_COLOUR_YELLOW);
 	else
 		setTextColour(CONSOLE_COLOUR_RED);
-	print(msg);
+	printf("%s\n",msg);
 	setTextColour(color);
 }
 
