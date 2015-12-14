@@ -19,8 +19,6 @@ namespace cz
 namespace rpc
 {
 
-typedef cz::SharedQueue<std::function<void()>> WorkQueue;
-
 class BaseConnection;
 
 class Transport
