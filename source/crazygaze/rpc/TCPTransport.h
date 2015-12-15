@@ -21,16 +21,24 @@ namespace cz
 namespace rpc
 {
 
+//! Note: Instead of having the rpc library using a SharedQueue directly, it uses an interface, so the
+// user code can trigger other things whenever work is queued, if required
+class RPCWorkQueue
+{
+public:
+	virtual void addWork(std::function<void()> work) = 0;
+};
+
 class TCPTransport : public Transport
 {
 public:
-  TCPTransport(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
-  TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
+  TCPTransport(const char* ip, int port, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
+  TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
   virtual ~TCPTransport();
 
 protected:
 
-	void init(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
+	void init(const char* ip, int port, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
 	//
 	// Transport interface
 	virtual ChunkBuffer prepareSend() override;
@@ -44,20 +52,20 @@ protected:
 
 	//! If this is a client side transport, we created the socket, and we control the lifetime
 	std::unique_ptr<net::TCPSocket> m_socket;
-	WorkQueue* m_rcvQueue;
+	RPCWorkQueue* m_rcvQueue;
 	cz::ZeroSemaphore m_queuedOps;
 };
 
 class TCPServerTransport : public ServerTransport
 {
 public:
-	TCPServerTransport(int listenPort, net::CompletionPort& iocp, WorkQueue* rcvQueue = nullptr);
+	TCPServerTransport(int listenPort, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
 	virtual ~TCPServerTransport();
 	void onClientRemoved(class TCPServerConnection* clientInfo);
 protected:
 	virtual int getNumClients() override;
 	std::unique_ptr<net::TCPServerClientInfo> createConnection(net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket,
-		WorkQueue* rcvQueue);
+		RPCWorkQueue* rcvQueue);
 	net::TCPServer m_tcpServer;
 };
 
