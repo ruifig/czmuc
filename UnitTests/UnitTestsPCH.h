@@ -37,3 +37,4 @@
 #include "crazygaze/rpc/RPCConnection.h"
 #include "crazygaze/rpc/TCPTransport.h"
 #include "crazygaze/rpc/GenericRPC.h"
+#include "crazygaze/AsyncCommandQueue.h"

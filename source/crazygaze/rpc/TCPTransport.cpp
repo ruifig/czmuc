@@ -26,7 +26,7 @@ namespace rpc
 {
 
 // #TODO : Remove all the unnecessary parameters that I was using for debugging
-static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, WorkQueue* rcvQueue,
+static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, RPCWorkQueue* rcvQueue,
 							 cz::ZeroSemaphore* queuedOps)
 {
 	while(true)
@@ -47,7 +47,7 @@ static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, WorkQ
 			buf.read(ptr.get(), size);
 			tmp->writeBlock(std::move(ptr), size, size);
 			queuedOps->increment();
-			rcvQueue->emplace([transport, buf = std::move(tmp), queuedOps]()
+			rcvQueue->addWork([transport, buf = std::move(tmp), queuedOps]()
 			{
 				transport->onReceivedData(*buf);
 				queuedOps->decrement();
@@ -63,13 +63,13 @@ static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, WorkQ
 //
 //////////////////////////////////////////////////////////////////////////
 
-TCPTransport::TCPTransport(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue)
+TCPTransport::TCPTransport(const char* ip, int port, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue)
 {
 	init(ip, port, iocp, rcvQueue);
 }
 
 TCPTransport::TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp,
-					   WorkQueue* rcvQueue)
+					   RPCWorkQueue* rcvQueue)
 {
 	init(address.toString(false), address.port, iocp, rcvQueue);
 }
@@ -83,7 +83,7 @@ TCPTransport::~TCPTransport()
 	LOGEXIT();
 }
 
-void TCPTransport::init(const char* ip, int port, net::CompletionPort& iocp, WorkQueue* rcvQueue /*= nullptr*/)
+void TCPTransport::init(const char* ip, int port, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue /*= nullptr*/)
 {
 	LOGENTRY();
 	m_rcvQueue = rcvQueue;
@@ -145,7 +145,7 @@ class TCPServerConnection : public net::TCPServerClientInfo
 {
 public:
   TCPServerConnection(net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket, class TCPServerTransport* transportOwner,
-							 WorkQueue* rcvQueue = nullptr)
+							 RPCWorkQueue* rcvQueue = nullptr)
 	  : net::TCPServerClientInfo(owner, std::move(socket)), m_transportOwner(transportOwner), m_rcvQueue(rcvQueue)
 	{
 		LOGENTRY();
@@ -184,7 +184,7 @@ protected:
 	friend class TCPServerTransport;
 	Transport* m_transport;
 	class TCPServerTransport* m_transportOwner;
-	WorkQueue* m_rcvQueue;
+	RPCWorkQueue* m_rcvQueue;
 	cz::ZeroSemaphore m_queuedOps;
 };
 
@@ -240,7 +240,7 @@ protected:
 //
 //////////////////////////////////////////////////////////////////////////
 TCPServerTransport::TCPServerTransport(int listenPort, net::CompletionPort& iocp,
-								   WorkQueue* rcvQueue)
+								   RPCWorkQueue* rcvQueue)
 	: m_tcpServer(listenPort, iocp, [this, rcvQueue](net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket)
 				  {
 					  return createConnection(owner, std::move(socket), rcvQueue);
@@ -255,7 +255,7 @@ TCPServerTransport::~TCPServerTransport()
 
 std::unique_ptr<net::TCPServerClientInfo> TCPServerTransport::createConnection(
 	net::TCPServer* owner, std::unique_ptr<net::TCPSocket> socket,
-	WorkQueue* rcvQueue)
+	RPCWorkQueue* rcvQueue)
 {
 	auto clientInfo = std::make_unique<TCPServerConnection>(owner, std::move(socket), this, rcvQueue);
 	auto transport = std::make_unique<TCPServerSideTransport>(clientInfo.get());

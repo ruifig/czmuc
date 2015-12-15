@@ -35,44 +35,46 @@ int runAllTests()
 
 
 // #TODO remove this crap, or refactor it?
-WorkQueue* gRcvQueue;
-bool gRcvQueueThreadFinish = false;
-std::thread* gRcvQueueThread;
+class RPCQueueImplementation : public rpc::RPCWorkQueue
+{
+
+public:
+	AsyncCommandQueueAutomatic cmdQueue;
+	virtual void addWork(std::function<void()> work)
+	{
+		cmdQueue.send(std::move(work));
+	}
+
+	unsigned size()
+	{
+		return cmdQueue.getQueue().size();
+	}
+};
+
+
+rpc::RPCWorkQueue* gRpcQueue;
+
 void waitForQueueToFinish()
 {
-	if (gRcvQueue)
+	if (gRpcQueue)
 	{
-		CZ_ASSERT(gRcvQueue->size() == 0);
+		CZ_ASSERT(static_cast<RPCQueueImplementation*>(gRpcQueue)->size() == 0);
 		return;
 		auto pr = std::make_shared<std::promise<void>>();
-		gRcvQueue->push([&]() { pr->set_value();});
+		gRpcQueue->addWork([&]() { pr->set_value();});
 		pr->get_future().get();
 	}
 }
 
 int runAllTestsQueued()
 {
-	WorkQueue q;
-	gRcvQueue = &q;
-	gRcvQueueThreadFinish = false;
+	RPCQueueImplementation rpcQueue;
+	gRpcQueue = &rpcQueue;
+	bool rpcQueueThreadFinish = false;
 
-	auto qThread = std::thread([&q]
-	{
-		while (!gRcvQueueThreadFinish)
-		{
-			std::function<void()> f;
-			q.wait_and_pop(f);
-			f();
-		}
-	});
-	gRcvQueueThread = &qThread;
 	int ret = runAllTests();
 
-	gRcvQueue->push([&]() { gRcvQueueThreadFinish = true;});
-	gRcvQueueThread->join();
-
-	gRcvQueue = nullptr;
-	gRcvQueueThread = nullptr;
+	gRpcQueue = nullptr;
 	return ret;
 }
 

@@ -4,7 +4,7 @@ using namespace cz;
 using namespace cz::rpc;
 using namespace cz::net;
 
-extern WorkQueue* gRcvQueue;
+extern RPCWorkQueue* gRpcQueue;
 extern std::thread* gRcvQueueThread;
 extern void waitForQueueToFinish();
 
@@ -245,7 +245,7 @@ TEST(Simple)
 	{
 		Calculator calc;
 		CompletionPort iocp(1);
-		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// Wait for the client to finish
 		finish.wait();
@@ -257,7 +257,7 @@ TEST(Simple)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<Calculator> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<Calculator> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 
 		auto res1 = CALLRPC(calcClient, add, 1, 2);
 		auto res2 = CALLRPC(calcClient, subtract, 10, 1);
@@ -291,7 +291,7 @@ TEST(IgnoredFutured)
 	{
 		Calculator calc;
 		CompletionPort iocp(1);
-		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// Wait for the client to finish
 		finish.wait();
@@ -305,7 +305,7 @@ TEST(IgnoredFutured)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<Calculator> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<Calculator> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 		auto res1 = CALLRPC(calcClient, add, 1, 2);
 		CALLRPC(calcClient, add, 4, 2); // Call something but don't keep the future
 		clientFinished = true;
@@ -324,7 +324,7 @@ TEST(VariousParameters)
 	{
 		RPCTest obj;
 		CompletionPort iocp(1);
-		Server<RPCTest> rpcServer(obj, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<RPCTest> rpcServer(obj, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// Wait for the client to finish
 		finish.wait();
@@ -336,7 +336,7 @@ TEST(VariousParameters)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(4);
-		Connection<RPCTest> rpcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<RPCTest> rpcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 
 		// Test strings
 		{
@@ -393,7 +393,7 @@ TEST(Virtuals)
 	{
 		Calculator calc;
 		CompletionPort iocp(1);
-		Server<CalculatorInterface> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<CalculatorInterface> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// wait for the client to finish
 		finish.wait();
@@ -405,7 +405,7 @@ TEST(Virtuals)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<CalculatorInterface> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<CalculatorInterface> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 
 		auto res1 = CALLRPC(calcClient, multiply, 4, 2);
 		auto res2 = CALLRPC(calcClient, divide, 6, 2);
@@ -430,7 +430,7 @@ TEST(Inheritance)
 	{
 		Calculator calc;
 		CompletionPort iocp(1);
-		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// wait for the client to finish
 		finish.wait();
@@ -444,7 +444,7 @@ TEST(Inheritance)
 		CompletionPort iocp(1);
 		std::unique_ptr<BaseConnection> base  =
 			std::unique_ptr<Connection<Calculator>>( new Connection<Calculator>(
-			std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue)));
+			std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue)));
 
 
 		{
@@ -487,7 +487,7 @@ TEST(Inheritance)
 TEST(ConnectFailure)
 {
 	CompletionPort iocp(1);
-	CHECK_THROW(TCPTransport("127.0.0.1", 28000, iocp, gRcvQueue), std::runtime_error);
+	CHECK_THROW(TCPTransport("127.0.0.1", 28000, iocp, gRpcQueue), std::runtime_error);
 	waitForQueueToFinish();
 }
 
@@ -516,7 +516,7 @@ TEST(RPCFailure)
 	{
 		RPCTest calc;
 		CompletionPort iocp(1);
-		Server<RPCTest> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<RPCTest> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// wait for the client to finish
 		finish.wait();
@@ -527,7 +527,7 @@ TEST(RPCFailure)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<RPCTest> client(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<RPCTest> client(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 
 		checkRPCThrow(CALLRPC(client, broken, 1), "Failed rpc");
 
@@ -564,7 +564,7 @@ TEST(ConnectionDropped)
 	{
 		RPCTest calc;
 		CompletionPort iocp(1);
-		Server<RPCTest> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<RPCTest> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// wait
 		finish.wait();
@@ -576,7 +576,7 @@ TEST(ConnectionDropped)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<RPCTest> client(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<RPCTest> client(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 
 		// Signal the server to finish, so it will fail when we call an RPC
 		finish.notify();
@@ -600,7 +600,7 @@ TEST(BothDirections)
 		RPCTest calc;
 		CompletionPort iocp(1);
 		{
-			Server<RPCTest, RPCTestClient> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+			Server<RPCTest, RPCTestClient> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 			serverRunning.notify();
 
 			// wait for the client to finish
@@ -619,7 +619,7 @@ TEST(BothDirections)
 	{
 		CompletionPort iocp(2);
 		RPCTestClient obj;
-		Connection<RPCTest, RPCTestClient> client(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue), obj);
+		Connection<RPCTest, RPCTestClient> client(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue), obj);
 		obj.connection = &client;
 
 		CALLRPC(client, doFunc1, 1234);
@@ -643,7 +643,7 @@ TEST(FutureReturnValue)
 	{
 		Calculator calc;
 		CompletionPort iocp(1);
-		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// Wait for the client to finish
 		finish.wait();
@@ -655,7 +655,7 @@ TEST(FutureReturnValue)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<Calculator> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<Calculator> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 		auto res1 = CALLRPC(calcClient, slowSum, 1, 2);
 		CHECK_EQUAL(3, res1.get());
 	});
@@ -682,7 +682,7 @@ TEST(GenericRPC)
 	{
 		Calculator calc;
 		CompletionPort iocp(1);
-		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRcvQueue));
+		Server<Calculator> calcServer(calc, std::make_unique<TCPServerTransport>(28000, iocp, gRpcQueue));
 		serverRunning.notify();
 		// Wait for the client to finish
 		finish.wait();
@@ -694,7 +694,7 @@ TEST(GenericRPC)
 	auto clientThread = std::thread([&]()
 	{
 		CompletionPort iocp(1);
-		Connection<GenericRPCClass> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRcvQueue));
+		Connection<GenericRPCClass> calcClient(std::make_unique<TCPTransport>("127.0.0.1", 28000, iocp, gRpcQueue));
 
 		std::vector<Any> params;
 		params.push_back(Any(1));
