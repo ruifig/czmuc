@@ -205,7 +205,8 @@ namespace details
 		static cz::ChunkBuffer& serialize(cz::ChunkBuffer& stream, const Container& v)
 		{
 			stream << static_cast<int>(v.size());
-			stream.write(&v[0], sizeof(v[0])*static_cast<unsigned>(v.size()));
+			if (v.size())
+				stream.write(&v[0], sizeof(v[0])*static_cast<unsigned>(v.size()));
 			return stream;
 		}
 
@@ -215,8 +216,11 @@ namespace details
 			int size;
 			stream >> size;
 			v.clear();
-			v.resize(size);
-			stream.read(&v[0], sizeof(v[0])*size);
+			if (size)
+			{
+				v.resize(size);
+				stream.read(&v[0], sizeof(v[0])*size);
+			}
 			return stream;
 		}
 	};
