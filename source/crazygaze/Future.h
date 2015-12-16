@@ -282,7 +282,7 @@ namespace details
 			{
 				// Unlock before calling the continuation, since it's unknown code
 				lk.unlock();
-				w(std::forward<OuterFt>(outerFt));
+				w(std::reference_wrapper<OuterFt>(outerFt).get());
 				return Future<WT>::makeReady();
 			}
 
@@ -291,7 +291,7 @@ namespace details
 			m_continuations.push_back(
 				[outerFt = std::move(outerFt), pr = std::move(pr), w = std::move(w)]() mutable
 			{
-				w(std::forward<OuterFt>(outerFt));
+				w(std::reference_wrapper<OuterFt>(outerFt).get());
 				pr.set_value();
 			});
 			return ft;
