@@ -40,7 +40,7 @@ class RPCQueueImplementation : public rpc::RPCWorkQueue
 
 public:
 	AsyncCommandQueueAutomatic cmdQueue;
-	virtual void addWork(std::function<void()> work)
+	virtual void push(std::function<void()> work) override
 	{
 		cmdQueue.send(std::move(work));
 	}
@@ -61,7 +61,7 @@ void waitForQueueToFinish()
 		CZ_ASSERT(static_cast<RPCQueueImplementation*>(gRpcQueue)->size() == 0);
 		return;
 		auto pr = std::make_shared<std::promise<void>>();
-		gRpcQueue->addWork([&]() { pr->set_value();});
+		gRpcQueue->push([&]() { pr->set_value();});
 		pr->get_future().get();
 	}
 }

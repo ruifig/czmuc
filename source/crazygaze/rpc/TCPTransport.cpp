@@ -47,7 +47,7 @@ static void processRPCBuffer(Transport* transport, const ChunkBuffer& buf, RPCWo
 			buf.read(ptr.get(), size);
 			tmp->writeBlock(std::move(ptr), size, size);
 			queuedOps->increment();
-			rcvQueue->addWork([transport, buf = std::move(tmp), queuedOps]()
+			rcvQueue->push([transport, buf = std::move(tmp), queuedOps]()
 			{
 				transport->onReceivedData(*buf);
 				queuedOps->decrement();

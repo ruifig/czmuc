@@ -26,7 +26,7 @@ namespace rpc
 class RPCWorkQueue
 {
 public:
-	virtual void addWork(std::function<void()> work) = 0;
+	virtual void push(std::function<void()> work) = 0;
 };
 
 class TCPTransport : public Transport
