@@ -43,18 +43,6 @@ protected:
 		m_th.join();
 	}
 
-	template<typename R, typename F>
-	void exec(Promise<R>& pr, F& f) const
-	{
-		pr.set_value(f(m_t));
-	}
-	template<typename F>
-	void exec(Promise<void> pr, F& f) const
-	{
-		f(m_t);
-		pr.set_value();
-	}
-
 public:
 	WorkQueue& getQueue()
 	{
@@ -68,7 +56,7 @@ public:
 		auto ft = pr.get_future();
 		m_q.push([pr = std::move(pr), f=std::move(f), this]() mutable
 		{
-			exec(pr, f);
+			fulfillPromiseFromWork(pr, f, m_t);
 		});
 
 		return ft;
