@@ -257,7 +257,7 @@ namespace details
 			{
 				// Unlock before calling the continuation, since it's unknown code
 				lk.unlock();
-				return makeFutureReadyFromWork(std::forward<Cont>(w), std::reference_wrapper<OuterFt>(outerFt).get());
+				return makeFutureReadyFromWork(w, std::reference_wrapper<OuterFt>(outerFt).get());
 			}
 
 			Promise<R> pr;
