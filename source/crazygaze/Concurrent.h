@@ -49,6 +49,11 @@ public:
 		return m_q;
 	}
 
+	std::thread::id getThreadId() const
+	{
+		return m_th.get_id();
+	}
+
 	template<typename F>
 	auto operator()(F f) const -> Future<decltype(f(m_t))>
 	{
@@ -80,7 +85,11 @@ public:
 		m_th = std::thread([this]
 		{
 			while (!m_done)
-				m_q.wait_and_pop()();
+			{
+				std::function<void()> f;
+				m_q.wait_and_pop(f);
+				f();
+			}
 		});
 	}
 };
