@@ -575,9 +575,32 @@ private:
 	std::shared_ptr<details::FutureData<bool>> m_data;
 };
 
+
+//! Given a promise, a work lambda and work parameters, it fulfill the promise with work result
+// This makes it easier for code to fulfill Promise<T> and Promise<void> with the same code
+template<typename R, typename F, typename... WorkParams>
+void fulfillPromiseFromWork(Promise<R>& pr, F& f, WorkParams&&... workParams )
+{
+	pr.set_value(f(std::forward<WorkParams>(workParams)...));
+}
+template<typename F, typename... WorkParams>
+void fulfillPromiseFromWork(Promise<void>& pr, F& f, WorkParams&&... workParams )
+{
+	f(std::forward<WorkParams>(workParams)...);
+	pr.set_value();
+}
+template<typename R>
+void fulfillPromiseWithEmpty(Promise<R>& pr)
+{
+	pr.set_value(R());
+}
+inline void fulfillPromiseWithEmpty(Promise<void>& pr)
+{
+	pr.set_value();
+}
+
+
 #endif
-
-
 
 }
 
