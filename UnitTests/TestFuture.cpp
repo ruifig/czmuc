@@ -192,6 +192,109 @@ TEST(Future_Continuations_2)
 }
 
 
+TEST(Future_thenQueue)
+{
+	struct WorkThread
+	{
+		WorkThread()
+		{
+			workQueue = std::make_shared<WorkQueue>();
+			th = std::thread([this]
+			{
+				while (!finish)
+				{
+					std::function<void()> f;
+					workQueue->wait_and_pop(f);
+					f();
+				}
+			});
+
+		}
+
+		~WorkThread()
+		{
+			workQueue->push([this] { finish = true;});
+			th.join();
+		}
+		std::shared_ptr<WorkQueue> workQueue;
+		std::thread th;
+		bool finish=false;
+	};
+
+	auto th = std::make_unique<WorkThread>();
+
+	// Just a quick way to execute lambdas on another thread
+	Concurrent<int> conc;
+
+
+	{
+		Semaphore checkpoint1;
+		Semaphore checkpoint2;
+		auto readyFt = conc([&](auto& i)
+		{
+			return 3;
+		});
+		auto nonReadyFt = conc([&](auto& i)
+		{
+			checkpoint1.notify(); // When this is signaled, we know that readyFt is ready
+			checkpoint2.wait();
+			return 5;
+		});
+
+
+		checkpoint1.wait();
+		CHECK(readyFt.is_ready());
+		{
+			auto ft = readyFt.thenQueue(
+				th->workQueue,
+				[&](Future<int>& resFt)
+			{
+				// Even though the future was already ready when we called thenQueue, we still want the work to be
+				// queued to the other thread as we requested.
+				CHECK(std::this_thread::get_id() == th->th.get_id());
+				return resFt.get() * 0.5f;
+			});
+			CHECK_CLOSE(1.5f, ft.get(), std::numeric_limits<float>::epsilon());
+		}
+
+		{
+			auto ft = nonReadyFt.thenQueue(
+				th->workQueue,
+				[&](Future<int>& resFt)
+			{
+				CHECK(std::this_thread::get_id() == th->th.get_id());
+				return resFt.get() * 0.5f;
+			});
+			CHECK(!nonReadyFt.is_ready());
+			// calling this here after the thenQueue, makes sure that we can test the nonReadyFt as not ready
+			checkpoint2.notify(); 
+			// This future will not be ready, and it will block
+			CHECK_CLOSE(2.5f, ft.get(), std::numeric_limits<float>::epsilon());
+		}
+	}
+
+	// Test with the queue deleted
+	{
+		Semaphore checkpoint1;
+		auto ft1 = conc([&](auto& i)
+		{
+			checkpoint1.wait();
+			return 1;
+		});
+
+		auto resFt1 = ft1.thenQueue(
+			th->workQueue,
+			[](Future<int>& resFt)
+		{
+			return resFt.get() + 1;
+		});
+		th = nullptr;
+		checkpoint1.notify();
+		checkFutureErrorCode(FutureError::Code::BrokenPromise, [&] {resFt1.get();});
+	}
+
+}
+
 TEST(Future_void)
 {
 	// Simple

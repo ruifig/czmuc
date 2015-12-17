@@ -248,52 +248,51 @@ namespace details
 		}
 
 		template< typename Cont, typename OuterFt>
-		auto thenImpl(Cont w, OuterFt outerFt)
-			-> typename std::enable_if<!std::is_void<decltype(w(outerFt))>::value, Future<decltype(w(outerFt))>>::type
+		auto thenImpl(Cont w, OuterFt outerFt) -> Future<decltype(w(outerFt))>
 		{
 			std::unique_lock<std::mutex> lk(m_mtx);
-			using WT = decltype(w(outerFt));
+			using R = decltype(w(outerFt));
 
 			if (m_result.is_ready())
 			{
 				// Unlock before calling the continuation, since it's unknown code
 				lk.unlock();
-				return Future<WT>::makeReady(w(std::forward<OuterFt>(outerFt)));
+				return makeFutureReadyFromWork(std::forward<Cont>(w), std::reference_wrapper<OuterFt>(outerFt).get());
 			}
 
-			Promise<WT> pr;
+			Promise<R> pr;
 			auto ft = pr.get_future();
 			m_continuations.push_back(
 				[outerFt = std::move(outerFt), pr = std::move(pr), w = std::move(w)]() mutable
 			{
-				pr.set_value(w(std::forward<OuterFt>(outerFt)));
+				fulfillPromiseFromWork(pr, w, std::reference_wrapper<OuterFt>(outerFt).get());
 			});
 			return ft;
 		}
 
-		template< typename Cont, typename OuterFt>
-		auto thenImpl(Cont w, OuterFt outerFt)
-			-> typename std::enable_if<std::is_void<decltype(w(outerFt))>::value, Future<decltype(w(outerFt))>>::type
+
+		template<typename Cont, typename OuterFt, typename Queue>
+		auto thenQueueImpl(Cont w, OuterFt outerFt, std::weak_ptr<Queue> q) -> Future<decltype(w(outerFt))>
 		{
-			std::unique_lock<std::mutex> lk(m_mtx);
-			using WT = decltype(w(outerFt));
-
-			if (m_result.is_ready())
-			{
-				// Unlock before calling the continuation, since it's unknown code
-				lk.unlock();
-				w(std::reference_wrapper<OuterFt>(outerFt).get());
-				return Future<WT>::makeReady();
-			}
-
-			Promise<WT> pr;
+			using R = decltype(w(outerFt));
+			Promise<R> pr;
 			auto ft = pr.get_future();
-			m_continuations.push_back(
-				[outerFt = std::move(outerFt), pr = std::move(pr), w = std::move(w)]() mutable
-			{
-				w(std::reference_wrapper<OuterFt>(outerFt).get());
-				pr.set_value();
-			});
+			thenImpl(
+				[pr=std::move(pr), w=std::move(w), q=std::move(q)](auto outerFt) mutable
+				{
+					auto qq = q.lock();
+					if (!qq)
+						return;
+					else
+					{
+						qq->push([pr=std::move(pr), w=std::move(w), outerFt=std::move(outerFt)]() mutable
+						{
+							fulfillPromiseFromWork(pr, w, std::reference_wrapper<OuterFt>(outerFt).get());
+						});
+					}
+				},
+				outerFt);
+
 			return ft;
 		}
 		
@@ -305,7 +304,13 @@ namespace details
 		{
 			m_cond.notify_all();
 			for (auto&& c : m_continuations)
+			{
 				c();
+				// delete the continuations, so any objects contained in the passed lambdas are destroyed.
+				// This is required, since some lambdas might be dealing with promises directly, and expect promises to be
+				// broken if something went wrong
+				c = nullptr;
+			}
 		}
 
 		mutable std::mutex m_mtx;
@@ -366,6 +371,27 @@ public:
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		return m_data->thenImpl(std::forward<Cont>(w), *this);
+	}
+
+
+	/*! Adds a continuation to a specified queue
+	* \param q
+	*		Shared pointer to some object that implements the push method (like a queue)
+	*		This is kept internally as a weak_ptr.
+	*		When the future goes ready, if this weak_ptr is not valid any more, the continuation is dropped, and the
+	*		future will be set with an exception (broken_promise)
+	* \param w
+	*	Continuation to run.
+	*	The continuation is ALWAYS queued to the specified queue, even if the future is already in a ready state when
+	*   calling this method.
+	*	
+	*/
+	template<typename Cont, typename Queue>
+	auto thenQueue(std::shared_ptr<Queue>& q, Cont w)
+	{
+		if (!m_data)
+			throw FutureError(FutureError::Code::NoState);
+		return m_data->thenQueueImpl(std::forward<Cont>(w), *this, std::weak_ptr<Queue>(q));
 	}
 
 	bool is_ready() const
@@ -599,7 +625,26 @@ inline void fulfillPromiseWithEmpty(Promise<void>& pr)
 	pr.set_value();
 }
 
+template<typename F, typename... WorkParams>
+auto makeFutureReadyFromWork(F& f, WorkParams&&... workParams) 
+	-> typename std::enable_if<
+		!std::is_void<decltype(f(std::forward<WorkParams>(workParams)...))>::value,
+		Future<decltype(f(std::forward<WorkParams>(workParams)...))> >::type
+{
+	using R = decltype(f(std::forward<WorkParams>(workParams)...));
+	return Future<R>::makeReady(f(std::forward<WorkParams>(workParams)...));
+}
 
+template<typename F, typename... WorkParams>
+auto makeFutureReadyFromWork(F& f, WorkParams&&... workParams) 
+	-> typename std::enable_if<
+		std::is_void<decltype(f(std::forward<WorkParams>(workParams)...))>::value,
+		Future<decltype(f(std::forward<WorkParams>(workParams)...))> >::type
+{
+	using R = decltype(f(std::forward<WorkParams>(workParams)...));
+	f(std::forward<WorkParams>(workParams)...);
+	return Future<R>::makeReady();
+}
 #endif
 
 }
