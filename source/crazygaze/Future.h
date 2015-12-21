@@ -387,7 +387,7 @@ public:
 	*	
 	*/
 	template<typename Cont, typename Queue>
-	auto thenQueue(std::shared_ptr<Queue>& q, Cont w)
+	auto thenQueue(const std::shared_ptr<Queue>& q, Cont w)
 	{
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
