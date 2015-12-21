@@ -87,7 +87,6 @@ CompletionPort::~CompletionPort()
 		t.join();
 	}
 
-
 	::CloseHandle(m_port);
 }
 

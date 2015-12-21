@@ -711,13 +711,13 @@ TCPSocketData* WriteOperation::getSharedData()
 	return static_cast<TCPSocketData*>(sharedData.get());
 }
 
-std::atomic<uint64_t> gWriteOperationBytesTransfered = 0;
+std::atomic<uint64_t> gWriteOperationBytesTransfered(0);
 void WriteOperation::onSuccess(unsigned bytesTransfered)
 {
 	gWriteOperationBytesTransfered += bytesTransfered;
 }
 
-std::atomic<int> gWriteOperationErrors = 0;
+std::atomic<int> gWriteOperationErrors(0);
 void WriteOperation::onError()
 {
 	gWriteOperationErrors++;
