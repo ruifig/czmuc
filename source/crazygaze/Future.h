@@ -401,6 +401,11 @@ public:
 		return m_data->is_ready();
 	}
 
+	bool valid() const
+	{
+		return m_data.get()!=nullptr;
+	}
+
 	static Future makeReady(T v)
 	{
 		return Future(std::make_shared<details::FutureData<T>>(std::move(v)));
@@ -453,6 +458,11 @@ public:
 		if (!m_data)
 			throw FutureError(FutureError::Code::NoState);
 		return m_data->is_ready();
+	}
+
+	bool valid() const
+	{
+		return m_data.get()!=nullptr;
 	}
 
 	static Future makeReady()
@@ -645,8 +655,23 @@ auto makeFutureReadyFromWork(F& f, WorkParams&&... workParams)
 	f(std::forward<WorkParams>(workParams)...);
 	return Future<R>::makeReady();
 }
+
+
+template<typename F>
+auto async(F f) -> Future<decltype(f())>
+{
+	using R = decltype(f());
+	Promise<R> pr;
+	auto ft = pr.get_future();
+	std::async(std::launch::async, [f=std::move(f), pr=std::move(pr)]() mutable
+	{
+		pr.set_value(f());
+	});
+	return ft;
+}
+
 #endif
 
-}
+} // namespace cz
 
 #pragma warning(pop)

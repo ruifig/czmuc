@@ -95,7 +95,13 @@ extern LogCategoryLogNone logNone;
 
 #define CZ_DECLARE_LOG_CATEGORY(NAME, DEFAULT_VERBOSITY, COMPILETIME_VERBOSITY) extern ::cz::LogCategoryLogNone& NAME;
 #define CZ_DEFINE_LOG_CATEGORY(NAME) ::cz::LogCategoryLogNone& NAME = ::cz::logNone;
-#define CZ_LOG(...) {}
+#define CZ_LOG(NAME, VERBOSITY, fmt, ...)                               \
+	{                                                                   \
+		if (::cz::LogVerbosity::VERBOSITY == ::cz::LogVerbosity::Fatal) \
+		{                                                               \
+			::cz::_doAssert(__FILE__, __LINE__, fmt, ##__VA_ARGS__);    \
+		}                                                               \
+	}
 
 #else
 
@@ -116,16 +122,21 @@ extern LogCategoryLogNone logNone;
 	(((int)::cz::LogVerbosity::VERBOSITY <= LogCategory##NAME::CompileTimeVerbosity) && \
 	 ((int)::cz::LogVerbosity::VERBOSITY <= (int)::cz::LogVerbosity::CZ_LOG_MINIMUM_VERBOSITY))
 
-
-#define CZ_LOG(NAME,VERBOSITY, fmt, ...) \
-	{if (CZ_LOG_CHECK_COMPILETIME_VERBOSITY(NAME, VERBOSITY)) \
-	{ \
-		if (!NAME.isSuppressed(::cz::LogVerbosity::VERBOSITY)) \
-		{ \
-			::cz::LogOutput::logToAll(__FILE__, __LINE__, &NAME, ::cz::LogVerbosity::VERBOSITY, fmt, ##__VA_ARGS__); \
-		} \
-	} }
-
+#define CZ_LOG(NAME, VERBOSITY, fmt, ...)                                                                \
+	{                                                                                                    \
+		if (CZ_LOG_CHECK_COMPILETIME_VERBOSITY(NAME, VERBOSITY))                                         \
+		{                                                                                                \
+			if (!NAME.isSuppressed(::cz::LogVerbosity::VERBOSITY))                                       \
+			{                                                                                            \
+				::cz::LogOutput::logToAll(__FILE__, __LINE__, &NAME, ::cz::LogVerbosity::VERBOSITY, fmt, \
+				                          ##__VA_ARGS__);                                                \
+				if (::cz::LogVerbosity::VERBOSITY == ::cz::LogVerbosity::Fatal)                          \
+				{                                                                                        \
+					::cz::_doAssert(__FILE__, __LINE__, fmt, ##__VA_ARGS__);                             \
+				}                                                                                        \
+			}                                                                                            \
+		}                                                                                                \
+	}
 
 #endif
 

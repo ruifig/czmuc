@@ -1,9 +1,9 @@
 #include "czlibPCH.h"
 #include "crazygaze/net/TCPSocket.h"
-#include "crazygaze/Semaphore.h"
 #include "crazygaze/net/details/TCPSocketDebug.h"
-#include "crazygaze/StringUtils.h"
 #include "crazygaze/Json.h"
+#include "crazygaze/Logging.h"
+#include "crazygaze/StringUtils.h"
 
 #pragma comment(lib, "ws2_32.lib")
 // Disable deprecation warnings
@@ -56,6 +56,53 @@ namespace cz
 {
 namespace net
 {
+
+namespace details
+{
+	WSAInstance::WSAInstance()
+	{
+		WORD wVersionRequested = MAKEWORD(2, 2);
+		WSADATA wsaData;
+		int err = WSAStartup(wVersionRequested, &wsaData);
+		if (err != 0)
+			throw std::runtime_error(getLastWin32ErrorMsg());
+		if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
+		{
+			WSACleanup();
+			throw std::runtime_error("Could not find a usable version of Winsock.dll");
+		}
+	}
+
+	WSAInstance::~WSAInstance()
+	{
+		WSACleanup();
+	}
+
+	struct AsyncAcceptData
+	{
+		enum
+		{
+			AddrLen = sizeof(sockaddr_in) + 16
+		};
+		char outputBuffer[2 * AddrLen];
+		CompletionHandler handler;
+		TCPSocket* socket = nullptr;
+	};
+
+	struct AsyncReceiveData
+	{
+		std::unique_ptr<char[]> buf;
+		int capacity;
+		CompletionHandler handler;
+	};
+
+	struct AsyncSendData
+	{
+		std::vector<char> buf;
+		CompletionHandler handler;
+	};
+
+} // namespace details
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -142,107 +189,25 @@ static bool movepop(Q& q, T& dst)
 //
 //////////////////////////////////////////////////////////////////////////
 
-const char* SocketAddress::toString(bool includePort) const
-{
-	if (includePort)
-		return formatString("%d.%d.%d.%d:%d", ip.bytes.b1, ip.bytes.b2, ip.bytes.b3, ip.bytes.b4, port);
-	else
-		return formatString("%d.%d.%d.%d", ip.bytes.b1, ip.bytes.b2, ip.bytes.b3, ip.bytes.b4);
-}
-
-void SocketAddress::constructFrom(const sockaddr_in* sa)
-{
-	ip.full = sa->sin_addr.s_addr;
-	port = ntohs(sa->sin_port);
-}
-
-SocketAddress::SocketAddress(const sockaddr& addr)
-{
-	CZ_ASSERT(addr.sa_family == AF_INET);
-	constructFrom((const sockaddr_in*)&addr);
-}
-
-SocketAddress::SocketAddress(const sockaddr_in& addr)
-{
-	CZ_ASSERT(addr.sin_family == AF_INET);
-	constructFrom(&addr);
-}
-
-SocketAddress::SocketAddress(const char* ip_, int port_)
-{
-	inet_pton(AF_INET, ip_, &ip.full);
-	port = port_;
-}
-
-SocketAddress::SocketAddress(const std::string& ipAndPort)
-{
-	constructFrom(ipAndPort.c_str());
-}
-
-SocketAddress::SocketAddress(const char* ipAndPort)
-{
-	constructFrom(ipAndPort);
-}
-
-void SocketAddress::constructFrom(const char* ipAndPort)
-{
-	auto ptr = ipAndPort;
-	char* ip_ = getTemporaryString();
-	while(*ptr)
-	{
-		if (*ptr == ':' || *ptr == '|')
-		{
-			ip_[ptr-ipAndPort] = 0;
-			inet_pton(AF_INET, ip_, &ip.full);
-			port = std::atoi(ptr+1);
-			return;
-		}
-		ip_[ptr - ipAndPort] = *ptr++;
-	}
-
-	throw std::runtime_error("String is not a valid IP:PORT");
-}
-
-SocketAddress::SocketAddress(const std::string& ip_, int port_)
-{
-	inet_pton(AF_INET, ip_.c_str(), &ip.full);
-	port = port_;
-}
-
 //////////////////////////////////////////////////////////////////////////
 //
 // Shared Data
 //
 //////////////////////////////////////////////////////////////////////////
 
-struct TCPBaseSocketData : public CompletionPortOperationBaseData
+
+struct TCPServerSocketData
 {
-	explicit TCPBaseSocketData(CompletionPort& iocp) : CompletionPortOperationBaseData(iocp)
+	explicit TCPServerSocketData(CompletionPort& iocp) : iocp(iocp)
 	{
 	}
-	virtual ~TCPBaseSocketData()
-	{
-	}
-
-	uint32_t pendingReceivesCount;
-	uint32_t pendingReceivesSize;
-};
-
-// Forward declaration
-struct ReadOperation;
-
-struct TCPServerSocketData : public TCPBaseSocketData
-{
-	explicit TCPServerSocketData(CompletionPort& iocp) : TCPBaseSocketData(iocp) {}
 	virtual ~TCPServerSocketData()
 	{
 	}
+	CompletionPort& iocp;
 	SocketWrapper listenSocket;
 	LPFN_ACCEPTEX lpfnAcceptEx = NULL;
 	LPFN_GETACCEPTEXSOCKADDRS lpfnGetAcceptExSockaddrs = NULL;
-	std::function<void(std::unique_ptr<TCPSocket>)> onAccept;
-	bool shuttingDown = false;
-	ZeroSemaphore pendingAcceptsCount;
 };
 
 // NOTE: The order of the enums needs to be the order things happen with typical use
@@ -255,157 +220,17 @@ enum class SocketState
 	Disconnected
 };
 
-struct TCPSocketData : public TCPBaseSocketData
+struct TCPSocketData
 {
+	CompletionPort& iocp;
 	SocketWrapper socket;
 	SocketState state = SocketState::None;
-	std::shared_future<bool> connectingFt;
+	Future<bool> connectingFt;
 	SocketAddress localAddr;
 	SocketAddress remoteAddr;
 	TCPSocket* owner;
-
-	std::vector<ReadOperation*> activeReadOperations;
-	std::atomic_uint64_t pendingSendBytes = 0;
-
-	std::function<void(const ChunkBuffer&)> onReceive;
-	std::function<void(int, const std::string&)> onShutdown;
-	std::function<void()> onSendCompleted;
-
-	//
-	// Members to keep track of data we received
-	//
-	struct Receive
-	{
-		// Putting the counter outside the ReadOperation object, to make it more cache friendly
-		typedef std::pair<uint64_t, std::unique_ptr<ReadOperation>> PendingReadOperation;
-		// This is used to help process out of order notifications for the WSARecv calls
-		struct PendingReadOperationCompare
-		{
-			bool operator()(const PendingReadOperation& a, const PendingReadOperation& b)
-			{
-				return a.first > b.first;
-			}
-		};
-		// Reads that Windows completed. We need to hold them, so we can can process out-of-order notifications
-		// Deriving from priority_queue, so we can access "Container c".
-		// This is required, so we can move the top element out of the queue, since we are storing unique_ptr elements, and
-		// priority_queue::top returns a const_reference therefore having no way to move unique_ptr elements out of the queue.
-		typedef std::priority_queue<PendingReadOperation, std::vector<PendingReadOperation>, PendingReadOperationCompare>
-			ReadyReadsQueue;
-		ReadyReadsQueue ready;
-
-		// #TODO have to way to handle wrap around of the counter. Although it's very unlikely it will wrap around a full 64 bits
-		// number
-		uint64_t counter = 0;
-		uint64_t lastDeliveredCounter = 0;
-		ChunkBuffer buf;
-	} rcv;
-
-	//////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////
-	//	OLD STUFF
-	//////////////////////////////////////////////////////////////////////////
-	struct
-	{
-		int code = 0;
-		std::string msg;
-	} disconnectInfo;
-
-	//////////////////////////////////////////////////////////////////////////
-
 	TCPSocketData(TCPSocket* owner, CompletionPort& iocp);
 	virtual ~TCPSocketData();
-	void state_WaitingAccept();
-	void state_Connecting(const std::string& ip, int port);
-	void state_Connected(const SocketAddress& local, const SocketAddress& remote);
-	void state_Disconnected(int code, const std::string& reason);
-	void addReadyRead(ReadOperation* op);
-};
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Socket operations
-//
-//////////////////////////////////////////////////////////////////////////
-
-struct AcceptOperation : public CompletionPortOperation
-{
-	std::unique_ptr<TCPSocket> acceptSocket;
-	char outputBuffer[2 * (sizeof(sockaddr_in) + 16)];
-	explicit AcceptOperation(std::shared_ptr<TCPServerSocketData> sharedData_);
-	virtual ~AcceptOperation();
-	virtual void onSuccess(unsigned bytesTransfered) override;
-	virtual void onError() override;
-	TCPServerSocketData* getSharedData();
-	static void prepareAccept(const std::shared_ptr<TCPServerSocketData>& sharedData);
-};
-
-struct ReadOperation : public CompletionPortOperation
-{
-	WSABUF wsabuf;
-	struct
-	{
-		std::unique_ptr<char[]> ptr;
-		unsigned capacity;
-		unsigned size = 0;  // Used space. This is filled once we receive the IOCP notification
-	} buf;
-	uint64_t counter;
-	DWORD rcvFlags = 0;
-
-	explicit ReadOperation(unsigned initialCapacity, std::shared_ptr<TCPSocketData> sharedData_);
-	virtual ~ReadOperation();
-	ReadOperation(ReadOperation&) = delete;
-	ReadOperation& operator=(ReadOperation&) = delete;
-	virtual void onSuccess(unsigned bytesTransfered) override;
-	virtual void onError() override;
-	virtual void destroy() override;
-	TCPSocketData* getSharedData();
-
-	static bool prepareRecv(const std::shared_ptr<TCPSocketData>& sharedData)
-	{
-		if (sharedData->state != SocketState::Connected)
-			return false;
-
-		auto operation = std::make_unique<ReadOperation>(sharedData->pendingReceivesSize, sharedData);
-		DWORD bytesTransfered = 0;
-		int res = WSARecv(sharedData->socket.get(), &operation->wsabuf, 1, NULL, &operation->rcvFlags, &operation->overlapped, NULL);
-		int err = WSAGetLastError();
-
-		if (res == 0)
-		{
-			// Operation completed immediately, but we will still get the iocp notification
-		}
-		else
-		{
-			CZ_ASSERT(res == SOCKET_ERROR);
-			if (err == WSA_IO_PENDING)
-			{
-				// Expected
-			}
-			else  // Any other error, we close this connection
-			{
-				sharedData->state_Disconnected(err, getLastWin32ErrorMsg(err));
-				return false;
-			}
-		}
-
-		operation.release();
-		return true;
-	}
-};
-
-struct WriteOperation : public CompletionPortOperation
-{
-	std::vector<WSABUF> wsabufs;
-	ChunkBuffer buffer;
-	uint64_t totalSize=0;
-	explicit WriteOperation(ChunkBuffer buffer_, std::shared_ptr<TCPSocketData> sharedData_);
-	virtual ~WriteOperation();
-	WriteOperation(WriteOperation&) = delete;
-	WriteOperation& operator=(WriteOperation&) = delete;
-	virtual void onSuccess(unsigned bytesTransfered) override;
-	virtual void onError() override;
-	TCPSocketData* getSharedData();
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -415,331 +240,12 @@ struct WriteOperation : public CompletionPortOperation
 //////////////////////////////////////////////////////////////////////////
 
 TCPSocketData::TCPSocketData(TCPSocket* owner, CompletionPort& iocp)
-	: TCPBaseSocketData(iocp)
+	: iocp(iocp)
 	, owner(owner)
 {
-	//printf("TCPSocketData: %p\n", this);
 }
 TCPSocketData::~TCPSocketData()
 {
-	//printf("~TCPSocketData: %p\n", this);
-}
-void TCPSocketData::state_WaitingAccept()
-{
-	LOG("%p: state_WaitingAccept:\n", this);
-	CZ_ASSERT(state == SocketState::None);
-	state = SocketState::WaitingAccept;
-}
-
-void TCPSocketData::state_Connecting(const std::string& ip, int port)
-{
-	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
-	CZ_ASSERT(state == SocketState::None);
-	state = SocketState::Connecting;
-
-	SocketAddress remoteAddr(ip.c_str(), port);
-	connectingFt = std::async(std::launch::async, [this, remoteAddr]
-	{
-		sockaddr_in addr;
-		ZeroMemory(&addr, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = remoteAddr.ip.full;
-		addr.sin_port = htons(remoteAddr.port);
-		auto res =
-			WSAConnect(socket.get(), (SOCKADDR*)&addr, sizeof(addr), NULL, NULL, NULL, NULL);
-
-		auto lk = this->lock();
-
-		if (res == SOCKET_ERROR)
-		{
-			int err = WSAGetLastError();
-			state_Disconnected(err, getLastWin32ErrorMsg(err));
-			return false;
-		}
-
-		sockaddr_in localinfo;
-		int size = sizeof(localinfo);
-		if (getsockname(socket.get(), (SOCKADDR*)&localinfo, &size) == SOCKET_ERROR)
-		{
-			int err = WSAGetLastError();
-			state_Disconnected(err, getLastWin32ErrorMsg(err));
-			return false;
-		}
-
-		SocketAddress localAddr(localinfo);
-		state_Connected(localAddr, remoteAddr);
-		// Changing the state to connected might itself detect other errors, and set it to
-		// disconnected, so
-		// returning true/false by checking against the state, instead of explicit "true"
-		return state == SocketState::Connected;
-	});
-}
-
-void TCPSocketData::state_Connected(const SocketAddress& local, const SocketAddress& remote)
-{
-	LOG("%p: state_Connected: local=%s, remote=%s\n", this, local.toString(true), remote.toString(true));
-	CZ_ASSERT(state == SocketState::Connecting || state == SocketState::WaitingAccept);
-	localAddr = local;
-	remoteAddr = remote;
-	state = SocketState::Connected;
-
-	for (uint32_t i = 0; i < pendingReceivesCount;i++)
-		ReadOperation::prepareRecv(std::static_pointer_cast<TCPSocketData>(shared_from_this()));
-}
-
-void TCPSocketData::state_Disconnected(int code, const std::string& reason)
-{
-	LOG("%p: state_Disconnected:\n", this);
-	if (state == SocketState::Disconnected)
-		return;
-	CZ_ASSERT(state == SocketState::Connecting || state==SocketState::Connected || state == SocketState::WaitingAccept);
-	state = SocketState::Disconnected;
-	disconnectInfo.code = code;
-	disconnectInfo.msg = reason;
-	onShutdown(disconnectInfo.code, disconnectInfo.msg);
-}
-
-void TCPSocketData::addReadyRead(ReadOperation* op)
-{
-	rcv.ready.push(std::make_pair(op->counter, std::unique_ptr<ReadOperation>(op)));
-
-	// Try to deliver any finished read operations, in order
-	while (rcv.ready.size() > 0 && rcv.ready.top().first == rcv.lastDeliveredCounter + 1)
-	{
-		CZ_ASSERT(rcv.ready.top().second != nullptr);
-		Receive::PendingReadOperation pendingRead;
-		movepop(rcv.ready, pendingRead);
-		debugData.receivedData(this, pendingRead.second->buf.ptr.get(), pendingRead.second->buf.size);
-		rcv.buf.writeBlock(std::move(pendingRead.second->buf.ptr), pendingRead.second->buf.capacity,
-							  pendingRead.second->buf.size);
-		rcv.lastDeliveredCounter++;
-		onReceive(rcv.buf);
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Socket operations
-//
-//////////////////////////////////////////////////////////////////////////
-
-
-AcceptOperation::AcceptOperation(std::shared_ptr<TCPServerSocketData> sharedData_)
-	: CompletionPortOperation(std::move(sharedData_))
-{
-	LOG("AcceptOperation: %p\n", this);
-	auto data = getSharedData();
-	memset(&overlapped, 0, sizeof(overlapped));
-	acceptSocket = std::make_unique<TCPSocket>(data->iocp, data->pendingReceivesCount, data->pendingReceivesSize);
-	acceptSocket->m_data->state_WaitingAccept();
-	data->pendingAcceptsCount.increment();
-}
-
-AcceptOperation::~AcceptOperation()
-{
-	LOG("~AcceptOperation: %p\n", this);
-
-	// Delete our pending accept socket before signaling that there are no more Accept operations,
-	// so that there is no chance of our accept socket having the last strong reference to the CompletionPort,
-	// and trying it to delete from here
-	if (acceptSocket)
-		acceptSocket->shutdown();
-	acceptSocket.reset();
-	auto data = getSharedData();
-	data->pendingAcceptsCount.decrement();
-}
-
-TCPServerSocketData* AcceptOperation::getSharedData()
-{
-	return static_cast<TCPServerSocketData*>(sharedData.get());
-}
-
-void AcceptOperation::prepareAccept(const std::shared_ptr<TCPServerSocketData>& sharedData)
-{
-	auto op = std::make_unique<AcceptOperation>(sharedData);
-
-	DWORD dwBytes;
-	auto res = sharedData->lpfnAcceptEx(sharedData->listenSocket.get(), op->acceptSocket->m_data->socket.get(), &op->outputBuffer, 0,
-		sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
-		&dwBytes /*Unused for asynchronous AcceptEx*/, &op->overlapped);
-	int err = WSAGetLastError();
-	// In our case, since the AcceptEx is asynchronous, it should return FALSE and give an error of "PENDING"
-	if (!(res == FALSE && err == ERROR_IO_PENDING))
-		throw std::runtime_error(formatString("Error calling AcceptEx: %s", getLastWin32ErrorMsg()));
-
-	auto data = op->getSharedData();
-	op.release();
-}
-
-void AcceptOperation::onSuccess(unsigned bytesTransfered)
-{
-	auto data = getSharedData();
-	SOCKET optval = data->listenSocket.get();
-	auto res =
-		setsockopt(acceptSocket->m_data->socket.get(), SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&optval, sizeof(optval));
-
-	if (res != 0)
-		throw std::runtime_error(formatString("Error calling setsockopt: %s", getLastWin32ErrorMsg()));
-
-	sockaddr* localSockAddr = NULL;
-	int localSockAddrSize;
-	sockaddr* remoteSockAddr = NULL;
-	int remoteSockAddrSize;
-
-	data->lpfnGetAcceptExSockaddrs(&outputBuffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &localSockAddr,
-								   &localSockAddrSize, &remoteSockAddr, &remoteSockAddrSize);
-
-	LOG("New connection:\n\tlocal = %s\n\tremote = %s\n", getAddr(localSockAddr), getAddr(remoteSockAddr));
-
-	acceptSocket->m_data->state_Connected(SocketAddress(*localSockAddr), SocketAddress(*remoteSockAddr));
-	data->onAccept(std::move(acceptSocket));
-
-	if (!data->shuttingDown)
-		AcceptOperation::prepareAccept(std::static_pointer_cast<TCPServerSocketData>(sharedData));
-}
-
-void AcceptOperation::onError()
-{
-}
-
-//////////////////////////////////////////////////////////////////////////
-//	ReadOperation
-//////////////////////////////////////////////////////////////////////////
-
-ReadOperation::ReadOperation(unsigned initialCapacity, std::shared_ptr<TCPSocketData> sharedData_)
-	: CompletionPortOperation(std::move(sharedData_))
-{
-	LOG("ReadOperation: %p : Counter %d\n", this, (int)counter);
-	auto data = getSharedData();
-	counter = ++data->rcv.counter;
-	data->activeReadOperations.push_back(this);
-	memset(&overlapped, 0, sizeof(overlapped));
-	memset(&wsabuf, 0, sizeof(wsabuf));
-	buf.ptr = std::unique_ptr<char[]>(new char[initialCapacity]);
-	buf.capacity = initialCapacity;
-	buf.size = 0;
-	wsabuf.buf = buf.ptr.get();
-	wsabuf.len = buf.capacity;
-}
-
-ReadOperation::~ReadOperation()
-{
-	LOG("~ReadOperation: %p\n", this);
-	auto data = getSharedData();
-	for (auto it = data->activeReadOperations.begin(); it != data->activeReadOperations.end(); it++)
-	{
-		if (*it == this)
-		{
-			data->activeReadOperations.erase(it);
-			break;
-		}
-	}
-}
-
-TCPSocketData* ReadOperation::getSharedData()
-{
-	return static_cast<TCPSocketData*>(sharedData.get());
-}
-
-void ReadOperation::onSuccess(unsigned bytesTransfered)
-{
-	LOG("ReadOperation::onSuccess(%d): %p\n", bytesTransfered, this);
-
-	auto data = getSharedData();
-	if (bytesTransfered == 0)
-	{
-		data->state_Disconnected(0, "Connection closed");
-		return;
-	}
-
-	buf.size = bytesTransfered;
-}
-
-void ReadOperation::onError()
-{
-	LOG("ReadOperation::onError: %p\n", this);
-	auto data = getSharedData();
-	data->state_Disconnected(0, "Connection closed");
-}
-
-void ReadOperation::destroy()
-{
-	LOG("ReadOperation::destroy: %p\n", this);
-	auto data = getSharedData();
-	if (buf.size)
-	{
-		ReadOperation::prepareRecv(std::static_pointer_cast<TCPSocketData>(sharedData));
-		data->addReadyRead(this);
-	}
-	else
-	{
-		delete this;
-	}
-}
-
-WriteOperation::WriteOperation(ChunkBuffer buffer_, std::shared_ptr<TCPSocketData> sharedData_)
-	: CompletionPortOperation(std::move(sharedData_))
-	, buffer(std::move(buffer_))
-{
-	LOG("WriteOperation: %p\n", this);
-	// Prepare WSABUF
-	wsabufs.reserve(buffer.numBlocks());
-	buffer.iterateBlocks(
-		[&](const char* ptr, unsigned size)
-		{
-			WSABUF buf;
-			buf.buf = const_cast<char*>(ptr);
-			buf.len = size;
-			totalSize += size;
-			wsabufs.push_back(buf);
-		});
-
-	auto data = getSharedData();
-	data->pendingSendBytes += totalSize;
-}
-
-WriteOperation::~WriteOperation()
-{
-	auto data = getSharedData();
-	data->pendingSendBytes -= totalSize;
-	data->onSendCompleted();
-	LOG("~WriteOperation: %p\n", this);
-}
-
-TCPSocketData* WriteOperation::getSharedData()
-{
-	return static_cast<TCPSocketData*>(sharedData.get());
-}
-
-std::atomic<uint64_t> gWriteOperationBytesTransfered(0);
-void WriteOperation::onSuccess(unsigned bytesTransfered)
-{
-	gWriteOperationBytesTransfered += bytesTransfered;
-}
-
-std::atomic<int> gWriteOperationErrors(0);
-void WriteOperation::onError()
-{
-	gWriteOperationErrors++;
-}
-
-//////////////////////////////////////////////////////////////////////////
-//
-// CompletionPort
-//
-//////////////////////////////////////////////////////////////////////////
-
-void initializeSocketsLib()
-{
-	WSADATA wsaData;
-	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (result != NO_ERROR)
-		throw std::runtime_error(formatString("Error initializing WinSock: %s", getLastWin32ErrorMsg()));
-}
-
-void shutdownSocketsLib()
-{
-	WSACleanup();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -748,23 +254,13 @@ void shutdownSocketsLib()
 //
 //////////////////////////////////////////////////////////////////////////
 
-TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort,
-								 std::function<void(std::unique_ptr<TCPSocket>)> onAccept, uint32_t numPendingReads,
-								 uint32_t pendingReadSize)
+TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 {
 	LOG("TCPServerSocket %p: Enter\n", this);
 	m_data = std::make_shared<TCPServerSocketData>(iocp);
-	m_data->pendingReceivesCount = numPendingReads ? numPendingReads : TCPSocket::DefaultPendingReads;
-	m_data->pendingReceivesSize = pendingReadSize ? pendingReadSize : TCPSocket::DefaultReadSize;
-	m_data->onAccept = std::move(onAccept);
-
-	// Need a lock even here in the constructor, because once we add stuff to the IOCP, we might get other threads touching
-	// this object before we are even done with the constructor
-	auto lk = m_data->lock();
-
 	m_data->listenSocket = SocketWrapper(WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
 	if (!m_data->listenSocket.isValid())
-		throw std::runtime_error(formatString("Error creating listen socket: %s", getLastWin32ErrorMsg()));
+		CZ_LOG(logDefault, Fatal, "Error creating listen socket: %s", getLastWin32ErrorMsg());
 
 	// Set this, so no other applications can bind to the same port
 	int iOptval = 1;
@@ -781,7 +277,7 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort,
 	if (bind(m_data->listenSocket.get(), (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR ||
 		listen(m_data->listenSocket.get(), SOMAXCONN) == SOCKET_ERROR)
 	{
-		throw std::runtime_error(formatString("Error initializing listen socket: %s", getLastWin32ErrorMsg()));
+		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
 	// Load the AcceptEx function into memory using WSAIoctl.
@@ -805,10 +301,8 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort,
 	if (CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_data->listenSocket.get()), m_data->iocp.getHandle(),
 							   (ULONG_PTR) this, 0) == NULL)
 	{
-		throw std::runtime_error(formatString("Error initializing listen socket: %s", getLastWin32ErrorMsg()));
+		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
-
-	AcceptOperation::prepareAccept(m_data);
 
 	debugData.serverSocketCreated(this);
 	LOG("TCPServerSocket %p: Exit\n", this);
@@ -817,19 +311,55 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort,
 TCPServerSocket::~TCPServerSocket()
 {
 	LOG("~TCPServerSocket %p: Enter\n", this);
-
-	{
-		auto lk = m_data->lock();
-		m_data->shuttingDown = true;
-	}
-
 	CancelIoEx(reinterpret_cast<HANDLE>(m_data->listenSocket.get()), NULL);
-
-	// Block until no more AcceptOperations running
-	m_data->pendingAcceptsCount.wait();
-
 	debugData.serverSocketDestroyed(this);
 	LOG("~TCPServerSocket %p: Exit\n", this);
+}
+
+
+void TCPServerSocket::asyncAccept(TCPSocket& socket, CompletionHandler handler)
+{
+	DWORD dwBytes;
+
+	auto data = std::make_shared<details::AsyncAcceptData>();
+	data->handler = std::move(handler);
+	data->socket = &socket;
+
+	auto op = std::make_unique<CompletionPortOperation>([data,this](unsigned bytesTransfered)
+	{
+		sockaddr* localSockAddr = NULL;
+		int localSockAddrSize;
+		sockaddr* remoteSockAddr = NULL;
+		int remoteSockAddrSize;
+		m_data->lpfnGetAcceptExSockaddrs(&data->outputBuffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &localSockAddr,
+									   &localSockAddrSize, &remoteSockAddr, &remoteSockAddrSize);
+		LOG("New connection:\n\tlocal = %s\n\tremote = %s\n", getAddr(localSockAddr), getAddr(remoteSockAddr));
+		data->socket->m_data->localAddr = SocketAddress(*localSockAddr);
+		data->socket->m_data->remoteAddr = SocketAddress(*remoteSockAddr);
+		data->socket->m_data->state = SocketState::Connected;
+		data->handler(bytesTransfered);
+	});
+
+	auto res = m_data->lpfnAcceptEx(
+		m_data->listenSocket.get(), // sListenSocket
+		socket.m_data->socket.get(), // sAcceptSocket
+		&data->outputBuffer, // lpOutputBuffer
+		0, // dwReceiveDataLength
+		details::AsyncAcceptData::AddrLen, // dwLocalAddressLength
+		details::AsyncAcceptData::AddrLen, // dwRemoteAddressLength
+		&dwBytes /*Unused for asynchronous AcceptEx*/,
+		&op->overlapped
+		);
+
+	int err = WSAGetLastError();
+	// In our case, since the AcceptEx is asynchronous, it should return FALSE and give an error of "PENDING"
+	if (!(res == FALSE && err == ERROR_IO_PENDING))
+	{
+		CZ_LOG(logDefault, Fatal, "Error calling AcceptEx: %s", getLastWin32ErrorMsg());
+	}
+
+	socket.m_data->state = SocketState::WaitingAccept;
+	m_data->iocp.add(std::move(op));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -838,16 +368,22 @@ TCPServerSocket::~TCPServerSocket()
 //
 //////////////////////////////////////////////////////////////////////////
 
-void TCPSocket::createSocket()
+TCPSocket::TCPSocket(CompletionPort& iocp)
 {
+	LOG("TCPSocket %p: Enter\n", this);
+	debugData.socketCreated(this);
+	m_data = std::make_shared<TCPSocketData>(this, iocp);
+
 	m_data->socket = SocketWrapper(WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
 	if (!m_data->socket.isValid())
-		throw std::runtime_error(formatString("Error creating client socket: %s", getLastWin32ErrorMsg()));
+	{
+		CZ_LOG(logDefault, Fatal, "Error creating client socket: %s", getLastWin32ErrorMsg());
+	}
 
 	if (CreateIoCompletionPort((HANDLE)m_data->socket.get(), m_data->iocp.getHandle(),
 							   (ULONG_PTR)this, 0) == NULL)
 	{
-		throw std::runtime_error(formatString("Error initializing accept socket: %s", getLastWin32ErrorMsg()));
+		CZ_LOG(logDefault, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
 	}
 
 	// This disables IOCP notification if the request completes immediately at the point of call.
@@ -855,54 +391,42 @@ void TCPSocket::createSocket()
 	if (SetFileCompletionNotificationModes((HANDLE)m_socket.get(), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)==FALSE)
 		throw std::runtime_error(formatString("Error initializing accept socket: %s", getLastWin32ErrorMsg()));
 	*/
+	LOG("TCPSocket %p: Exit\n", this);
 }
 
-TCPSocket::TCPSocket(CompletionPort& iocp, uint32_t numPendingReads, uint32_t pendingReadSize)
+TCPSocket::~TCPSocket()
 {
-	LOG("TCPSocket %p: Enter\n", this);
-	debugData.socketCreated(this);
-	m_data = std::make_shared<TCPSocketData>(this, iocp);
-	m_data->pendingReceivesCount = numPendingReads ? numPendingReads : TCPSocket::DefaultPendingReads;
-	m_data->pendingReceivesSize = pendingReadSize ? pendingReadSize : TCPSocket::DefaultReadSize;
-	resetCallbacks();
-	createSocket();
-	LOG("TCPSocket %p: Exit\n", this);
+	shutdown();
 }
 
 void TCPSocket::shutdown()
 {
 	LOG("~TCPSocket %p: Enter\n", this);
 
-	if (m_data->state == SocketState::Connecting)
+	// If we are connecting, there is an async operation in fly which reference us, so we need for it to finish
+	if (m_data->connectingFt.valid())
 		m_data->connectingFt.get();
-
-	auto lk = m_data->lock();
 
 	// Notes:
 	// CancelIo - Cancels I/O operations that are issued by calling thread
 	// CancelIoEx Cancels all I/O regardless of the thread that created the I/O operation.
+	auto res = CancelIoEx(
+		(HANDLE)m_data->socket.get(), // hFile
+		NULL // lpOverlapped - NULL means cancel all I/O requests for the specified hFile
+		);
 
-	// Cancel only read operations, so we leave pending sending operations to finish
-	for (auto&& i : m_data->activeReadOperations)
+	if (res == FALSE)
 	{
-		auto res = CancelIoEx((HANDLE)m_data->socket.get(), &i->overlapped);
-		if (res == 0)
+		auto err = GetLastError();
+		if (err == ERROR_NOT_FOUND)
 		{
-			auto err = GetLastError();
-			if (err != ERROR_NOT_FOUND)  // This means no elements were found to cancel, and it's expected
-			{
-				// If we get any other errors, probably the user called WSACleanup already
-				LOG(formatString("CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err)));
-			}
+			// This means no elements were found to cancel, and it's expected
 		}
-	}
-
-	// Remove the callbacks, so we don't try to use any user objects from the pending operations
-	resetCallbacks();
-
-	if (m_data->state != SocketState::Disconnected)
-	{
-		m_data->state_Disconnected(0, "TCPSocket destroyed");
+		else
+		{
+			// If we get any other errors, probably the user called WSACleanup already
+			CZ_LOG(logDefault, Warning, "CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err));
+		}
 	}
 
 	debugData.socketDestroyed(this);
@@ -910,107 +434,189 @@ void TCPSocket::shutdown()
 	m_userData.reset();
 	LOG("~TCPSocket %p: Exit\n", this);
 }
-TCPSocket::~TCPSocket()
-{
-	auto s = m_data->state;
-	CZ_ASSERT(m_data->state == SocketState::Disconnected);
-}
 
-void TCPSocket::resetCallbacks()
-{
-	auto lk = m_data->lock();
-	m_data->onReceive = [](const ChunkBuffer&) { };
-	m_data->onShutdown = [](int, const std::string&) { };
-	m_data->onSendCompleted = []() {};
-}
-
-void TCPSocket::setOnReceive(std::function<void(const ChunkBuffer&)> fn)
-{
-	auto lk = m_data->lock();
-	m_data->onReceive = std::move(fn);
-}
-
-void TCPSocket::setOnShutdown(std::function<void(int, const std::string&)> fn)
-{
-	auto lk = m_data->lock();
-	m_data->onShutdown = std::move(fn);
-}
-
-void TCPSocket::setOnSendCompleted(std::function<void()> fn)
-{
-	auto lk = m_data->lock();
-	m_data->onSendCompleted = std::move(fn);
-}
-
-std::shared_future<bool> TCPSocket::connect(const std::string& ip, int port)
+Future<bool> TCPSocket::connect(const std::string& ip, int port)
 {
 	CZ_ASSERT(m_data->state == SocketState::None);
-	m_data->state_Connecting(ip, port);
+
+	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
+	CZ_ASSERT(m_data->state == SocketState::None);
+	m_data->state = SocketState::Connecting;
+
+	m_data->connectingFt = cz::async([this, ip, port]
+	{
+		SocketAddress remoteAddr(ip.c_str(), port);
+		sockaddr_in addr;
+		ZeroMemory(&addr, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = remoteAddr.ip.full;
+		addr.sin_port = htons(remoteAddr.port);
+		auto res =
+			WSAConnect(m_data->socket.get(), (SOCKADDR*)&addr, sizeof(addr), NULL, NULL, NULL, NULL);
+
+		if (res == SOCKET_ERROR)
+		{
+			int err = WSAGetLastError();
+			CZ_LOG(logDefault, Log, "Could not connect. Error '%s'", getLastWin32ErrorMsg(err));
+			m_data->state = SocketState::Disconnected;
+			return false;
+		}
+
+		sockaddr_in localinfo;
+		int size = sizeof(localinfo);
+		if (getsockname(m_data->socket.get(), (SOCKADDR*)&localinfo, &size) == SOCKET_ERROR)
+		{
+			int err = WSAGetLastError();
+			CZ_LOG(logDefault, Log, "Could not get address information. Error '%s'", getLastWin32ErrorMsg(err));
+			m_data->state = SocketState::Disconnected;
+			return false;
+		}
+
+		m_data->localAddr = SocketAddress(localinfo);
+		m_data->remoteAddr = remoteAddr;
+		m_data->state = SocketState::Connected;
+		return true;
+	});
+
 	return m_data->connectingFt;
 }
 
-uint64_t TCPSocket::getPendingSendBytes() const
+const SocketAddress& TCPSocket::getLocalAddress() const
 {
-	return m_data->pendingSendBytes;
+	return m_data->localAddr;
 }
 
-const SocketAddress& TCPSocket::getRemoteAddress()
+const SocketAddress& TCPSocket::getRemoteAddress() const
 {
 	return m_data->remoteAddr;
 }
 
-void TCPSocket::setUserData(std::shared_ptr<TCPSocketUserData> userData)
+CompletionPort& TCPSocket::getIOCP()
 {
-	m_userData = std::move(userData);
+	return m_data->iocp;
 }
 
-const std::shared_ptr<TCPSocketUserData>& TCPSocket::getUserData()
-{
-	return m_userData;
-}
-
-bool TCPSocket::send(ChunkBuffer&& data)
+bool TCPSocket::asyncReceive(std::unique_ptr<char[]> buf, int capacity, CompletionHandler handler)
 {
 	if (m_data->state != SocketState::Connected)
 		return false;
-	auto toSend = data.calcSize();
-	if (toSend==0)
-		return true;
 
-	auto op = std::make_unique<WriteOperation>(std::move(data), m_data);
+	// According to the documentation for WSARecv, it is safe to have the WSABUF on the stack, since it will copied
+	int const numbuffers = 1;
+	WSABUF wsabufs[numbuffers];
+	memset(&wsabufs, 0, sizeof(wsabufs));
+	wsabufs[0].buf = buf.get();
+	wsabufs[0].len = capacity;
 
-	LOG("%p: Sending %d bytes\n", this, toSend);
-	int res = WSASend(m_data->socket.get(), &op->wsabufs[0], static_cast<DWORD>(op->wsabufs.size()), NULL, 0,
-					  &op->overlapped, NULL);
+
+	// Note: Need to wrap the buffer and handler with our own stuff, since we need to keep things alive until the
+	// handler is executed
+	auto data = std::make_shared<details::AsyncReceiveData>();
+	data->handler = std::move(handler);
+	data->buf = std::move(buf);
+	data->capacity = capacity;
+	auto op = std::make_unique<CompletionPortOperation>(
+		[data=std::move(data)](unsigned bytesTransfered)
+	{
+		data->handler(bytesTransfered);
+	});
+
+	DWORD rcvFlags = 0;
+	DWORD bytesTransfered = 0;
+	int res = WSARecv(
+		m_data->socket.get(), // Socket
+		&wsabufs[0], // lpBuffers
+		numbuffers, // dwBufferCount
+		NULL, // lpNumberOfBytesRecvd
+		&rcvFlags, // lpFlags
+		&op->overlapped, // lpOverlapped
+		NULL // lpCompletionRoutine
+		);
 	int err = WSAGetLastError();
 
-	if (res == 0)  // Send operation completed immediately, so nothing else to do
+	if (res == 0)
 	{
-		op.release();
-		return true;
-	}
-
-	CZ_ASSERT(res == SOCKET_ERROR);
-	if (err == WSA_IO_PENDING)
-	{
-		// Send is being done asynchronously, so save the pointer, and it will be released once we get the IOCP notification
-		// that the send completed
-		// Nothing to do
+		// Operation completed immediately, but we will still get the iocp notification
 	}
 	else
 	{
-		//throw std::runtime_error(formatString("WSASend failed: %s", getLastWin32ErrorMsg(err)));
-		return false;
+		CZ_ASSERT(res == SOCKET_ERROR);
+		if (err == WSA_IO_PENDING)
+		{
+			// Expected
+		}
+		else  // Any other error, we close this connection
+		{
+			m_data->state = SocketState::Disconnected;
+			CZ_LOG(logDefault, Log, "%s failed with '%s'", __FUNCTION__, getLastWin32ErrorMsg(err));
+			return false;
+		}
 	}
 
-	op.release();
+	m_data->iocp.add(std::move(op));
 	return true;
 }
 
-bool TCPSocket::isConnected() const
+bool TCPSocket::asyncSend(std::vector<char> buf, CompletionHandler handler)
 {
-	return m_data->state == SocketState::Connected;
+	if (m_data->state != SocketState::Connected)
+		return false;
+
+	LOG("%p: Sending %d bytes\n", this, toSend);
+
+	auto data = std::make_shared<details::AsyncSendData>();
+	data->buf = std::move(buf);
+	data->handler = std::move(handler);
+
+	// WSABUF is safe to keep on the stack, according to the documentation
+	const int numbuffers = 1;
+	WSABUF wsabufs[numbuffers];
+	wsabufs[0].buf = data->buf.data();
+	wsabufs[0].len = static_cast<DWORD>(data->buf.size());
+
+	auto op = std::make_unique<CompletionPortOperation>([data=std::move(data)](unsigned bytesTransfered)
+	{
+		data->handler(bytesTransfered);
+	});
+
+	int res = WSASend(
+		m_data->socket.get(), // Socket
+		&wsabufs[0], // lpBuffers
+		numbuffers, // dwBufferCount
+		NULL, // lpNumberOfBytesSent
+		0, // dwFlags
+		&op->overlapped, // lpOverlapped
+		NULL // lpCompletionRoutine
+		);
+
+	int err = WSAGetLastError();
+
+	if (res == 0)
+	{
+		// Send operation completed immediately, so nothing else to do.
+		// Note that we still get the notification call. This gives us consistent behavior
+	}
+	else if (res==SOCKET_ERROR)
+	{
+		if (err == WSA_IO_PENDING)
+		{
+			// Send is being done asynchronously
+		}
+		else
+		{
+			// Operation failed
+			return false;
+		}
+	}
+	else
+	{
+		CZ_UNEXPECTED();
+	}
+
+	m_data->iocp.add(std::move(op));
+	return true;
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 //

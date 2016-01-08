@@ -182,6 +182,7 @@
     <ClInclude Include="..\source\crazygaze\Concurrent.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\net\SocketAddress.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -275,6 +276,7 @@
       <Filter>crazygaze</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\rpc\RPCBase.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\SocketAddress.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />

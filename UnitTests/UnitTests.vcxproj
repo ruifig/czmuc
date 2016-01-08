@@ -161,9 +161,20 @@
     <ClCompile Include="TestAny.cpp" />
     <ClCompile Include="TestChunkBuffer.cpp" />
     <ClCompile Include="TestFuture.cpp" />
-    <ClCompile Include="TestRPC.cpp" />
+    <ClCompile Include="TestRPC.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="TestRPCTraits.cpp" />
-    <ClCompile Include="TestTCPSocket.cpp" />
+    <ClCompile Include="TestTCPSocket.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="TestTCPSocket2.cpp" />
     <ClCompile Include="TestThreadingUtils.cpp" />
     <ClCompile Include="UnitTests.cpp" />
     <ClCompile Include="UnitTestsPCH.cpp">

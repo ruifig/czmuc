@@ -9,8 +9,7 @@
 
 #include "czlibPCH.h"
 #include "crazygaze/net/CompletionPort.h"
-#include "crazygaze/StringUtils.h"
-#include "crazygaze/net/details/TCPSocketDebug.h"
+#include "crazygaze/Logging.h"
 
 namespace cz
 {
@@ -23,23 +22,10 @@ namespace net
 //
 //////////////////////////////////////////////////////////////////////////
 
-CompletionPortOperation::CompletionPortOperation(std::shared_ptr<CompletionPortOperationBaseData> sharedData_)
-	: sharedData(std::move(sharedData_))
+CompletionPortOperation::CompletionPortOperation(CompletionHandler handler)
+	: handler(std::move(handler))
 {
 	memset(&overlapped, 0, sizeof(overlapped));
-	debugData.operationCreated(this);
-	++sharedData->iocp.m_queuedCount;
-}
-
-CompletionPortOperation::~CompletionPortOperation()
-{
-	--sharedData->iocp.m_queuedCount;
-	debugData.operationDestroyed(this);
-}
-
-void CompletionPortOperation::destroy()
-{
-	delete this;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -47,47 +33,22 @@ void CompletionPortOperation::destroy()
 // CompletionPort
 //
 //////////////////////////////////////////////////////////////////////////
-CompletionPort::CompletionPort(int numThreads)
+CompletionPort::CompletionPort()
 {
-	CZ_ASSERT(numThreads>0);
-	m_port = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, numThreads);
-	if (m_port == NULL)
-		throw std::runtime_error(formatString("Error creation io completion port: %s", getLastWin32ErrorMsg()));
-	while (numThreads--)
-	{
-		m_threads.push_back(std::thread([this]
-		{
-			try
-			{
-				run();
-			}
-			catch (std::exception& /*e*/)
-			{
-				CZ_UNEXPECTED();
-			}
+	m_port = ::CreateIoCompletionPort(
+		INVALID_HANDLE_VALUE, // FileHandle
+		NULL, // ExistingCompletionPort
+		0, // CompletionKey
+		0 // NumberOfConcurrentThreads (0 : allow as many concurrently running threads as there are processors in the system)
+		);
 
-		}));
-	}
+	if (m_port == NULL)
+		CZ_LOG(logDefault, Fatal, "Error creating io completion port: %s", getLastWin32ErrorMsg());
 }
 
 CompletionPort::~CompletionPort()
 {
-	while (m_queuedCount)
-		std::this_thread::yield();
-
-	// Send one dummy command per thread, to unblock them
-	for (auto&& t : m_threads)
-		::PostQueuedCompletionStatus(m_port, 0, (DWORD)NULL, NULL);
-
-	// Now wait for the threads to finish
-	// This can't be in the same loop as the PostQueuedCompletionStatus, as we don't know what thread will be
-	// dequeuing and finishing.
-	for (auto&& t : m_threads)
-	{
-		t.join();
-	}
-
-	::CloseHandle(m_port);
+	stop();
 }
 
 HANDLE CompletionPort::getHandle()
@@ -95,11 +56,26 @@ HANDLE CompletionPort::getHandle()
 	return m_port;
 }
 
-void CompletionPort::runImpl()
+void CompletionPort::stop()
 {
-	static int val = 0;
-	int ourid = val++;
-	int counter = 0;
+	if (m_port != INVALID_HANDLE_VALUE)
+		::CloseHandle(m_port);
+	m_port = INVALID_HANDLE_VALUE;
+}
+
+void CompletionPort::add(std::unique_ptr<CompletionPortOperation> operation)
+{
+	m_data([&](auto&& data)
+	{
+		auto p = operation.get();
+		data.items[operation.get()] = std::move(operation);
+		p->readyToExecute.notify();
+	});
+}
+
+size_t CompletionPort::run()
+{
+	size_t counter = 0;
 	while (true)
 	{
 		DWORD bytesTransfered = 0;
@@ -111,52 +87,51 @@ void CompletionPort::runImpl()
 		if (res == FALSE)
 			err = ::GetLastError();
 
-		// This is a signal to finish
-		if (completionKey == 0)
-			return;
-		CZ_ASSERT(overlapped);
-
-		CompletionPortOperation* operation = CONTAINING_RECORD(overlapped, CompletionPortOperation, overlapped);
-
+		//
+		// Note: If overlapped was NOT NULL, it means an operation was dequeued, successful or not.
+		if (overlapped)
 		{
-			// Make a copy, so we can hold lock the mutex and not end up with the shared data being destroyed while we
-			// hold the mutex
-			auto data = operation->sharedData;
-			auto lk = data->lock();
+			CompletionPortOperation* operation = CONTAINING_RECORD(overlapped, CompletionPortOperation, overlapped);
+			operation->handler(bytesTransfered);
 
-			if (err == ERROR_OPERATION_ABORTED)
-				operation->onError();
-			else
-				operation->onSuccess(bytesTransfered);
-
-			operation->destroy();
+			// This is needed, since we can get after the WSASend/WSARecv, but before the operation is put into the map
+			// If it was not for this check, the send/recv could end up adding operations to the map, AFTER the handler
+			// was executed. Those operations would then never been removed from the map
+			operation->readyToExecute.wait();
+			m_data([operation](Data& data)
+			{
+				//
+				// Instead of doing .erase(key), I'm first doing a find, so I can assert the item exists
+				auto it = data.items.find(operation);
+				CZ_ASSERT(it != data.items.end());
+				data.items.erase(it);
+			});
 		}
 
+		if (err==0)
+		{
+			// Operation succesfull
+		}
+		else if (err == ERROR_ABANDONED_WAIT_0) // handle closed
+		{
+			return counter;
+		}
+		else if (err == ERROR_OPERATION_ABORTED)
+		{
+			// Do nothing
+		}
+		else
+		{
+			CZ_LOG(logDefault, Fatal, "Unexpected error: '%s'", getLastWin32ErrorMsg());
+		}
 	};
 }
 
-void CompletionPort::run()
+size_t CompletionPort::poll()
 {
-	runImpl();
-}
-
-WSAInstance::WSAInstance()
-{
-	WORD wVersionRequested = MAKEWORD(2, 2);
-	WSADATA wsaData;
-	int err = WSAStartup(wVersionRequested, &wsaData);
-	if (err != 0)
-		throw std::runtime_error(getLastWin32ErrorMsg());
-	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
-	{
-		WSACleanup();
-		throw std::runtime_error("Could not find a usable version of Winsock.dll");
-	}
-}
-
-WSAInstance::~WSAInstance()
-{
-	WSACleanup();
+	// #TODO : Implement this
+	CZ_UNEXPECTED();
+	return 0;
 }
 
 } // namespace net

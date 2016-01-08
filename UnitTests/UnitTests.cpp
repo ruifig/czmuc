@@ -24,9 +24,7 @@ std::string getCurrentTestName()
 
 int runAllTests()
 {
-	initializeSocketsLib();
 	auto res = UnitTest::RunAllTests();
-	shutdownSocketsLib();
 	if (res != EXIT_SUCCESS)
 		return res;
 	debugData.checkAndReset();

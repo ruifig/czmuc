@@ -67,6 +67,7 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 
 	    _wassert(wbuf, wfile, line);
 	    __debugbreak(); // This will break in all builds
+		//DebugBreak();
     #elif defined(__MINGW32__)
 	    DebugBreak();
     #endif

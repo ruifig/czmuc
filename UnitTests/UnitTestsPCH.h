@@ -14,6 +14,7 @@
 #include <tchar.h>
 #include <random>
 #include <chrono>
+#include <inttypes.h>
 
 //
 // UnitTest++

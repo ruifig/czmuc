@@ -7,74 +7,29 @@ other connection requests are denied. Ideally, we should have a couple of accept
 #pragma once
 
 #include "crazygaze/czlib.h"
+#include "crazygaze/net/CompletionPort.h"
+#include "crazygaze/net/SocketAddress.h"
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/net/details/TCPSocketDebug.h"
-#include "crazygaze/net/CompletionPort.h"
+#include "crazygaze/Future.h"
 
 namespace cz
 {
 namespace net
 {
 
-struct SocketAddress
+namespace details
 {
-	struct IP
+	// Instead of having a function to initialize the library, I call WSAStartup and WSACleanup as
+	// required, since those functions can be called several times
+	struct WSAInstance
 	{
-		union
-		{
-			struct bytes_st
-			{
-				uint8_t b1, b2, b3, b4;
-			} bytes;
-			uint32_t full = 0;
-		};
-	} ip;
-	int port = 0;
-
-	const char* toString(bool includePort) const;
-	SocketAddress() {}
-	explicit SocketAddress(const sockaddr& addr);
-	explicit SocketAddress(const sockaddr_in& addr);
-	explicit SocketAddress(const char* ip, int port);
-	explicit SocketAddress(const std::string& ipAndPort);
-	explicit SocketAddress(const char* ipAndPort);
-	explicit SocketAddress(const std::string& ip, int port);
-
-	bool operator==( const SocketAddress& right ) const
-	{
-		return (ip.full == right.ip.full) && (port == right.port);
-	}
-	bool operator!=( const SocketAddress& right ) const
-	{
-		return (*this == right) == false;
-	}
-	bool operator > ( const SocketAddress& right ) const
-	{
-		if (port == right.port)
-			return ip.full > right.ip.full;
-		else
-			return port > right.port;
-	}
-	bool operator < ( const SocketAddress& right ) const
-	{
-		if (port == right.port)
-			return ip.full < right.ip.full;
-		else
-			return port < right.port;
-	}
-
-	bool isValid() const
-	{
-		return !(port == 0 && ip.full == 0);
-	}
-
-  private:
-	void constructFrom(const sockaddr_in* sa);
-	void constructFrom(const char* ipAndPort);
-};
-
-void initializeSocketsLib();
-void shutdownSocketsLib();
+		WSAInstance();
+		~WSAInstance();
+		WSAInstance(const WSAInstance&) = delete;
+		WSAInstance& operator=(const WSAInstance&) = delete;
+	};
+}
 
 
 //! Simple SOCKET wrapper, to have the socket closed even if an exception occurs
@@ -96,22 +51,17 @@ class SocketWrapper
 	SOCKET m_socket = INVALID_SOCKET;
 };
 
+class TCPSocket;
+
 class TCPServerSocket
 {
   public:
-	/*!
-	* \param numPendingReads
-	*	If 0, it will assume the default
-	* \param pendingReadSize 
-	*	If 0, it will assume the default
-	*/
-	TCPServerSocket(CompletionPort& iocp, int listenPort, std::function<void(std::unique_ptr<TCPSocket>)> onAccept,
-					uint32_t numPendingReads = 0, uint32_t pendingReadSize = 0);
+	TCPServerSocket(CompletionPort& iocp, int listenPort);
 	~TCPServerSocket();
-
-  protected:
+	void asyncAccept(TCPSocket& socket, CompletionHandler handler);
   private:
 	std::shared_ptr<struct TCPServerSocketData> m_data;
+	details::WSAInstance m_wsainstance;
 };
 
 struct TCPSocketUserData
@@ -122,45 +72,20 @@ struct TCPSocketUserData
 class TCPSocket
 {
   public:
-
-	enum
-	{
-		DefaultPendingReads = 10,
-		DefaultReadSize = 1500
-	};
-
-	/*!
-	* \param numPendingReads
-	*	If 0, it will assume the default
-	* \param pendingReadSize 
-	*	If 0, it will assume the default
-	*/
-	explicit TCPSocket(CompletionPort& iocp, uint32_t numPendingReads = 0, uint32_t pendingReadSize = 0);
-	~TCPSocket();
-	void shutdown();
-	void setOnReceive(std::function<void(const ChunkBuffer&)> fn);
-	void setOnShutdown(std::function<void(int, const std::string&)> fn);
-	void setOnSendCompleted(std::function<void()> fn);
-	void resetCallbacks();
-
-	void setUserData(std::shared_ptr<TCPSocketUserData> userData);
-	const std::shared_ptr<TCPSocketUserData>& getUserData();
-	bool send(ChunkBuffer&& data);
-	bool isConnected() const;
-	std::shared_future<bool> connect(const std::string& ip, int port);
-	uint64_t getPendingSendBytes() const;
-
-	const SocketAddress& getRemoteAddress();
-
-	friend TCPServerSocketData;
-	friend struct AcceptOperation;
-
+	explicit TCPSocket(CompletionPort& iocp);
+	virtual ~TCPSocket();
+	Future<bool> connect(const std::string& ip, int port);
+	bool asyncSend(std::vector<char> buf, CompletionHandler handler);
+	bool asyncReceive(std::unique_ptr<char[]> buf, int capacity, CompletionHandler handler);
+	const SocketAddress& getLocalAddress() const;
+	const SocketAddress& getRemoteAddress() const;
+	CompletionPort& getIOCP();
   protected:
-	void createSocket();
-
-	bool m_destroyed = false;
+	void shutdown();
+	friend class TCPServerSocket;
 	std::shared_ptr<TCPSocketData> m_data;
 	std::shared_ptr<TCPSocketUserData> m_userData;
+	details::WSAInstance m_wsainstance;
 };
 
 } // namespace net

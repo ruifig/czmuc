@@ -44,6 +44,7 @@
     <ClInclude Include="..\source\crazygaze\Logging.h" />
     <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
+    <ClInclude Include="..\source\crazygaze\net\SocketAddress.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
     <ClInclude Include="..\source\crazygaze\Parameters.h" />
@@ -93,15 +94,36 @@
     <ClCompile Include="..\source\crazygaze\Logging.cpp" />
     <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
     <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\SocketAddress.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
     <ClCompile Include="..\source\crazygaze\Parameters.cpp" />
     <ClCompile Include="..\source\crazygaze\Random.cpp" />
     <ClCompile Include="..\source\crazygaze\RingBuffer.cpp" />
     <ClCompile Include="..\source\crazygaze\rpc\RPCBase.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp" />
+    <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
     <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
     <ClCompile Include="..\source\crazygaze\Singleton.cpp" />

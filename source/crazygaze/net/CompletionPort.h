@@ -11,66 +11,61 @@
 #pragma once
 
 #include "crazygaze/czlib.h"
+#include "crazygaze/ThreadingUtils.h"
+#include "crazygaze/Semaphore.h"
 
 namespace cz
 {
 namespace net
 {
 
-// Instead of having a function to initialize the library, I call WSAStartup and WSACleanup as
-// required, since they can be called several times
-struct WSAInstance
-{
-	WSAInstance();
-	~WSAInstance();
-};
-
-class CompletionPort;
-
-struct CompletionPortOperationBaseData : public std::enable_shared_from_this<CompletionPortOperationBaseData>
-{
-	CompletionPortOperationBaseData(CompletionPort& iocp) : iocp(iocp) {}
-	virtual ~CompletionPortOperationBaseData() {}
-
-	std::recursive_mutex mtx;
-	std::unique_lock<std::recursive_mutex> lock()
-	{
-		return std::unique_lock<std::recursive_mutex>(mtx);
-	}
-	CompletionPort& iocp;
-};
+using CompletionHandler = std::function<void(unsigned)>;
 
 struct CompletionPortOperation
 {
-	explicit CompletionPortOperation(std::shared_ptr<CompletionPortOperationBaseData> sharedData_);
-	virtual ~CompletionPortOperation();
+	CompletionPortOperation(CompletionHandler handler);
 	CompletionPortOperation(const CompletionPortOperation& other) = delete;
 	CompletionPortOperation& operator=(const CompletionPortOperation& other) = delete;
-	virtual void onSuccess(unsigned bytesTransfered) = 0;
-	virtual void onError() = 0;
-	virtual void destroy();
 	WSAOVERLAPPED overlapped;
-	std::shared_ptr<CompletionPortOperationBaseData> sharedData;
+	CompletionHandler handler;
+	Semaphore readyToExecute;
 };
+
 class CompletionPort
 {
   public:
-	explicit CompletionPort(int numThreads);
+	explicit CompletionPort();
 	~CompletionPort();
+	CompletionPort(const CompletionPort&) = delete;
+	CompletionPort& operator=(const CompletionPort) = delete;
 
 	HANDLE getHandle();
 
+	//! Run and executes all handles. It blocks until the Completion Port is stopped
+	// \return
+	//		Return the number of items handled
+	size_t run();
+
+	//! Execute any ready handles, without blocking
+	// \return
+	//		Return the number of items handled
+	size_t poll();
+
+	//! Stops the completion port
+	// This will cause any threads currently calling #run to exit
+	void stop();
+
+	void add(std::unique_ptr<CompletionPortOperation> operation);
+
   protected:
-	void run();
-	void runImpl();
-	std::vector<std::thread> m_threads;
 	HANDLE m_port;
-	friend struct CompletionPortOperation;
 
-	WSAInstance wsa;
+	struct Data
+	{
+		std::unordered_map<CompletionPortOperation*, std::unique_ptr<CompletionPortOperation>> items;
+	};
+	Monitor<Data> m_data;
 
-	// #TODO Replace this with a ZeroSemaphore?
-	std::atomic_int m_queuedCount = 0;
 };
 
 } // namespace net
