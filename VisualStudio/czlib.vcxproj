@@ -1,0 +1,273 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\source\crazygaze\Algorithm.h" />
+    <ClInclude Include="..\source\crazygaze\Any.h" />
+    <ClInclude Include="..\source\crazygaze\AsyncCommandQueue.h" />
+    <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
+    <ClInclude Include="..\source\crazygaze\Concurrent.h" />
+    <ClInclude Include="..\source\crazygaze\config.h" />
+    <ClInclude Include="..\source\crazygaze\czlib.h" />
+    <ClInclude Include="..\source\crazygaze\czlibPCH.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h" />
+    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\unchecked.h" />
+    <ClInclude Include="..\source\crazygaze\Expected.h" />
+    <ClInclude Include="..\source\crazygaze\File.h" />
+    <ClInclude Include="..\source\crazygaze\Filename.h" />
+    <ClInclude Include="..\source\crazygaze\Filesystem.h" />
+    <ClInclude Include="..\source\crazygaze\Filetime.h" />
+    <ClInclude Include="..\source\crazygaze\FNVHash.h" />
+    <ClInclude Include="..\source\crazygaze\Future.h" />
+    <ClInclude Include="..\source\crazygaze\Guid.h" />
+    <ClInclude Include="..\source\crazygaze\IniFile.h" />
+    <ClInclude Include="..\source\crazygaze\Json.h" />
+    <ClInclude Include="..\source\crazygaze\Logging.h" />
+    <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
+    <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
+    <ClInclude Include="..\source\crazygaze\net\SocketAddress.h" />
+    <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
+    <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
+    <ClInclude Include="..\source\crazygaze\Parameters.h" />
+    <ClInclude Include="..\source\crazygaze\Random.h" />
+    <ClInclude Include="..\source\crazygaze\RingBuffer.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCTransport.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCConnection.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCProcessor.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCServer.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\RPCUtils.h" />
+    <ClInclude Include="..\source\crazygaze\rpc\TCPTransport.h" />
+    <ClInclude Include="..\source\crazygaze\ScopeGuard.h" />
+    <ClInclude Include="..\source\crazygaze\Semaphore.h" />
+    <ClInclude Include="..\source\crazygaze\SharedFlag.h" />
+    <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
+    <ClInclude Include="..\source\crazygaze\Singleton.h" />
+    <ClInclude Include="..\source\crazygaze\StringUtils.h" />
+    <ClInclude Include="..\source\crazygaze\targetver.h" />
+    <ClInclude Include="..\source\crazygaze\ThreadingUtils.h" />
+    <ClInclude Include="..\source\crazygaze\Ticker.h" />
+    <ClInclude Include="..\source\crazygaze\Timer.h" />
+    <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
+    <ClInclude Include="..\source\crazygaze\UTF8String.h" />
+    <ClInclude Include="..\source\crazygaze\WindowsConsole.h" />
+    <ClInclude Include="..\source\czlibPCH.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\crazygaze\Any.cpp" />
+    <ClCompile Include="..\source\crazygaze\AsyncCommandQueue.cpp" />
+    <ClCompile Include="..\source\crazygaze\ChunkBuffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\czlib.cpp" />
+    <ClCompile Include="..\source\crazygaze\czlibPCH.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\File.cpp" />
+    <ClCompile Include="..\source\crazygaze\Filename.cpp" />
+    <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
+    <ClCompile Include="..\source\crazygaze\Filetime.cpp" />
+    <ClCompile Include="..\source\crazygaze\Guid.cpp" />
+    <ClCompile Include="..\source\crazygaze\IniFile.cpp" />
+    <ClCompile Include="..\source\crazygaze\Json.cpp" />
+    <ClCompile Include="..\source\crazygaze\Logging.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\SocketAddress.cpp" />
+    <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
+    <ClCompile Include="..\source\crazygaze\Parameters.cpp" />
+    <ClCompile Include="..\source\crazygaze\Random.cpp" />
+    <ClCompile Include="..\source\crazygaze\RingBuffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\rpc\RPCBase.cpp" />
+    <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
+    <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
+    <ClCompile Include="..\source\crazygaze\Singleton.cpp" />
+    <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
+    <ClCompile Include="..\source\crazygaze\Timer.cpp" />
+    <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
+    <ClCompile Include="..\source\crazygaze\WindowsConsole.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODO.txt" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4DEF60BC-547E-4AB1-B80D-D75B934AB3D6}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>czlib</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="czlib.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="czlib.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="czlib.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="czlib.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
