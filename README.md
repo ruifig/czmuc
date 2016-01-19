@@ -12,5 +12,5 @@ To the extent possible under law, [Rui Figueira](http://www.ruifigueira.net) has
 
 Some portions of czlib makes use of some other libraries. Check those libraries licenses if you use code that depends on them.
 
-* SFMT [](http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/)
-* UTF8-CPP [](http://utfcpp.sourceforge.net/)
+* [SIMD-oriented Fast Mersenne Twister (SFMT)](http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/)
+* [UTF8-CPP](http://utfcpp.sourceforge.net/)
