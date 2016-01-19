@@ -1,6 +1,6 @@
 # README #
 
-C++ library with miscellaneous bits of code I tend to use on other projects.
+czlib is a C++ library with miscellaneous bits of code I tend to use on other projects.
 Feel free to copy, modify, share, do whatever you want with it, except where my code uses other libraries. See below.
 
 ## Legal ##
