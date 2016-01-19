@@ -1,6 +1,6 @@
 # README #
 
-czlib is a C++ library with miscellaneous bits of code I tend to use on other projects.
+czLib is a C++ library with miscellaneous bits of code I tend to use on other projects.
 
 It is licensed under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/), so feel free to copy, modify, share, do whatever you want with it, except where my code uses other libraries. See below.
 
