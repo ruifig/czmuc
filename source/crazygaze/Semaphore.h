@@ -14,7 +14,8 @@
 namespace cz
 {
 
-class Semaphore {
+class Semaphore
+{
 public:
     Semaphore (unsigned int count = 0) : m_count(count) {}
     void notify();

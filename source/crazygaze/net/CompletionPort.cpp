@@ -22,8 +22,7 @@ namespace net
 //
 //////////////////////////////////////////////////////////////////////////
 
-CompletionPortOperation::CompletionPortOperation(CompletionHandler handler)
-	: handler(std::move(handler))
+CompletionPortOperation::CompletionPortOperation()
 {
 	memset(&overlapped, 0, sizeof(overlapped));
 }
@@ -81,7 +80,6 @@ size_t CompletionPort::run()
 		DWORD bytesTransfered = 0;
 		ULONG_PTR completionKey = 0;
 		OVERLAPPED* overlapped = NULL;
-
 		BOOL res = ::GetQueuedCompletionStatus(m_port, &bytesTransfered, &completionKey, &overlapped, INFINITE);
 		int err = 0;
 		if (res == FALSE)
@@ -92,7 +90,7 @@ size_t CompletionPort::run()
 		if (overlapped)
 		{
 			CompletionPortOperation* operation = CONTAINING_RECORD(overlapped, CompletionPortOperation, overlapped);
-			operation->handler(bytesTransfered);
+			operation->execute(bytesTransfered, completionKey);
 
 			// This is needed, since we can get after the WSASend/WSARecv, but before the operation is put into the map
 			// If it was not for this check, the send/recv could end up adding operations to the map, AFTER the handler
@@ -110,15 +108,21 @@ size_t CompletionPort::run()
 
 		if (err==0)
 		{
-			// Operation succesfull
+			// Operation successful
 		}
-		else if (err == ERROR_ABANDONED_WAIT_0) // handle closed
+		else if (
+			err == ERROR_ABANDONED_WAIT_0 || // handle closed||
+			err ==ERROR_INVALID_HANDLE // m_port was set to INVALID_HANDLE, has part of #stop
+			)
 		{
 			return counter;
 		}
-		else if (err == ERROR_OPERATION_ABORTED)
+		else if (overlapped)
 		{
-			// Do nothing
+			// If overlapped was set, but we have an error, it means the operation was dequeued, and
+			// The error is treated in the handler itself.
+			// It has nothing to do with the CompletionPort
+			//
 		}
 		else
 		{

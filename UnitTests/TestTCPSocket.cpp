@@ -208,6 +208,7 @@ TEST(BigData)
 				   ((m_received*8) / (1000.0 * 1000.0)) / (ms / 1000.0));
 		}
 		virtual void onSocketReceive(const ChunkBuffer& buf) override
+
 		{
 			TCPServerClientInfo::onSocketReceive(buf); // Call base class
 

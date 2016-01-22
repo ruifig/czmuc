@@ -30,7 +30,7 @@ TEST(Future_Async)
 	{
 		// Wait for the main thread be ready to wait on the future, so we can measure the time
 		checkpoint1.wait();
-		UnitTest::TimeHelpers::SleepMs(50);
+		spinMs(50);
 		pr.set_value("Hello");
 	});
 
@@ -316,17 +316,17 @@ TEST(Future_void)
 		{
 			// Wait for the main thread be ready to wait on the future, so we can measure the time
 			checkpoint1.wait();
-			UnitTest::TimeHelpers::SleepMs(50);
+			spinMs(25);
 			pr.set_value();
 		});
 
 		checkFutureErrorCode(FutureError::Code::NoState, [&] {pr.set_value();});
 
-		checkpoint1.notify();
 		auto t1 = timer.GetTimeInMs();
+		checkpoint1.notify();
 		ft1.get();
 		auto t2 = timer.GetTimeInMs();
-		CHECK_CLOSE(50, t2 - t1, 5);
+		CHECK_CLOSE(25, t2 - t1, 5);
 		t.join();
 	}
 }

@@ -23,11 +23,12 @@ using CompletionHandler = std::function<void(unsigned)>;
 
 struct CompletionPortOperation
 {
-	CompletionPortOperation(CompletionHandler handler);
+	CompletionPortOperation();
 	CompletionPortOperation(const CompletionPortOperation& other) = delete;
 	CompletionPortOperation& operator=(const CompletionPortOperation& other) = delete;
+	virtual ~CompletionPortOperation() {}
+	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) = 0;
 	WSAOVERLAPPED overlapped;
-	CompletionHandler handler;
 	Semaphore readyToExecute;
 };
 

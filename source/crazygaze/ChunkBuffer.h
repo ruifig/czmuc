@@ -24,6 +24,12 @@ struct BlockReadInfo;
 struct BlockWriteInfo;
 struct BlockReserveWriteInfo;
 
+template<typename T>
+std::shared_ptr<T> make_shared_array(size_t size)
+{
+	return std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
+}
+
 class ChunkBuffer
 {
 private:
@@ -31,7 +37,7 @@ private:
 	class Block
 	{
 	public:
-		Block(std::unique_ptr<char[]> ptr, unsigned capacity, unsigned usedSize);
+		Block(std::shared_ptr<char> ptr, unsigned capacity, unsigned usedSize);
 		Block(Block&& other);
 		Block(const Block&) = delete;
 		Block& operator = (const Block&) = delete;
@@ -47,7 +53,7 @@ private:
 		void writeAt(unsigned pos, BlockWriteInfo& info);
 		const char* getReadPtr() const;
 	private:
-		std::unique_ptr<char[]> m_ptr;
+		std::shared_ptr<char> m_ptr;
 		unsigned m_capacity = 0;
 		mutable unsigned m_readPos = 0;
 		unsigned m_writePos = 0;
@@ -93,11 +99,12 @@ public:
 
 	//! Returns how many bytes are available to read
 	unsigned calcSize() const;
+	unsigned getDefaultBlockSize() const;
 
 	unsigned numBlocks() const;
 	void iterateBlocks(std::function<void(const char*, unsigned)> f);
 
-	void writeBlock(std::unique_ptr<char[]> data, unsigned capacity, unsigned size);
+	void writeBlock(std::shared_ptr<char> data, unsigned capacity, unsigned size);
 	void write(const void* data, unsigned size);
 
 	struct WritePos

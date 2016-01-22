@@ -27,6 +27,7 @@
 //
 #include "crazygaze/czlibPCH.h"
 #include "crazygaze/TypeTraits.h"
+#include "crazygaze/WindowsConsole.h"
 #include "crazygaze/Any.h"
 #include "crazygaze/Future.h"
 #include "crazygaze/Semaphore.h"
@@ -40,3 +41,10 @@
 #include "crazygaze/rpc/GenericRPC.h"
 #include "crazygaze/Concurrent.h"
 #include "crazygaze/AsyncCommandQueue.h"
+#include "crazygaze/Buffer.h"
+
+CZ_DECLARE_LOG_CATEGORY(logTests, Log, Log)
+CZ_DECLARE_LOG_CATEGORY(logTestsVerbose, Log, Log)
+
+void spinMs(double ms);
+

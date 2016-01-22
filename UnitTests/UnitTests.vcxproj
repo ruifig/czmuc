@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="TestAny.cpp" />
+    <ClCompile Include="TestBuffer.cpp" />
     <ClCompile Include="TestChunkBuffer.cpp" />
     <ClCompile Include="TestFuture.cpp" />
     <ClCompile Include="TestRPC.cpp">
