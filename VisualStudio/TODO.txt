@@ -1,4 +1,10 @@
 
+
+Sockets
+-----------------
+- Check what happens when I call send/receive on disconnected socket.
+	- Ideally the handler should still be called from the IOCP (with the appropriate error), to keep behaviour consistent
+
 - Have void RPC also return a reply, so Future<void> actually waits for the RPC to be processed
 
 - Replace typedefs with alias templates, as specified in "Effective Modern C++, Item9 (page 63).

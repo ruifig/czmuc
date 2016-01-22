@@ -12,6 +12,7 @@ other connection requests are denied. Ideally, we should have a couple of accept
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/net/details/TCPSocketDebug.h"
 #include "crazygaze/Future.h"
+#include "crazygaze/Buffer.h"
 
 namespace cz
 {
@@ -46,19 +47,63 @@ class SocketWrapper
 	~SocketWrapper();
 	SOCKET get();
 	bool isValid() const;
+	void shutdown();
 
   private:
 	SOCKET m_socket = INVALID_SOCKET;
 };
 
+enum class SocketOperationCode
+{
+	None,
+	NotConnected,
+	Disconnected
+};
+
+struct SocketCompletionError
+{
+	enum class Code
+	{
+		None,
+		NotConnected, // The socket is not connected.
+		Disconnected, // The socket was connected at some point, but it disconnected
+		NoResources // Lack os OS resources caused the operation to fail. (e.g: Sending data too fast)
+	};
+
+	Code code;
+	std::string msg; // Provides extra information (OS dependent), if there is an error
+
+	SocketCompletionError()
+		: code(Code::None) { }
+
+	SocketCompletionError(Code code) :
+		code(code) { }
+
+	SocketCompletionError(Code code, std::string msg) :
+		code(code), msg(std::move(msg)) { }
+
+	bool isOk() const
+	{
+		return code != Code::Disconnected;
+	}
+
+};
+
 class TCPSocket;
+using SocketCompletionHandler = std::function<void(const SocketCompletionError& err, unsigned)>;
+using SocketCompletionUntilHandler = std::function<bool(ChunkBuffer& buf)>;
 
 class TCPServerSocket
 {
   public:
 	TCPServerSocket(CompletionPort& iocp, int listenPort);
 	~TCPServerSocket();
-	void asyncAccept(TCPSocket& socket, CompletionHandler handler);
+	void asyncAccept(TCPSocket& socket, SocketCompletionHandler handler);
+
+  protected:
+	  friend struct AsyncAcceptOperation;
+	  void execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey);
+
   private:
 	std::shared_ptr<struct TCPServerSocketData> m_data;
 	details::WSAInstance m_wsainstance;
@@ -69,19 +114,26 @@ struct TCPSocketUserData
 	virtual ~TCPSocketUserData() {}
 };
 
+
 class TCPSocket
 {
   public:
 	explicit TCPSocket(CompletionPort& iocp);
 	virtual ~TCPSocket();
 	Future<bool> connect(const std::string& ip, int port);
-	bool asyncSend(std::vector<char> buf, CompletionHandler handler);
-	bool asyncReceive(std::unique_ptr<char[]> buf, int capacity, CompletionHandler handler);
+	void asyncSend(Buffer buf, SocketCompletionHandler handler);
+	void asyncReceive(Buffer buf, SocketCompletionHandler handler);
+	void asyncReceiveUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
 	const SocketAddress& getLocalAddress() const;
 	const SocketAddress& getRemoteAddress() const;
 	CompletionPort& getIOCP();
-  protected:
 	void shutdown();
+  protected:
+	friend struct AsyncReceiveOperation;
+	friend struct AsyncSendOperation;
+	void execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey);
+	void execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey);
+	void prepareRecvUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
 	friend class TCPServerSocket;
 	std::shared_ptr<TCPSocketData> m_data;
 	std::shared_ptr<TCPSocketUserData> m_userData;

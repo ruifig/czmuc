@@ -78,29 +78,6 @@ namespace details
 		WSACleanup();
 	}
 
-	struct AsyncAcceptData
-	{
-		enum
-		{
-			AddrLen = sizeof(sockaddr_in) + 16
-		};
-		char outputBuffer[2 * AddrLen];
-		CompletionHandler handler;
-		TCPSocket* socket = nullptr;
-	};
-
-	struct AsyncReceiveData
-	{
-		std::unique_ptr<char[]> buf;
-		int capacity;
-		CompletionHandler handler;
-	};
-
-	struct AsyncSendData
-	{
-		std::vector<char> buf;
-		CompletionHandler handler;
-	};
 
 } // namespace details
 
@@ -115,7 +92,7 @@ static const char* getLastWin32ErrorMsg(int err = 0)
 	DWORD errCode = (err == 0) ? GetLastError() : err;
 	thread_local char buf[512];
 	// http://msdn.microsoft.com/en-us/library/ms679351(VS.85).aspx
-	int size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,  // use windows internal message table
+	int size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_MAX_WIDTH_MASK ,  // use windows internal message table
 							  0,						   // 0 since source is internal message table
 							  errCode,					   // this is the error code returned by WSAGetLastError()
 							  // Could just as well have been an error code from generic
@@ -185,12 +162,6 @@ static bool movepop(Q& q, T& dst)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// SocketAddress
-//
-//////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////
-//
 // Shared Data
 //
 //////////////////////////////////////////////////////////////////////////
@@ -248,6 +219,54 @@ TCPSocketData::~TCPSocketData()
 {
 }
 
+struct AsyncAcceptOperation : public CompletionPortOperation
+{
+	AsyncAcceptOperation(TCPServerSocket* owner) : owner(owner) { }
+	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) override
+	{
+		owner->execute(this, bytesTransfered, completionKey);
+	}
+
+	enum
+	{
+		AddrLen = sizeof(sockaddr_in) + 16
+	};
+	TCPServerSocket* owner;
+	SocketCompletionHandler handler;
+	char outputBuffer[2 * AddrLen];
+	TCPSocket* socket = nullptr;
+};
+
+struct AsyncReceiveOperation : public CompletionPortOperation
+{
+	AsyncReceiveOperation(TCPSocket* owner) : owner(owner)
+	{
+	}
+	virtual ~AsyncReceiveOperation()
+	{
+	}
+	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) override
+	{
+		owner->execute(this, bytesTransfered, completionKey);
+	}
+	TCPSocket* owner;
+	SocketCompletionHandler handler;
+	SocketCompletionError err;
+	Buffer buf;
+};
+
+struct AsyncSendOperation : public CompletionPortOperation
+{
+	AsyncSendOperation(TCPSocket* owner) : owner(owner) { }
+	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) override
+	{
+		owner->execute(this, bytesTransfered, completionKey);
+	}
+	TCPSocket* owner;
+	SocketCompletionHandler handler;
+	SocketCompletionError err;
+	Buffer buf;
+};
 //////////////////////////////////////////////////////////////////////////
 //
 // TCPServerSocket
@@ -298,8 +317,12 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 	if (res1 == SOCKET_ERROR || res2 == SOCKET_ERROR)
 		throw std::runtime_error(formatString("Error initializing listen socket: %s", getLastWin32ErrorMsg()));
 
-	if (CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_data->listenSocket.get()), m_data->iocp.getHandle(),
-							   (ULONG_PTR) this, 0) == NULL)
+	if (CreateIoCompletionPort(
+			reinterpret_cast<HANDLE>(m_data->listenSocket.get()), // FileHandle
+			m_data->iocp.getHandle(), // ExistingCompletionPort
+			(ULONG_PTR)0, // CompletionKey
+			0 // NumberOfConcurrentThreads
+		) == NULL)
 	{
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
@@ -316,37 +339,21 @@ TCPServerSocket::~TCPServerSocket()
 	LOG("~TCPServerSocket %p: Exit\n", this);
 }
 
-
-void TCPServerSocket::asyncAccept(TCPSocket& socket, CompletionHandler handler)
+void TCPServerSocket::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler)
 {
 	DWORD dwBytes;
 
-	auto data = std::make_shared<details::AsyncAcceptData>();
-	data->handler = std::move(handler);
-	data->socket = &socket;
-
-	auto op = std::make_unique<CompletionPortOperation>([data,this](unsigned bytesTransfered)
-	{
-		sockaddr* localSockAddr = NULL;
-		int localSockAddrSize;
-		sockaddr* remoteSockAddr = NULL;
-		int remoteSockAddrSize;
-		m_data->lpfnGetAcceptExSockaddrs(&data->outputBuffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &localSockAddr,
-									   &localSockAddrSize, &remoteSockAddr, &remoteSockAddrSize);
-		LOG("New connection:\n\tlocal = %s\n\tremote = %s\n", getAddr(localSockAddr), getAddr(remoteSockAddr));
-		data->socket->m_data->localAddr = SocketAddress(*localSockAddr);
-		data->socket->m_data->remoteAddr = SocketAddress(*remoteSockAddr);
-		data->socket->m_data->state = SocketState::Connected;
-		data->handler(bytesTransfered);
-	});
+	auto op = std::make_unique<AsyncAcceptOperation>(this);
+	op->handler = std::move(handler);
+	op->socket = &socket;
 
 	auto res = m_data->lpfnAcceptEx(
 		m_data->listenSocket.get(), // sListenSocket
 		socket.m_data->socket.get(), // sAcceptSocket
-		&data->outputBuffer, // lpOutputBuffer
+		&op->outputBuffer, // lpOutputBuffer
 		0, // dwReceiveDataLength
-		details::AsyncAcceptData::AddrLen, // dwLocalAddressLength
-		details::AsyncAcceptData::AddrLen, // dwRemoteAddressLength
+		AsyncAcceptOperation::AddrLen, // dwLocalAddressLength
+		AsyncAcceptOperation::AddrLen, // dwRemoteAddressLength
 		&dwBytes /*Unused for asynchronous AcceptEx*/,
 		&op->overlapped
 		);
@@ -360,6 +367,27 @@ void TCPServerSocket::asyncAccept(TCPSocket& socket, CompletionHandler handler)
 
 	socket.m_data->state = SocketState::WaitingAccept;
 	m_data->iocp.add(std::move(op));
+}
+
+void TCPServerSocket::execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey)
+{
+	if (completionKey!=0)
+	{
+		// Implement this
+		CZ_UNEXPECTED();
+	}
+
+	sockaddr* localSockAddr = NULL;
+	int localSockAddrSize;
+	sockaddr* remoteSockAddr = NULL;
+	int remoteSockAddrSize;
+	m_data->lpfnGetAcceptExSockaddrs(&op->outputBuffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &localSockAddr,
+		&localSockAddrSize, &remoteSockAddr, &remoteSockAddrSize);
+	LOG("New connection:\n\tlocal = %s\n\tremote = %s\n", getAddr(localSockAddr), getAddr(remoteSockAddr));
+	op->socket->m_data->localAddr = SocketAddress(*localSockAddr);
+	op->socket->m_data->remoteAddr = SocketAddress(*remoteSockAddr);
+	op->socket->m_data->state = SocketState::Connected;
+	op->handler(SocketCompletionError(), bytesTransfered);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -380,8 +408,12 @@ TCPSocket::TCPSocket(CompletionPort& iocp)
 		CZ_LOG(logDefault, Fatal, "Error creating client socket: %s", getLastWin32ErrorMsg());
 	}
 
-	if (CreateIoCompletionPort((HANDLE)m_data->socket.get(), m_data->iocp.getHandle(),
-							   (ULONG_PTR)this, 0) == NULL)
+	if (CreateIoCompletionPort(
+			(HANDLE)m_data->socket.get(), // FileHandle
+			m_data->iocp.getHandle(), // ExistingCompletionPort
+			(ULONG_PTR)0, // CompletionKey
+			0 // NumberOfConcurrentThreads
+		) == NULL) 
 	{
 		CZ_LOG(logDefault, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
 	}
@@ -396,12 +428,16 @@ TCPSocket::TCPSocket(CompletionPort& iocp)
 
 TCPSocket::~TCPSocket()
 {
+	LOG("~TCPSocket %p: Enter\n", this);
 	shutdown();
+	LOG("~TCPSocket %p: Exit\n", this);
 }
+
 
 void TCPSocket::shutdown()
 {
-	LOG("~TCPSocket %p: Enter\n", this);
+	if (m_data->state == SocketState::Disconnected)
+		return;
 
 	// If we are connecting, there is an async operation in fly which reference us, so we need for it to finish
 	if (m_data->connectingFt.valid())
@@ -431,8 +467,9 @@ void TCPSocket::shutdown()
 
 	debugData.socketDestroyed(this);
 
+	m_data->socket.shutdown();
+	m_data->state = SocketState::Disconnected;
 	m_userData.reset();
-	LOG("~TCPSocket %p: Exit\n", this);
 }
 
 Future<bool> TCPSocket::connect(const std::string& ip, int port)
@@ -496,30 +533,18 @@ CompletionPort& TCPSocket::getIOCP()
 	return m_data->iocp;
 }
 
-bool TCPSocket::asyncReceive(std::unique_ptr<char[]> buf, int capacity, CompletionHandler handler)
+void TCPSocket::asyncReceive(Buffer buf, SocketCompletionHandler handler)
 {
-	if (m_data->state != SocketState::Connected)
-		return false;
-
 	// According to the documentation for WSARecv, it is safe to have the WSABUF on the stack, since it will copied
 	int const numbuffers = 1;
 	WSABUF wsabufs[numbuffers];
 	memset(&wsabufs, 0, sizeof(wsabufs));
-	wsabufs[0].buf = buf.get();
-	wsabufs[0].len = capacity;
+	wsabufs[0].buf = buf.ptr;
+	wsabufs[0].len = static_cast<DWORD>(buf.size);
 
-
-	// Note: Need to wrap the buffer and handler with our own stuff, since we need to keep things alive until the
-	// handler is executed
-	auto data = std::make_shared<details::AsyncReceiveData>();
-	data->handler = std::move(handler);
-	data->buf = std::move(buf);
-	data->capacity = capacity;
-	auto op = std::make_unique<CompletionPortOperation>(
-		[data=std::move(data)](unsigned bytesTransfered)
-	{
-		data->handler(bytesTransfered);
-	});
+	auto op = std::make_unique<AsyncReceiveOperation>(this);
+	op->handler = std::move(handler);
+	op->buf = buf;
 
 	DWORD rcvFlags = 0;
 	DWORD bytesTransfered = 0;
@@ -543,41 +568,107 @@ bool TCPSocket::asyncReceive(std::unique_ptr<char[]> buf, int capacity, Completi
 		CZ_ASSERT(res == SOCKET_ERROR);
 		if (err == WSA_IO_PENDING)
 		{
-			// Expected
+			// Expected. Handler was queued
 		}
 		else  // Any other error, we close this connection
 		{
-			m_data->state = SocketState::Disconnected;
-			CZ_LOG(logDefault, Log, "%s failed with '%s'", __FUNCTION__, getLastWin32ErrorMsg(err));
-			return false;
+			op->err.msg = getLastWin32ErrorMsg();
+			switch(err)
+			{
+			case WSAENOTCONN: // Socket was not connected at all;
+				op->err.code = SocketCompletionError::Code::NotConnected;
+				break;
+			case WSAENOBUFS:
+				op->err.code = SocketCompletionError::Code::NoResources;
+				m_data->state = SocketState::Disconnected;
+				break;
+			default: // Any other error we just consider as disconnection
+				op->err.code = SocketCompletionError::Code::Disconnected;
+				m_data->state = SocketState::Disconnected;
+			}
+			// Manually queue the handler
+			auto res = PostQueuedCompletionStatus(
+				m_data->iocp.getHandle(), // CompletionPort
+				0, // dwNumberOfBytesTransfered
+				1, // CompletionKey
+				&op->overlapped // lpOverlapped
+				);
+			CZ_ASSERT_F(res != 0, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
 		}
 	}
 
 	m_data->iocp.add(std::move(op));
-	return true;
 }
 
-bool TCPSocket::asyncSend(std::vector<char> buf, CompletionHandler handler)
+void TCPSocket::prepareRecvUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler)
 {
-	if (m_data->state != SocketState::Connected)
-		return false;
+	auto ptr = make_shared_array<char>(buf.getDefaultBlockSize());
+	asyncReceive(
+		Buffer(ptr.get(), buf.getDefaultBlockSize()),
+		[this, ptr, &buf, untilHandler=std::move(untilHandler), handler=std::move(handler)](const SocketCompletionError& err, unsigned bytesTransfered)
+	{
+		if (bytesTransfered==0)
+		{
+			handler(err, bytesTransfered);
+			return;
+		}
 
-	LOG("%p: Sending %d bytes\n", this, toSend);
+		buf.write(ptr.get(), bytesTransfered);
+		if (untilHandler(buf))
+		{
+			handler(err, bytesTransfered);
+		}
+		else
+		{
+			prepareRecvUntil(buf, std::move(untilHandler), std::move(handler));
+		}
+	});
+}
 
-	auto data = std::make_shared<details::AsyncSendData>();
-	data->buf = std::move(buf);
-	data->handler = std::move(handler);
+void TCPSocket::asyncReceiveUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler)
+{
+	prepareRecvUntil(buf, std::move(untilHandler), std::move(handler));
+}
+
+void TCPSocket::execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey)
+{
+	if (completionKey==0) // The operation was queued by WSARecv
+	{
+		if (bytesTransfered==0) // When a receive gives us 0 bytes, it means the peer disconnected
+		{
+			m_data->state = SocketState::Disconnected;
+			if (op->err.isOk())
+				op->err = SocketCompletionError(SocketCompletionError::Code::Disconnected, "Disconnected");
+		}
+	}
+	else if (completionKey==1) // The operation failed, and we queued it manually
+	{
+		CZ_ASSERT(bytesTransfered == 0);
+	}
+	else
+	{
+		CZ_UNEXPECTED();
+	}
+	
+	op->handler(op->err, bytesTransfered);
+}
+
+void TCPSocket::asyncSend(Buffer buf, SocketCompletionHandler handler)
+{
+	//printf("TCPSocket::asyncSend(%d bytes)\n", (int)buf.size);
+	CZ_ASSERT(buf.ptr != nullptr);
+
+	LOG("%p: Sending %d bytes\n", this, buf.capacity);
+
+	auto op = std::make_unique<AsyncSendOperation>(this);
+	op->handler = std::move(handler);
+	op->buf = buf;
 
 	// WSABUF is safe to keep on the stack, according to the documentation
 	const int numbuffers = 1;
 	WSABUF wsabufs[numbuffers];
-	wsabufs[0].buf = data->buf.data();
-	wsabufs[0].len = static_cast<DWORD>(data->buf.size());
-
-	auto op = std::make_unique<CompletionPortOperation>([data=std::move(data)](unsigned bytesTransfered)
-	{
-		data->handler(bytesTransfered);
-	});
+	wsabufs[0].buf = op->buf.ptr;
+	wsabufs[0].len = static_cast<DWORD>(op->buf.size);
 
 	int res = WSASend(
 		m_data->socket.get(), // Socket
@@ -605,7 +696,28 @@ bool TCPSocket::asyncSend(std::vector<char> buf, CompletionHandler handler)
 		else
 		{
 			// Operation failed
-			return false;
+			op->err.msg = getLastWin32ErrorMsg();
+			switch(err)
+			{
+			case WSAENOTCONN: // Socket was not connected at all;
+				op->err.code = SocketCompletionError::Code::NotConnected;
+				break;
+			case WSAENOBUFS:
+				op->err.code = SocketCompletionError::Code::NoResources;
+				m_data->state = SocketState::Disconnected;
+				break;
+			default: // Any other error we just consider as disconnection
+				op->err.code = SocketCompletionError::Code::Disconnected;
+				m_data->state = SocketState::Disconnected;
+			}
+			// Manually queue the handler
+			auto res = PostQueuedCompletionStatus(
+				m_data->iocp.getHandle(), // CompletionPort
+				0, // dwNumberOfBytesTransfered
+				1, // CompletionKey
+				&op->overlapped // lpOverlapped
+				);
+			CZ_ASSERT_F(res != 0, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
 		}
 	}
 	else
@@ -614,9 +726,23 @@ bool TCPSocket::asyncSend(std::vector<char> buf, CompletionHandler handler)
 	}
 
 	m_data->iocp.add(std::move(op));
-	return true;
 }
 
+void TCPSocket::execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey)
+{
+	if (completionKey==0) // Queued by WSASend
+	{
+	}
+	else if (completionKey==1) // Queued manually, because WSASend failed
+	{
+		CZ_ASSERT(bytesTransfered == 0);
+	}
+	else
+	{
+		CZ_UNEXPECTED();
+	}
+	op->handler(op->err, bytesTransfered);
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -636,7 +762,16 @@ SocketWrapper::~SocketWrapper()
 {
 	if (m_socket != INVALID_SOCKET)
 	{
-		shutdown(m_socket, SD_BOTH);
+		::shutdown(m_socket, SD_BOTH);
+		closesocket(m_socket);
+	}
+}
+
+void SocketWrapper::shutdown()
+{
+	if (m_socket != INVALID_SOCKET)
+	{
+		::shutdown(m_socket, SD_BOTH);
 		closesocket(m_socket);
 	}
 }

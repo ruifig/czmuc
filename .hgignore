@@ -21,6 +21,7 @@ syntax: regexp
 #^bin/[^/]*\.(exe|ilk|iobj|ipdb|exp|lib)$
 ^tmp/
 ^VisualStudio/ipch/
+^VisualStudio/[^/]*\.(db)
 ^lib/
 ^bin/
 ^CppDepend/CppDependOut

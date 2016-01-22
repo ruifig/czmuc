@@ -76,10 +76,13 @@ int runAllTestsQueued()
 	return ret;
 }
 
-#if CONTINUOUS_TESTING
 int _tmain(int argc, _TCHAR* argv[])
 {
 	int c = 0;
+	WindowsConsole con(120, 40, 300, 1000);
+	logTestsVerbose.setVerbosity(LogVerbosity::Fatal);
+
+#if CONTINUOUS_TESTING
 	while (true)
 	{
 		printf("*** Run %d\n***", c++);
@@ -96,14 +99,8 @@ int _tmain(int argc, _TCHAR* argv[])
 			return ret;
 	}
 	return EXIT_SUCCESS;
-}
-
 #else
-int _tmain(int argc, _TCHAR* argv[])
-{
-	initializeSocketsLib();
 	auto res = UnitTest::RunAllTests();
-	shutdownSocketsLib();
 	return EXIT_SUCCESS;
-}
 #endif
+}

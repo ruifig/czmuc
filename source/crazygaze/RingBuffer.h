@@ -133,6 +133,7 @@ namespace cz
 		template<typename T>
 		int write(T v)
 		{
+			static_assert(std::is_arithmetic<T>::value, "Type is not an arithmetic type");
 			return write(&v, sizeof(v));
 		}
 
@@ -142,6 +143,7 @@ namespace cz
 		template<typename T>
 		int read(T* v)
 		{
+			static_assert(std::is_arithmetic<T>::value, "Type is not an arithmetic type");
 			return read(v, sizeof(*v));
 		}
 
@@ -156,11 +158,10 @@ namespace cz
 			return peek(v, sizeof(*v));
 		}
 
-	private:
+		RingBuffer(const RingBuffer& other) = delete;
+		void operator=(const RingBuffer& other) = delete;
 
-		// Private to avoid use
-		RingBuffer(const RingBuffer& other);
-		void operator=(const RingBuffer& other);
+	private:
 
 		bool peek(void* buf, int size);
 
@@ -170,6 +171,12 @@ namespace cz
 		int m_readpos;
 		int m_writepos;
 	};
+
+
+//
+//  Read operations
+//
+
 
 } // namespace cz
 

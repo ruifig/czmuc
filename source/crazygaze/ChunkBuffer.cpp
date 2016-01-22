@@ -36,7 +36,7 @@ struct BlockReserveWriteInfo
 //
 //////////////////////////////////////////////////////////////////////////
 
-ChunkBuffer::Block::Block(std::unique_ptr<char[]> ptr, unsigned capacity, unsigned usedSize)
+ChunkBuffer::Block::Block(std::shared_ptr<char> ptr, unsigned capacity, unsigned usedSize)
 	: m_ptr(std::move(ptr))
 	, m_capacity(capacity)
 	, m_readPos(0)
@@ -118,7 +118,7 @@ ChunkBuffer::ChunkBuffer(unsigned initialCapacity, unsigned defaultBlockSize)
 	: m_defaultBlockSize(defaultBlockSize)
 {
 	if (initialCapacity)
-		m_blocks.emplace(std::unique_ptr<char[]>(new char[initialCapacity]), initialCapacity, 0);
+		m_blocks.emplace(make_shared_array<char>(initialCapacity), initialCapacity, 0);
 }
 
 unsigned ChunkBuffer::calcSize() const
@@ -127,6 +127,11 @@ unsigned ChunkBuffer::calcSize() const
 	for (auto&& i : m_blocks.container())
 		size += i.size();
 	return size;
+}
+
+unsigned ChunkBuffer::getDefaultBlockSize() const
+{
+	return m_defaultBlockSize;
 }
 
 unsigned ChunkBuffer::numBlocks() const
@@ -140,7 +145,7 @@ void ChunkBuffer::iterateBlocks(std::function<void(const char*, unsigned)> f)
 		f(i.getReadPtr(), i.size());
 }
 
-void ChunkBuffer::writeBlock(std::unique_ptr<char[]> data, unsigned capacity, unsigned size)
+void ChunkBuffer::writeBlock(std::shared_ptr<char> data, unsigned capacity, unsigned size)
 {
 	CZ_ASSERT(capacity && size <= capacity);
 	m_blocks.emplace(std::move(data), capacity, size);
@@ -155,7 +160,7 @@ void ChunkBuffer::write(const void* data, unsigned size)
 	{
 		// Add another block if necessary
 		if (m_blocks.size()==0 || m_blocks.back().unused() == 0)
-			writeBlock(std::unique_ptr<char[]>(new char[m_defaultBlockSize]), m_defaultBlockSize, 0);
+			writeBlock(make_shared_array<char>(m_defaultBlockSize), m_defaultBlockSize, 0);
 		m_blocks.back().write(info);
 	}
 }
@@ -205,7 +210,7 @@ cz::ChunkBuffer::WritePos ChunkBuffer::writeReserve(unsigned size)
 {
 	WritePos ret;
 	if (m_blocks.container().size()==0)
-		writeBlock(std::unique_ptr<char[]>(new char[m_defaultBlockSize]), m_defaultBlockSize, 0);
+		writeBlock(make_shared_array<char>(m_defaultBlockSize), m_defaultBlockSize, 0);
 	ret.block = static_cast<unsigned>(m_blocks.container().size()) - 1;
 	ret.write = m_blocks.back().size();
 #if CZ_DEBUG
@@ -218,7 +223,7 @@ cz::ChunkBuffer::WritePos ChunkBuffer::writeReserve(unsigned size)
 	{
 		// Add another block if necessary
 		if (m_blocks.back().unused() == 0)
-			writeBlock(std::unique_ptr<char[]>(new char[m_defaultBlockSize]), m_defaultBlockSize, 0);
+			writeBlock(make_shared_array<char>(m_defaultBlockSize), m_defaultBlockSize, 0);
 		m_blocks.back().reserveWrite(info);
 	}
 
