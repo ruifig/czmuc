@@ -25,7 +25,7 @@
 #include <unordered_map>
 #include <future>
 #include <condition_variable>
-
+#include <algorithm>
 
 #include "crazygaze/czlib.h"
 

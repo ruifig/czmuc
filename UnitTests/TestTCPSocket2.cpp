@@ -34,8 +34,8 @@ void testConnection(int count)
 			s[i]->asyncSend(Buffer(buf.get(), 1), [buf, i, &s, &pendingSend](const SocketCompletionError& err, unsigned bytesTransfered)
 			{
 				CHECK_EQUAL(sizeof(int), bytesTransfered);
-				pendingSend.decrement();
 				s[i]->shutdown();
+				pendingSend.decrement();
 			});
 			connected.decrement();
 		});
@@ -204,23 +204,40 @@ private:
 	uint8_t m_expected = 0;
 };
 
-TEST(TestThroughput)
+
+struct IOCPThreads
 {
 	CompletionPort iocp;
 	std::vector<std::thread> ths;
-	for (int i = 0; i < 1; i++)
-	{
-		ths.push_back(std::thread([&iocp]
-		{
-			CZ_LOG(logTestsVerbose, Log, "Thread started");
-			iocp.run();
-			CZ_LOG(logTestsVerbose, Log, "Thread finished");
-		}));
-	}
 
+	void start(int nthreads)
+	{
+		for (int i = 0; i < nthreads; i++)
+		{
+			ths.push_back(std::thread([this]
+			{
+				CZ_LOG(logTestsVerbose, Log, "Thread started");
+				iocp.run();
+				CZ_LOG(logTestsVerbose, Log, "Thread finished");
+			}));
+		}
+	}
+		
+	void stop()
+	{
+		iocp.stop();
+		for (auto&& t : ths)
+			t.join();
+	}
+};
+
+TEST(TestThroughput)
+{
+	IOCPThreads ths;
+	ths.start(1);
 	auto server = std::make_unique<BigDataServer>();
 
-	TCPSocket client(iocp);
+	TCPSocket client(ths.iocp);
 
 	auto ft = client.connect("127.0.0.1", 28000);
 	CZ_LOG(logTestsVerbose, Log, "S2 accepted. LocalAddr=%s, RemoteAddr=%s", client.getLocalAddress().toString(true), client.getRemoteAddress().toString(true));
@@ -256,7 +273,7 @@ TEST(TestThroughput)
 	while(true)
 	{
 #if CZ_DEBUG
-		int const MBCOUNT = 20;
+		int const MBCOUNT = 5;
 #else
 		int const MBCOUNT = 1000;
 #endif
@@ -284,41 +301,300 @@ TEST(TestThroughput)
 	// Shutdown the client socket, so the server pending reads can complete (with error)
 	client.shutdown();
 	server = nullptr;
-	iocp.stop();
-	for (auto&& t : ths)
-		t.join();
+	ths.stop();
 }
 
-class EchoConnection
+class EchoServerConnection
 {
 public:
-	EchoConnection(std::unique_ptr<TCPSocket> socket, int waitMs=0)
+	EchoServerConnection(std::shared_ptr<TCPSocket> socket, int waitMs=0)
 		: m_socket(std::move(socket))
 		, m_waitMs(0)
 	{
+		setupRecv();
+	}
+
+	~EchoServerConnection()
+	{
+		CZ_LOG(logTests, Log, "EchoServerConnection: Destructor");
+		m_socket->shutdown();
+		m_pending.wait();
 	}
 
 private:
-	void prepareRecv()
+	void setupRecv()
 	{
-		auto buf = make_shared_array<char>(128);
-		m_socket->asyncReceive(Buffer(buf.get(), 128), [this, buf](const SocketCompletionError& err, unsigned bytesTransfered)
-		{
-			if (bytesTransfered==0)
+		m_pending.increment();
+		m_socket->asyncReceiveUntil(m_buf, '\n',
+			[this](const SocketCompletionError& err, unsigned bytesTransfered)
 			{
-				m_socket->shutdown();
-				return;
-			}
+				SCOPE_EXIT{ m_pending.decrement(); };
+				if (bytesTransfered==0)
+				{
+					CZ_LOG(logTests, Log, "EchoServerConnection: Disconnected");
+					m_socket->shutdown();
+					return;
+				}
 
-			if (m_waitMs)
-				spinMs(m_waitMs);
+				if (m_waitMs)
+					spinMs(m_waitMs);
 
-			//m_socket->asyncSend(Buffer(buf.get(), ))
-		});
+				std::string msg(m_buf.begin(), m_buf.begin() + bytesTransfered);
+				m_buf.skip(bytesTransfered);
+				CZ_LOG(logTests, Log, "EchoServerConnection:Received: %d bytes, %s,", bytesTransfered, msg.c_str());
+				CZ_LOG(logTests, Log, "EchoServerConnection: Buf fillcount: %d bytes", m_buf.getUsedSize());
+				setupRecv(); // This needs to be done AFTER reading our data from the buffer
+				m_socket->asyncSend(msg.c_str(), static_cast<int>(msg.size()), [this](auto err, auto bytesTransfered)
+				{
+					CZ_ASSERT(err.isOk() && bytesTransfered!=0);
+					CZ_LOG(logTests, Log, "EchoServerConnection: Sent %d bytes", bytesTransfered);
+				});
+			});
 	}
-	std::unique_ptr<TCPSocket> m_socket;
-	ChunkBuffer m_buf;
+
+	ZeroSemaphore m_pending;
+	std::shared_ptr<TCPSocket> m_socket;
+	RingBuffer m_buf;
 	int m_waitMs;
 };
+
+
+class EchoServer
+{
+public:
+	EchoServer(int listenPort)
+	{
+		m_ths.start(1);
+		m_serverSocket = std::make_unique<TCPServerSocket>(m_ths.iocp, listenPort);
+		prepareAccept();
+	}
+
+	~EchoServer()
+	{
+		m_serverSocket->shutdown();
+		m_pending.wait();
+		m_clients.clear();
+		m_ths.stop();
+	}
+
+	void prepareAccept()
+	{
+		auto socket = std::make_shared<TCPSocket>(m_ths.iocp);
+		m_pending.increment();
+		m_serverSocket->asyncAccept(*socket,
+			[this, socket=socket](const SocketCompletionError& err, unsigned bytesTransfered)
+		{
+			SCOPE_EXIT{ m_pending.decrement(); };
+			if (!err.isOk())
+				return;
+			m_inPrepare++;
+			CZ_LOG(logTests, Log, "Client from %s connected", socket->getRemoteAddress().toString(true));
+			auto con = std::make_unique<EchoServerConnection>(socket);
+			m_clients.push_back(std::move(con));
+			m_inPrepare--;
+		});
+	}
+
+private:
+	int m_inPrepare = 0;
+	ZeroSemaphore m_pending;
+	IOCPThreads m_ths;
+	std::unique_ptr<TCPServerSocket> m_serverSocket;
+	std::vector<std::unique_ptr<EchoServerConnection>> m_clients;
+};
+
+
+struct ClientConnection
+{
+	int num = 0;
+	int sendCount = 0;
+	int recvCount = 0;
+	ZeroSemaphore pending;
+	std::unique_ptr<TCPSocket> socket;
+	RingBuffer recvBuf;
+	ZeroSemaphore pendingEchos;
+
+	ClientConnection(CompletionPort& iocp)
+	{
+		socket = std::make_unique<TCPSocket>(iocp);
+	}
+
+	~ClientConnection()
+	{
+		pendingEchos.wait();
+		socket->shutdown();
+		pending.wait();
+	}
+
+	void send()
+	{
+		pending.increment();
+		pendingEchos.increment();
+		auto str = formatString("Client:%d:%d\n", num, sendCount++);
+		CZ_LOG(logTests, Log, formatString("Sending %s", str));
+		socket->asyncSend(
+			str, static_cast<int>(strlen(str)),
+			[this](const SocketCompletionError& err, unsigned bytesTransfered)
+
+		{
+			if (!err.isOk() || bytesTransfered==0)
+			{
+				CZ_LOG(logTests, Warning, "ClientConnection: Failed to send.");
+			}
+			else
+			{
+				CZ_LOG(logTests, Log, "ClientConnection: sent %d bytes", bytesTransfered)
+			}
+			pending.decrement();
+		});
+	}
+
+	void prepareRecv()
+	{
+		pending.increment();
+		socket->asyncReceiveUntil(recvBuf, '\n',
+			[this](const SocketCompletionError& err, unsigned bytesTranfered)
+		{
+			SCOPE_EXIT{ pending.decrement(); };
+			if (bytesTranfered == 0)
+			{
+				CZ_LOG(logTests, Log, "ClientConnection: Disconnected");
+				return;
+			}
+			std::string msg(recvBuf.begin(), recvBuf.begin() + bytesTranfered-1);
+			recvBuf.skip(bytesTranfered);
+			prepareRecv(); // This needs to be done AFTER reading our data from the buffer
+			CZ_LOG(logTestsVerbose, Log, "Client:Received: %s", msg.c_str());
+			CHECK_EQUAL(formatString("Client:%d:%d", num, recvCount++), msg.c_str());
+			pendingEchos.decrement();
+		});
+	}
+
+};
+
+TEST(Echo)
+{
+	IOCPThreads ths;
+	ths.start(1);
+	auto server = std::make_unique<EchoServer>(SERVER_PORT);
+
+	std::vector<std::unique_ptr<ClientConnection>> clients;
+	for (int i = 0; i < 1; i++)
+	{
+		clients.push_back(std::make_unique<ClientConnection>(ths.iocp));
+		auto c = clients.back().get();
+		CHECK(c->socket->connect("127.0.0.1", SERVER_PORT).get() == true);
+		c->num = i;
+		c->prepareRecv();
+		c->send();
+		c->send();
+	}
+
+	clients.clear();
+	server = nullptr;
+	ths.stop();
+}
+
+
+// This is what the handler expects. Full tokens (excluding the delimiter)
+std::vector<std::string> multipleUntilExpected = { "This", "is", "a", "test", "!" };
+// The client sends incomplete tokens. This tests the code that deals with holding on the data and only call the handler
+// when there is a complete token
+std::vector<std::string> multipleUntilSend = { "T", "his\nis", "\na\ntest\n!\n"};
+// Whenever the server receives a token, there might be data left in the buffer, which will be eventually be handling
+// by other calls to asyncReadUntil. This tests those cases.
+std::vector<std::string> multipleUntilLeftovers = { "is", "a\ntest\n!\n", "test\n!\n", "!\n", "" };
+struct MultipleUntilServer
+{
+	MultipleUntilServer()
+	{
+		ths.start(1);
+		serverSocket = std::make_unique<TCPServerSocket>(ths.iocp, SERVER_PORT);
+		clientSocket = std::make_unique<TCPSocket>(ths.iocp);
+		expected = multipleUntilExpected;
+		expectedRemaining = multipleUntilLeftovers;
+		serverSocket->asyncAccept(*clientSocket, [this](const SocketCompletionError& err, unsigned bytesTransfered)
+		{
+			CHECK(err.isOk());
+			prepareRecv();
+		});
+	}
+
+	~MultipleUntilServer()
+	{
+		pending.wait();
+		serverSocket->shutdown();
+		clientSocket->shutdown();
+		ths.stop();
+	}
+
+	void prepareRecv()
+	{
+		pending.increment();
+		clientSocket->asyncReceiveUntil(
+			buf, '\n', [this](const SocketCompletionError& err, unsigned bytesTransfered)
+		{
+			SCOPE_EXIT{ pending.decrement(); };
+			CHECK(err.isOk());
+			std::string msg(buf.begin(), buf.begin() + bytesTransfered-1);
+			buf.skip(bytesTransfered);
+			CZ_LOG(logTestsVerbose, Log, "MultipleUntilServer:Recv: %d, %s", bytesTransfered, msg.c_str());
+			CHECK_EQUAL(expected.front(),msg);
+			expected.erase(expected.begin());
+
+			// Check if the buffer has whatever remaining data should be there
+			std::string remaining(buf.begin(), buf.end());
+			CHECK_EQUAL(expectedRemaining.front(), remaining);
+			expectedRemaining.erase(expectedRemaining.begin());
+
+			if (expected.empty())
+				clientSocket->shutdown();
+			else
+				prepareRecv();
+		}, 1024);
+	}
+
+	std::vector<std::string> expected;
+	std::vector<std::string> expectedRemaining;
+	ZeroSemaphore pending;
+	std::unique_ptr<TCPServerSocket> serverSocket;
+	std::unique_ptr<TCPSocket> clientSocket;
+	RingBuffer buf;
+	IOCPThreads ths;
+};
+
+TEST(MultipleUntil)
+{
+	auto server = std::make_unique<MultipleUntilServer>();
+	IOCPThreads ths;
+	ths.start(1);
+
+	TCPSocket s(ths.iocp);
+	CHECK(s.connect("127.0.0.1", SERVER_PORT).get() == true);
+
+	ZeroSemaphore pending;
+	auto sendString = [&](TCPSocket& socket, std::string str)
+	{
+		pending.increment();
+		socket.asyncSend(str.c_str(), (int)str.size(), [&, len=(unsigned)str.size()](const SocketCompletionError& err, unsigned bytesTransfered)
+		{
+			CHECK_EQUAL(len, bytesTransfered);
+			pending.decrement();
+		});
+	};
+
+	for(auto&& str : multipleUntilSend)
+	{
+		sendString(s, str);
+		// Sleep a little bit, so the server has time to receive just the data we sent, therefore allowing us
+		// to test incomplete tokens
+		Sleep(1);
+	}
+
+	pending.wait();
+	server = nullptr;
+	s.shutdown();
+	ths.stop();
+}
 
 }

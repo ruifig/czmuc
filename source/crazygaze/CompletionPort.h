@@ -16,8 +16,6 @@
 
 namespace cz
 {
-namespace net
-{
 
 using CompletionHandler = std::function<void(unsigned)>;
 
@@ -58,6 +56,7 @@ class CompletionPort
 
 	void add(std::unique_ptr<CompletionPortOperation> operation);
 
+	void post(std::unique_ptr<CompletionPortOperation> op, unsigned bytesTransfered, uint64_t completionKey);
   protected:
 	HANDLE m_port;
 
@@ -69,10 +68,4 @@ class CompletionPort
 
 };
 
-} // namespace net
 } // namespace cz
-
-
-
-
-

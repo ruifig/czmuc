@@ -8,12 +8,10 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/net/CompletionPort.h"
+#include "crazygaze/CompletionPort.h"
 #include "crazygaze/Logging.h"
 
 namespace cz
-{
-namespace net
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -70,6 +68,19 @@ void CompletionPort::add(std::unique_ptr<CompletionPortOperation> operation)
 		data.items[operation.get()] = std::move(operation);
 		p->readyToExecute.notify();
 	});
+}
+
+void CompletionPort::post(std::unique_ptr<CompletionPortOperation> op, unsigned bytesTransfered, uint64_t completionKey)
+{
+	auto res = PostQueuedCompletionStatus(
+		m_port,
+		bytesTransfered,
+		completionKey,
+		&op->overlapped
+		);
+	if (res!=TRUE)
+		CZ_LOG(logDefault, Fatal, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
+	add(std::move(op));
 }
 
 size_t CompletionPort::run()
@@ -138,7 +149,6 @@ size_t CompletionPort::poll()
 	return 0;
 }
 
-} // namespace net
 } // namespace cz
 
 

@@ -15,12 +15,14 @@
 
 namespace cz
 {
+
+struct CompletionPortOperation;
+
 namespace net
 {
 
 class TCPSocket;
 class TCPServerSocket;
-struct CompletionPortOperation;
 struct TCPSocketData;
 
 //

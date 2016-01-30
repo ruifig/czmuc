@@ -11,10 +11,14 @@
 
 #include "crazygaze/czlib.h"
 
+#if CZ_DEBUG
+	#define CZ_RINGBUFFER_DEBUG 1
+#else
+	//#define CZ_RINGBUFFER_DEBUG 0
+#endif
+
 namespace cz
 {
-
-
 	class RingBuffer
 	{
 	public:
@@ -44,6 +48,12 @@ namespace cz
 		 *    memory again when witting data to the buffer.
  		 */
 		void clear(bool releaseMemory=false);
+
+		//! Tells if it's empty
+		bool empty() const
+		{
+			return m_fillcount == 0;
+		}
 
 		//! Writes data to the buffer
 		/*!
@@ -161,7 +171,191 @@ namespace cz
 		RingBuffer(const RingBuffer& other) = delete;
 		void operator=(const RingBuffer& other) = delete;
 
+
+		class Iterator : public std::iterator<std::forward_iterator_tag, char>
+		{
+		public:
+			Iterator(const RingBuffer* owner, int idx)
+				: m_owner(const_cast<RingBuffer*>(owner))
+				, m_idx(idx)
+#if CZ_RINGBUFFER_DEBUG
+				, m_readcounter(owner->m_readcounter)
+#endif
+			{
+			}
+			
+			// Iterator functionality is organized according to the table at:
+			// http://www.cplusplus.com/reference/iterator/
+
+			//
+			// Functionality for all categories of iterators
+			//
+			Iterator(const Iterator& other)
+				: m_owner(other.m_owner)
+				, m_idx(other.m_idx)
+#if CZ_RINGBUFFER_DEBUG
+				, m_readcounter(other.m_readcounter)
+#endif
+			{
+			}
+			Iterator& operator=(const Iterator& other)
+			{
+				m_owner = other.m_owner;
+				m_idx = other.m_idx;
+#if CZ_RINGBUFFER_DEBUG
+				m_readcounter = other.m_readcounter;
+#endif
+				return *this;
+			}
+			Iterator& operator ++()
+			{
+				m_idx++;
+				check();
+				return *this;
+			}
+			Iterator operator ++(int) // postfix
+			{
+				auto tmp = *this;
+				m_idx++;
+				check();
+				return tmp;
+			}
+
+			//
+			// Input iterators functionality
+			//
+			bool operator==(const Iterator& other) const
+			{
+				check();
+#if CZ_RINGBUFFER_DEBUG
+				CZ_ASSERT(m_owner == other.m_owner);
+#endif
+				return m_idx == other.m_idx;
+			}
+			bool operator!=(const Iterator& other) const
+			{
+				return !(operator==(other));
+			}
+			char operator*() const
+			{
+				check();
+				return m_owner->getAtIndex(m_idx);
+			}
+			char& operator*()
+			{
+				check();
+				return m_owner->getAtIndex(m_idx);
+			}
+			// char* operator->() { } // This is operator is not needed since Ringbuffer only takes char elements
+
+			// default constructible
+			Iterator()
+				: m_owner(nullptr)
+				, m_idx(0)
+#if CZ_RINGBUFFER_DEBUG
+				, m_readcounter(0)
+#endif
+			{
+			}
+
+			//
+			// Bidirectional iterators functionality
+			//
+			Iterator& operator--()
+			{
+				m_idx--;
+				check();
+				return *this;
+			}
+			Iterator operator--(int) // postfix
+			{
+				auto tmp = *this;
+				m_idx--;
+				check();
+				return tmp;
+			}
+
+			//
+			// Random access
+			//
+			Iterator operator+(int n) const
+			{
+				check();
+				return Iterator(m_owner, m_idx + n);
+			}
+			Iterator operator-(int n) const
+			{
+				check();
+				return Iterator(m_owner, m_idx - n);
+			}
+
+			int operator- (const Iterator& other) const
+			{
+				check();
+#if CZ_RINGBUFFER_DEBUG
+				CZ_ASSERT(m_owner == other.m_owner && m_idx >= other.m_idx);
+#endif
+				return m_idx - other.m_idx;
+			}
+
+			void check() const
+			{
+#if CZ_RINGBUFFER_DEBUG
+				CZ_ASSERT(
+					m_owner &&
+					m_owner->m_readcounter == m_readcounter &&
+					m_idx <= m_owner->getUsedSize()
+				);
+#endif
+			}
+
+
+		private:
+			RingBuffer* m_owner = nullptr;
+			int m_idx = 0;
+
+#if CZ_RINGBUFFER_DEBUG
+			int m_readcounter;
+#endif
+		};
+
+		const Iterator begin() const
+		{
+			return Iterator(this, 0);
+		}
+		Iterator begin()
+		{
+			return Iterator(this, 0);
+		}
+		const Iterator end() const
+		{
+			return Iterator(this, m_fillcount);
+		}
+		Iterator end()
+		{
+			return Iterator(this, m_fillcount);
+		}
+
+#if CZ_RINGBUFFER_DEBUG
+		int getReadCounter() const
+		{
+			return m_readcounter;
+		}
+#endif
+
 	private:
+
+		friend Iterator;
+		char& getAtIndex(int idx)
+		{
+#if CZ_RINGBUFFER_DEBUG
+			CZ_ASSERT(idx < m_fillcount);
+#endif
+			int i = m_readpos + idx;
+			if (i >= m_maxsize)
+				i -= m_maxsize;
+			return m_pBuf.get()[i];
+		}
 
 		bool peek(void* buf, int size);
 
@@ -170,12 +364,21 @@ namespace cz
 		int m_fillcount;
 		int m_readpos;
 		int m_writepos;
+
+#if CZ_RINGBUFFER_DEBUG
+		int m_readcounter = 0; // how many reads
+#endif
 	};
 
 
-//
-//  Read operations
-//
+	inline RingBuffer::Iterator operator+(int n, const RingBuffer::Iterator& it)
+	{
+		return it.operator+(n);
+	}
+	inline RingBuffer::Iterator operator-(int n, const RingBuffer::Iterator& it)
+	{
+		return it.operator-(n);
+	}
 
 
 } // namespace cz

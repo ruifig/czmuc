@@ -42,9 +42,17 @@
 #include "crazygaze/Concurrent.h"
 #include "crazygaze/AsyncCommandQueue.h"
 #include "crazygaze/Buffer.h"
+#include "crazygaze/RingBuffer.h"
+#include "crazygaze/DeadlineTimer.h"
+#include "crazygaze/TimerQueue.h"
 
 CZ_DECLARE_LOG_CATEGORY(logTests, Log, Log)
-CZ_DECLARE_LOG_CATEGORY(logTestsVerbose, Log, Log)
+
+#if CZ_DEBUG
+	CZ_DECLARE_LOG_CATEGORY(logTestsVerbose, Log, Log)
+#else
+	CZ_DECLARE_LOG_CATEGORY(logTestsVerbose, Log, Fatal)
+#endif 
 
 void spinMs(double ms);
 

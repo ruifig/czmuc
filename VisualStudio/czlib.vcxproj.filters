@@ -61,9 +61,6 @@
     <ClInclude Include="..\source\crazygaze\net\TCPSocket.h">
       <Filter>crazygaze\net</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\net\CompletionPort.h">
-      <Filter>crazygaze\net</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h">
       <Filter>crazygaze\net\details</Filter>
     </ClInclude>
@@ -188,6 +185,12 @@
     <ClInclude Include="..\source\crazygaze\Buffer.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\WaitableTimer.h" />
+    <ClInclude Include="..\source\crazygaze\CompletionPort.h">
+      <Filter>crazygaze</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\TimerQueue.h" />
+    <ClInclude Include="..\source\crazygaze\DeadlineTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -203,9 +206,6 @@
       <Filter>crazygaze</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp">
-      <Filter>crazygaze\net</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp">
       <Filter>crazygaze\net</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp">
@@ -289,6 +289,11 @@
     <ClCompile Include="..\source\crazygaze\Buffer.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\crazygaze\CompletionPort.cpp">
+      <Filter>crazygaze</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\TimerQueue.cpp" />
+    <ClCompile Include="..\source\crazygaze\DeadlineTimer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />
