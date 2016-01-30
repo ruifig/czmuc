@@ -55,6 +55,10 @@ namespace cz
 
 	void RingBuffer::clear(bool releaseMemory)
 	{
+#if CZ_RINGBUFFER_DEBUG
+		m_readcounter++;
+#endif
+
 		m_fillcount = 0;
 		m_readpos = 0;
 		m_writepos = 0;
@@ -81,7 +85,7 @@ namespace cz
 	int RingBuffer::write(int writeSize, void** ptr1, int* ptr1size, void **ptr2, int* ptr2size)
 	{
 		if (getFreeSize() < writeSize)
-			reserve(m_maxsize + writeSize - getFreeSize());
+			reserve(std::max((m_maxsize + writeSize - getFreeSize())*2, 32));
 
 		if (m_maxsize-m_writepos >= writeSize) // In case we don't need to wrap around
 		{
@@ -108,6 +112,9 @@ namespace cz
 
 	int RingBuffer::skip(int size)
 	{
+#if CZ_RINGBUFFER_DEBUG
+		m_readcounter++;
+#endif
 		if (size>=m_fillcount)
 		{
 			int done = m_fillcount;
@@ -193,11 +200,14 @@ namespace cz
 
 	int RingBuffer::read(int readsize, void **ptr1, int *ptr1size, void **ptr2, int *ptr2size)
 	{
+#if CZ_RINGBUFFER_DEBUG
+		m_readcounter++;
+#endif
 		int done = getReadPointers(readsize, ptr1, ptr1size, ptr2, ptr2size);
-		m_fillcount -=done;
+		m_fillcount -= done;
 		m_readpos += done;
-		if (m_readpos>=m_maxsize)
-			m_readpos -=m_maxsize;
+		if (m_readpos >= m_maxsize)
+			m_readpos -= m_maxsize;
 		return done;
 	}
 

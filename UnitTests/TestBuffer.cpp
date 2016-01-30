@@ -58,7 +58,7 @@ TEST(TestSub)
 		CHECK(b2.size == b1.size-2);
 		CHECK(b2.size == 1);
 		char newbuf[1] = { 3 };
-		CHECK_ARRAY_EQUAL(newbuf, b2.ptr, b2.size);
+		CHECK_ARRAY_EQUAL(newbuf, b2.ptr, static_cast<int>(b2.size));
 	}
 
 	{

@@ -102,7 +102,7 @@ public:
 	}
 
 	// Try to retrieve, if no items, wait till an item is available and try again
-	bool wait_and_pop(T& popped_item, int timeoutMs){
+	bool wait_and_pop(T& popped_item, int64_t timeoutMs){
 		std::unique_lock<std::mutex> lock(m_mtx);
 		if (!m_data_cond.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return !m_queue.empty();}))
 			return false;

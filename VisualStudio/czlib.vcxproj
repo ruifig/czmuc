@@ -24,10 +24,12 @@
     <ClInclude Include="..\source\crazygaze\AsyncCommandQueue.h" />
     <ClInclude Include="..\source\crazygaze\Buffer.h" />
     <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
+    <ClInclude Include="..\source\crazygaze\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\Concurrent.h" />
     <ClInclude Include="..\source\crazygaze\config.h" />
     <ClInclude Include="..\source\crazygaze\czlib.h" />
     <ClInclude Include="..\source\crazygaze\czlibPCH.h" />
+    <ClInclude Include="..\source\crazygaze\DeadlineTimer.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h" />
     <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h" />
@@ -43,7 +45,6 @@
     <ClInclude Include="..\source\crazygaze\IniFile.h" />
     <ClInclude Include="..\source\crazygaze\Json.h" />
     <ClInclude Include="..\source\crazygaze\Logging.h" />
-    <ClInclude Include="..\source\crazygaze\net\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
     <ClInclude Include="..\source\crazygaze\net\SocketAddress.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
@@ -69,8 +70,10 @@
     <ClInclude Include="..\source\crazygaze\ThreadingUtils.h" />
     <ClInclude Include="..\source\crazygaze\Ticker.h" />
     <ClInclude Include="..\source\crazygaze\Timer.h" />
+    <ClInclude Include="..\source\crazygaze\TimerQueue.h" />
     <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
     <ClInclude Include="..\source\crazygaze\UTF8String.h" />
+    <ClInclude Include="..\source\crazygaze\WaitableTimer.h" />
     <ClInclude Include="..\source\crazygaze\WindowsConsole.h" />
     <ClInclude Include="..\source\czlibPCH.h" />
   </ItemGroup>
@@ -79,6 +82,7 @@
     <ClCompile Include="..\source\crazygaze\AsyncCommandQueue.cpp" />
     <ClCompile Include="..\source\crazygaze\Buffer.cpp" />
     <ClCompile Include="..\source\crazygaze\ChunkBuffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\CompletionPort.cpp" />
     <ClCompile Include="..\source\crazygaze\czlib.cpp" />
     <ClCompile Include="..\source\crazygaze\czlibPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -86,6 +90,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\source\crazygaze\DeadlineTimer.cpp" />
     <ClCompile Include="..\source\crazygaze\File.cpp" />
     <ClCompile Include="..\source\crazygaze\Filename.cpp" />
     <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
@@ -94,7 +99,6 @@
     <ClCompile Include="..\source\crazygaze\IniFile.cpp" />
     <ClCompile Include="..\source\crazygaze\Json.cpp" />
     <ClCompile Include="..\source\crazygaze\Logging.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\CompletionPort.cpp" />
     <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
     <ClCompile Include="..\source\crazygaze\net\SocketAddress.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
@@ -131,6 +135,7 @@
     <ClCompile Include="..\source\crazygaze\Singleton.cpp" />
     <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
     <ClCompile Include="..\source\crazygaze\Timer.cpp" />
+    <ClCompile Include="..\source\crazygaze\TimerQueue.cpp" />
     <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
     <ClCompile Include="..\source\crazygaze\WindowsConsole.cpp" />
   </ItemGroup>

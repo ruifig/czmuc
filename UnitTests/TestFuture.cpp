@@ -34,8 +34,8 @@ TEST(Future_Async)
 		pr.set_value("Hello");
 	});
 
-	checkpoint1.notify();
 	auto t1 = timer.GetTimeInMs();
+	checkpoint1.notify();
 	auto res = ft1.get();
 	auto t2 = timer.GetTimeInMs();
 	CHECK_EQUAL(std::string("Hello"), res);

@@ -7,12 +7,13 @@ other connection requests are denied. Ideally, we should have a couple of accept
 #pragma once
 
 #include "crazygaze/czlib.h"
-#include "crazygaze/net/CompletionPort.h"
+#include "crazygaze/CompletionPort.h"
 #include "crazygaze/net/SocketAddress.h"
 #include "crazygaze/ChunkBuffer.h"
 #include "crazygaze/net/details/TCPSocketDebug.h"
 #include "crazygaze/Future.h"
 #include "crazygaze/Buffer.h"
+#include "crazygaze/RingBuffer.h"
 
 namespace cz
 {
@@ -67,7 +68,7 @@ struct SocketCompletionError
 		None,
 		NotConnected, // The socket is not connected.
 		Disconnected, // The socket was connected at some point, but it disconnected
-		NoResources // Lack os OS resources caused the operation to fail. (e.g: Sending data too fast)
+		NoResources // Lack of OS resources caused the operation to fail. (e.g: Sending data too fast)
 	};
 
 	Code code;
@@ -91,7 +92,7 @@ struct SocketCompletionError
 
 class TCPSocket;
 using SocketCompletionHandler = std::function<void(const SocketCompletionError& err, unsigned)>;
-using SocketCompletionUntilHandler = std::function<bool(ChunkBuffer& buf)>;
+using SocketCompletionUntilHandler = std::function<std::pair<RingBuffer::Iterator,bool>(RingBuffer::Iterator begin, RingBuffer::Iterator end)>;
 
 class TCPServerSocket
 {
@@ -99,6 +100,7 @@ class TCPServerSocket
 	TCPServerSocket(CompletionPort& iocp, int listenPort);
 	~TCPServerSocket();
 	void asyncAccept(TCPSocket& socket, SocketCompletionHandler handler);
+	void shutdown();
 
   protected:
 	  friend struct AsyncAcceptOperation;
@@ -122,8 +124,45 @@ class TCPSocket
 	virtual ~TCPSocket();
 	Future<bool> connect(const std::string& ip, int port);
 	void asyncSend(Buffer buf, SocketCompletionHandler handler);
+	template<typename HANDLER>
+	void asyncSend(const void* data, int size, HANDLER handler )
+	{
+		auto buf = make_shared_array<char>(size);
+		memcpy(buf.get(), data, size);
+		asyncSend(Buffer(buf.get(), size),
+			[buf, handler=std::move(handler)](auto err, auto bytesTransfered)
+		{
+			handler(err, bytesTransfered);
+		});
+	}
 	void asyncReceive(Buffer buf, SocketCompletionHandler handler);
-	void asyncReceiveUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
+	void asyncReceiveUntil(RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler,
+	                       int tmpBufSize = 2048);
+	void asyncReceiveUntil(RingBuffer& buf, char delim, SocketCompletionHandler handler,
+	                       int tmpBufSize = 2048)
+	{
+		asyncReceiveUntil(
+			buf,
+			[this, delim](auto begin, auto end) mutable -> std::pair<RingBuffer::Iterator, bool>
+			{
+				std::pair<RingBuffer::Iterator, bool> res;
+				while(begin!=end)
+				{
+					auto ch = *begin;
+					if (ch == delim)
+					{
+						res.second = true;
+						res.first = ++begin; res.second = true;
+						return res;
+					}
+					else
+						++begin;
+				}
+				res.first = begin; res.second = false;
+				return res;
+			},
+			std::move(handler), tmpBufSize);
+	}
 	const SocketAddress& getLocalAddress() const;
 	const SocketAddress& getRemoteAddress() const;
 	CompletionPort& getIOCP();
@@ -133,7 +172,8 @@ class TCPSocket
 	friend struct AsyncSendOperation;
 	void execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey);
-	void prepareRecvUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
+	void prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize, std::pair<RingBuffer::Iterator, bool> res,
+	                      RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
 	friend class TCPServerSocket;
 	std::shared_ptr<TCPSocketData> m_data;
 	std::shared_ptr<TCPSocketUserData> m_userData;

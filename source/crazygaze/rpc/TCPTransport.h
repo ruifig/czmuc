@@ -32,13 +32,13 @@ public:
 class TCPTransport : public Transport
 {
 public:
-  TCPTransport(const char* ip, int port, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
-  TCPTransport(const net::SocketAddress& address, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
+  TCPTransport(const char* ip, int port, CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
+  TCPTransport(const net::SocketAddress& address, CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
   virtual ~TCPTransport();
 
 protected:
 
-	void init(const char* ip, int port, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
+	void init(const char* ip, int port, CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
 	//
 	// Transport interface
 	virtual ChunkBuffer prepareSend() override;
@@ -59,7 +59,7 @@ protected:
 class TCPServerTransport : public ServerTransport
 {
 public:
-	TCPServerTransport(int listenPort, net::CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
+	TCPServerTransport(int listenPort, CompletionPort& iocp, RPCWorkQueue* rcvQueue = nullptr);
 	virtual ~TCPServerTransport();
 	void onClientRemoved(class TCPServerConnection* clientInfo);
 protected:

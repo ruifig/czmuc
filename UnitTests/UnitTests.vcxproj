@@ -161,7 +161,9 @@
     <ClCompile Include="TestAny.cpp" />
     <ClCompile Include="TestBuffer.cpp" />
     <ClCompile Include="TestChunkBuffer.cpp" />
+    <ClCompile Include="TestDeadlineTimer.cpp" />
     <ClCompile Include="TestFuture.cpp" />
+    <ClCompile Include="TestRingBuffer.cpp" />
     <ClCompile Include="TestRPC.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

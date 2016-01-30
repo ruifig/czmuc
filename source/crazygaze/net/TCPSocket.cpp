@@ -166,6 +166,16 @@ static bool movepop(Q& q, T& dst)
 //
 //////////////////////////////////////////////////////////////////////////
 
+// NOTE: The order of the enums needs to be the order things happen with typical use
+enum class SocketState
+{
+	None,
+	WaitingAccept,  // When being used on the server
+	Connecting,		// When it's a client connecting to a server
+	Connected,
+	Disconnected
+};
+
 
 struct TCPServerSocketData
 {
@@ -176,19 +186,10 @@ struct TCPServerSocketData
 	{
 	}
 	CompletionPort& iocp;
+	SocketState state = SocketState::None;
 	SocketWrapper listenSocket;
 	LPFN_ACCEPTEX lpfnAcceptEx = NULL;
 	LPFN_GETACCEPTEXSOCKADDRS lpfnGetAcceptExSockaddrs = NULL;
-};
-
-// NOTE: The order of the enums needs to be the order things happen with typical use
-enum class SocketState
-{
-	None,
-	WaitingAccept,  // When being used on the server
-	Connecting,		// When it's a client connecting to a server
-	Connected,
-	Disconnected
 };
 
 struct TCPSocketData
@@ -327,6 +328,7 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
+	m_data->state = SocketState::Connected;
 	debugData.serverSocketCreated(this);
 	LOG("TCPServerSocket %p: Exit\n", this);
 }
@@ -334,9 +336,41 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 TCPServerSocket::~TCPServerSocket()
 {
 	LOG("~TCPServerSocket %p: Enter\n", this);
-	CancelIoEx(reinterpret_cast<HANDLE>(m_data->listenSocket.get()), NULL);
+	shutdown();
 	debugData.serverSocketDestroyed(this);
 	LOG("~TCPServerSocket %p: Exit\n", this);
+}
+
+void TCPServerSocket::shutdown()
+{
+
+	if (m_data->state == SocketState::Disconnected)
+		return;
+
+	// Notes:
+	// CancelIo - Cancels I/O operations that are issued by calling thread
+	// CancelIoEx Cancels all I/O regardless of the thread that created the I/O operation.
+	auto res = CancelIoEx(
+		(HANDLE)m_data->listenSocket.get(), // hFile
+		NULL // lpOverlapped - NULL means cancel all I/O requests for the specified hFile
+		);
+
+	if (res == FALSE)
+	{
+		auto err = GetLastError();
+		if (err == ERROR_NOT_FOUND)
+		{
+			// This means no elements were found to cancel, and it's expected
+		}
+		else
+		{
+			// If we get any other errors, probably the user called WSACleanup already
+			CZ_LOG(logDefault, Warning, "CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err));
+		}
+	}
+
+	m_data->listenSocket.shutdown();
+	m_data->state = SocketState::Disconnected;
 }
 
 void TCPServerSocket::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler)
@@ -359,7 +393,6 @@ void TCPServerSocket::asyncAccept(TCPSocket& socket, SocketCompletionHandler han
 		);
 
 	int err = WSAGetLastError();
-	// In our case, since the AcceptEx is asynchronous, it should return FALSE and give an error of "PENDING"
 	if (!(res == FALSE && err == ERROR_IO_PENDING))
 	{
 		CZ_LOG(logDefault, Fatal, "Error calling AcceptEx: %s", getLastWin32ErrorMsg());
@@ -593,46 +626,103 @@ void TCPSocket::asyncReceive(Buffer buf, SocketCompletionHandler handler)
 				1, // CompletionKey
 				&op->overlapped // lpOverlapped
 				);
-			CZ_ASSERT_F(res != 0, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
+			CZ_ASSERT_F(res == TRUE, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
 		}
 	}
 
 	m_data->iocp.add(std::move(op));
 }
 
-void TCPSocket::prepareRecvUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler)
+
+
+void TCPSocket::prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize,
+                                 std::pair<RingBuffer::Iterator, bool> res, RingBuffer& buf,
+                                 SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler)
 {
-	auto ptr = make_shared_array<char>(buf.getDefaultBlockSize());
 	asyncReceive(
-		Buffer(ptr.get(), buf.getDefaultBlockSize()),
-		[this, ptr, &buf, untilHandler=std::move(untilHandler), handler=std::move(handler)](const SocketCompletionError& err, unsigned bytesTransfered)
+		Buffer(tmpbuf.get(), tmpBufSize),
+		[this, tmpbuf, tmpBufSize, res, &buf,
+#if CZ_RINGBUFFER_DEBUG
+		bufReadCounter = buf.getReadCounter(),
+#endif
+		untilHandler=std::move(untilHandler), handler=std::move(handler)](const SocketCompletionError& err, unsigned bytesTransfered) mutable
 	{
+
+#if CZ_RINGBUFFER_DEBUG
+		CZ_ASSERT_F(bufReadCounter == buf.getReadCounter(), "You Should not perform any read operations on the buffer while there are pending read-until operations");
+#endif
+
 		if (bytesTransfered==0)
 		{
 			handler(err, bytesTransfered);
 			return;
 		}
 
-		buf.write(ptr.get(), bytesTransfered);
-		if (untilHandler(buf))
-		{
-			handler(err, bytesTransfered);
-		}
+		buf.write(tmpbuf.get(), bytesTransfered);
+		res = untilHandler(res.first, buf.end());
+		if (res.second)
+			handler(err, res.first - buf.begin());
 		else
-		{
-			prepareRecvUntil(buf, std::move(untilHandler), std::move(handler));
-		}
+			prepareRecvUntil(std::move(tmpbuf), tmpBufSize, res, buf, std::move(untilHandler), std::move(handler));
 	});
 }
 
-void TCPSocket::asyncReceiveUntil(ChunkBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler)
+void TCPSocket::asyncReceiveUntil(RingBuffer& buf, SocketCompletionUntilHandler untilHandler,
+                                  SocketCompletionHandler handler, int tmpBufSize)
 {
-	prepareRecvUntil(buf, std::move(untilHandler), std::move(handler));
+	auto tmpbuf = make_shared_array<char>(tmpBufSize);
+	auto res = std::make_pair<RingBuffer::Iterator, bool>(buf.begin(), false);
+
+	if (buf.getUsedSize()==0)
+	{
+		prepareRecvUntil(tmpbuf, tmpBufSize, res, buf, std::move(untilHandler), std::move(handler));
+	}
+	else
+	{
+		// If the buffer is not empty, then we manually queue the operation.
+		// This deals with the case where the buffer already has enough data to match the condition.
+		auto op = std::make_unique<AsyncReceiveOperation>(this);
+		op->handler = [
+			this, tmpbuf, &buf, tmpBufSize, untilHandler=std::move(untilHandler), handler=std::move(handler),
+			err = SocketCompletionError()
+#if CZ_RINGBUFFER_DEBUG
+			, bufReadCounter = buf.getReadCounter()
+#endif
+		](const SocketCompletionError& err, unsigned bytesTransfered)
+		{
+
+#if CZ_RINGBUFFER_DEBUG
+			CZ_ASSERT_F(bufReadCounter == buf.getReadCounter(), "You Should not perform any read operations on the buffer while there are pending read-until operations");
+#endif
+			if (bytesTransfered == 0 || !err.isOk())
+			{
+				handler(err, bytesTransfered);
+				return;
+			}
+
+			auto res = untilHandler(buf.begin(), buf.end());
+			if (res.second)
+				handler(err, res.first - buf.begin());
+			else
+				prepareRecvUntil(std::move(tmpbuf), tmpBufSize, res, buf, std::move(untilHandler), std::move(handler));
+		};
+		op->buf = Buffer(tmpbuf.get(), tmpBufSize);
+
+		auto res = PostQueuedCompletionStatus(
+			m_data->iocp.getHandle(), // CompletionPort
+			buf.getUsedSize(), // dwNumberOfBytesTransfered
+			0, // CompletionKey
+			&op->overlapped // lpOverlapped
+			);
+		CZ_ASSERT_F(res == TRUE, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
+		m_data->iocp.add(std::move(op));
+	}
+
 }
 
 void TCPSocket::execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey)
 {
-	if (completionKey==0) // The operation was queued by WSARecv
+	if (completionKey==0) // The operation was queued by WSARecv (or a manual handler triggered by asyncReceiveUntil)
 	{
 		if (bytesTransfered==0) // When a receive gives us 0 bytes, it means the peer disconnected
 		{
@@ -717,7 +807,7 @@ void TCPSocket::asyncSend(Buffer buf, SocketCompletionHandler handler)
 				1, // CompletionKey
 				&op->overlapped // lpOverlapped
 				);
-			CZ_ASSERT_F(res != 0, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
+			CZ_ASSERT_F(res == TRUE, "PostQueuedCompletionStatus failed with '%s'", getLastWin32ErrorMsg());
 		}
 	}
 	else
