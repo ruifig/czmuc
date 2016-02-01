@@ -48,7 +48,7 @@ TimerQueue::ItemInfo TimerQueue::popHeap()
 	return ret;
 }
 
-uint64_t TimerQueue::add(std::function<void(bool)> handler, unsigned milliseconds)
+uint64_t TimerQueue::add(unsigned milliseconds, std::function<void(bool)> handler)
 {
 	ItemInfo info;
 	auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);

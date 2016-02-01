@@ -15,6 +15,7 @@
 #include <random>
 #include <chrono>
 #include <inttypes.h>
+#include <map>
 
 //
 // UnitTest++
