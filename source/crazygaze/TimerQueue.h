@@ -17,7 +17,17 @@ public:
 	TimerQueue(TimerQueue&&) = delete;
 	TimerQueue& operator= (TimerQueue&&) = delete;
 
-	uint64_t add(std::function<void(bool)> handler, unsigned milliseconds);
+
+	/*!
+	* Adds a new handler to execute after specified amount of time.
+	* Due to the way the queue is implemented, and the accuracy of the timer used, order of execution of the handlers
+	* is not guaranteed. For example, consider adding these handlers in succession.
+	* q.add(100, [](bool) {}); // Handler A
+	* q.add(100, [](bool) {}); // Handler B: Same interval as the previous, but not guaranteed it will execute after A.
+	* q.add(101, [](bool) {}); // Handler C: Even though the interval is 101, due to accuracy, you should not depend on it executing after B.
+	*/
+
+	uint64_t add(unsigned milliseconds, std::function<void(bool)> handler);
 	size_t cancel(uint64_t id);
 	size_t cancelAll();
 private:
