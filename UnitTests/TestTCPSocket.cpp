@@ -5,7 +5,7 @@ using namespace cz::net;
 
 #define SERVER_PORT 28000
 
-SUITE(TCPSocket2)
+SUITE(TCPSocket)
 {
 
 void testConnection(int count)
