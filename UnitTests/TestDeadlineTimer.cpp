@@ -2,46 +2,9 @@
 
 using namespace cz;
 
-SUITE(DeadlinerTimer)
+
+SUITE(TimerQueue)
 {
-
-TEST(Test1)
-{
-	return;
-
-	CompletionPort iocp;
-	auto th = std::thread([&iocp]()
-	{
-		iocp.run();
-	});
-
-	UnitTest::Timer timer;
-	timer.Start();
-	DeadlineTimer t(iocp, 2000);
-	//Sleep(1050);
-	auto isset = t._isSet();
-	ZeroSemaphore pending;
-	pending.increment();
-	t.expiresFromNow(2000);
-	t.asyncWait([&](DeadlineTimerResult err)
-	{
-		CZ_LOG(logTests, Log, "1: Elapsed: %4.3f. Res=%d\n", timer.GetTimeInMs(), (int)err.code);
-		pending.decrement();
-	});
-	t.cancel();
-	Sleep(500);
-	pending.increment();
-	t.asyncWait([&](DeadlineTimerResult err)
-	{
-		CZ_LOG(logTests, Log, "2: Elapsed: %4.3f. Res=%d\n", timer.GetTimeInMs(), (int)err.code);
-		pending.decrement();
-	});
-
-	pending.wait();
-	iocp.stop();
-	th.join();
-}
-
 
 struct DebugInfo
 {
@@ -52,6 +15,7 @@ struct DebugInfo
 
 TEST(TestTimerQueue)
 {
+	return;
 	TimerQueue q;
 
 	UnitTest::Timer timer;
@@ -79,6 +43,7 @@ TEST(TestTimerQueue)
 	};
 
 
+	const double toleranceMs = 2;
 #define checkReceivedAll(expectedIntervals_) \
 	{ \
 		std::vector<double> expectedIntervals = expectedIntervals_; \
@@ -88,7 +53,7 @@ TEST(TestTimerQueue)
 			CHECK_EQUAL(1, i.second); \
 		for (size_t i = 0; i < res.size(); i++) \
 		{ \
-			CHECK_CLOSE(expectedIntervals[i] , res[i].elapsed, 2); \
+			CHECK_CLOSE(expectedIntervals[i] , res[i].elapsed, toleranceMs); \
 			CZ_LOG(logTestsVerbose, Log, "Handler %d: Elapsed: %5.3fms. Error: %2.3fms", i, res[i].elapsed, res[i].error); \
 		} \
 		res.clear(); \
@@ -97,7 +62,6 @@ TEST(TestTimerQueue)
 
 	//
 	// Test with fast handlers that don't spin to waste cpu.
-	const double toleranceMs = 4;
 	{
 		CZ_LOG(logTests, Log, "Handlers with no spin");
 		res.clear();
@@ -131,7 +95,7 @@ TEST(TestTimerQueue)
 	//
 	// Test canceling all
 	{
-		CZ_LOG(logTests, Log, "Cancellng all");
+		CZ_LOG(logTests, Log, "Cancelling all");
 		res.clear();
 		{
 			int interval = 100;
@@ -160,8 +124,66 @@ TEST(TestTimerQueue)
 		pending.wait();
 		checkReceivedAll(std::vector<double>({0, 20, 30, 50}));
 	}
+}
 
 
 }
+
+SUITE(DeadlinerTimer)
+{
+
+TEST(Test1)
+{
+	CompletionPort iocp;
+	auto th = std::thread([&iocp]()
+	{
+		iocp.run();
+	});
+
+	UnitTest::Timer timer;
+	DeadlineTimer t(iocp, 50);
+	ZeroSemaphore pending;
+	timer.Start();
+	t.expiresFromNow(50);
+
+	std::vector<std::function<void()>> res;
+	auto addRes = [&timer, &res](int num, bool aborted, bool abortedExpected, int expected)
+	{
+		res.emplace_back([elapsed=timer.GetTimeInMs(), num, expected, aborted, abortedExpected]()
+		{
+			CHECK_EQUAL(aborted, abortedExpected);
+			CHECK_CLOSE(expected, elapsed, 2);
+			CZ_LOG(logTests, Log, "%d: Elapsed: %4.3f. aborted=%d\n", num, elapsed, (int)aborted);
+		});
+	};
+	auto checkRes = [&]
+	{
+		pending.wait();
+		for (auto&& f : res)
+			f();
+		res.clear();
+	};
+
+	// This one is canceled right away
+	pending.increment();
+	t.asyncWait([&](bool aborted)
+	{
+		addRes(1, aborted, true, 0);
+		pending.decrement();
+	});
+	t.cancel();
+
+	pending.increment();
+	t.asyncWait([&](bool aborted)
+	{
+		addRes(2, aborted, false, 50);
+		pending.decrement();
+	});
+	checkRes();
+
+	iocp.stop();
+	th.join();
+}
+
 
 }
