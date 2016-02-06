@@ -73,7 +73,6 @@
     <ClInclude Include="..\source\crazygaze\TimerQueue.h" />
     <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
     <ClInclude Include="..\source\crazygaze\UTF8String.h" />
-    <ClInclude Include="..\source\crazygaze\WaitableTimer.h" />
     <ClInclude Include="..\source\crazygaze\WindowsConsole.h" />
     <ClInclude Include="..\source\czlibPCH.h" />
   </ItemGroup>

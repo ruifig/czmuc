@@ -185,7 +185,6 @@
     <ClInclude Include="..\source\crazygaze\Buffer.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\WaitableTimer.h" />
     <ClInclude Include="..\source\crazygaze\CompletionPort.h">
       <Filter>crazygaze</Filter>
     </ClInclude>

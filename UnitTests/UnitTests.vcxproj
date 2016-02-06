@@ -176,7 +176,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="TestRPCTraits.cpp" />
-    <ClCompile Include="TestTCPSocket2.cpp" />
+    <ClCompile Include="TestTCPSocket.cpp" />
     <ClCompile Include="TestThreadingUtils.cpp" />
     <ClCompile Include="UnitTests.cpp" />
     <ClCompile Include="UnitTestsPCH.cpp">
