@@ -14,6 +14,8 @@ CZ_DEFINE_LOG_CATEGORY(logTestsVerbose)
 
 void spinMs(double ms)
 {
+	Sleep((int)ms);
+	/*
 	UnitTest::Timer timer;
 	timer.Start();
 	auto now = timer.GetTimeInMs();
@@ -21,4 +23,5 @@ void spinMs(double ms)
 	{
 		// Spin
 	}
+	*/
 }

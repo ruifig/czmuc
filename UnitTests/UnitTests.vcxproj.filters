@@ -27,9 +27,6 @@
     <ClCompile Include="TestChunkBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TestTCPSocket.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TestRPC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

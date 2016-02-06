@@ -2,71 +2,28 @@
 #include "crazygaze/DeadlineTimer.h"
 #include "crazygaze/Logging.h"
 #include "crazygaze/ScopeGuard.h"
+#include "crazygaze/TimerQueue.h"
 
+/*
+Implementation notes:
+
+Due to consecutive calls to asyncWait,cancel, and expireFromNow, several sets of handlers can be in flight at the same time.
+The way I deal with this is by giving ownership of the set of handlers to the TimerQueue handler, and keep only a weak_ptr.
+This makes it easy to figure out if there is still an active set of handlers, or if the timer expired.
+It also allows having several canceled sets in flight. For example:
+
+t.expireFromNow(2);
+t.asyncWait(a);
+t.asyncWait(b);
+t.cancel();  // we might be too late to cancel, and the set is already in flight for execution
+t.asyncWait(c); // Because we canceled the previous set, here we create another set, and end up with two sets in flight as expected
+
+*/
 namespace cz
 {
 
 namespace details
 {
-
-struct DeadlineTimerSharedData
-{
-	DeadlineTimerSharedData(const DeadlineTimerSharedData&) = delete;
-	DeadlineTimerSharedData& operator= (const DeadlineTimerSharedData&) = delete;
-
-	DeadlineTimerSharedData()
-	{
-		handle = CreateTimerQueue();
-		if (handle == NULL)
-			CZ_LOG(logDefault, Fatal, "Error calling CreateTimerQueue: %s", getLastWin32ErrorMsg());
-
-		cancelEvt = CreateEvent(NULL, TRUE, FALSE, NULL);
-		if (cancelEvt == NULL)
-			CZ_LOG(logDefault, Fatal, "Error calling CreateEvent: %s", getLastWin32ErrorMsg());
-	}
-
-	~DeadlineTimerSharedData()
-	{
-		if (handle)
-			shutdown();
-
-		auto res = WaitForSingleObject(cancelEvt, INFINITE);
-		if (res != WAIT_OBJECT_0)
-			CZ_LOG(logDefault, Fatal, "Error waiting for timer queue shutdown event %s", getLastWin32ErrorMsg());
-
-		CloseHandle(cancelEvt);
-	}
-
-	void shutdown()
-	{
-		if (handle==NULL)
-			return;
-
-		DeleteTimerQueueEx(
-			handle,
-			cancelEvt // This event is set when all callbacks have completed
-			);
-		handle = NULL; // Mark as NULL, so we know shutdown was called
-	}
-
-	HANDLE handle = NULL;
-	HANDLE cancelEvt = NULL;
-
-	static std::shared_ptr<DeadlineTimerSharedData> get()
-	{
-		static std::mutex mtx;
-		static std::weak_ptr<DeadlineTimerSharedData> ptr;
-		std::lock_guard<std::mutex> lk(mtx);
-		auto p = ptr.lock();
-		if (p)
-			return std::move(p);
-
-		p = std::make_shared<DeadlineTimerSharedData>();
-		ptr = p;
-		return std::move(p);
-	}
-
-};
 
 struct DeadlineTimerOperation : public CompletionPortOperation
 {
@@ -83,139 +40,150 @@ struct DeadlineTimerOperation : public CompletionPortOperation
 
 } // namespace details
 
-static void callback_DeadlineTimer(void* context, BOOLEAN timerOrWaitFired)
+
+std::shared_ptr<TimerQueue> DeadlineTimer::getDefaultQueue()
 {
-	reinterpret_cast<DeadlineTimer*>(context)->_callback(timerOrWaitFired == TRUE);
-}
+	static std::mutex mtx;
+	static std::weak_ptr<TimerQueue> ptr;
+	std::lock_guard<std::mutex> lk(mtx);
+	auto p = ptr.lock();
+	if (p)
+		return std::move(p);
 
+	p = std::make_shared<TimerQueue>();
+	ptr = p;
+	return std::move(p);
 
-void DeadlineTimer::init(unsigned ms)
-{
-	m_shared = details::DeadlineTimerSharedData::get();
-	m_handle = NULL;
-	auto res = CreateTimerQueueTimer(
-		&m_handle,
-		m_shared->handle,
-		callback_DeadlineTimer, // Callback
-		this, // Parameter to the callback
-		ms, // DueTime. Is INFINITE supported here? The documentation doesn't say anything
-		0, // Period. This needs to be zero, since we are using the WT_EXECUTEONLYONCE flag
-		WT_EXECUTEDEFAULT|WT_EXECUTEONLYONCE // Flags
-		);
-	
-	if (!res)
-		CZ_LOG(logDefault, Fatal, "Error calling CreateTimerQueueTimer: %s", getLastWin32ErrorMsg());
-
-	m_completionEvt = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if (m_completionEvt==NULL)
-		CZ_LOG(logDefault, Fatal, "Error calling CreateEvent: %s", getLastWin32ErrorMsg());
-
-	m_callbackCheck.setupCount++;
-}
-
-DeadlineTimer::DeadlineTimer(CompletionPort& iocp)
-	: m_iocp(iocp)
-{
-	init(INFINITE);
 }
 
 DeadlineTimer::DeadlineTimer(CompletionPort& iocp, unsigned milliseconds) : m_iocp(iocp)
 {
-	init(milliseconds);
-}
-
-void DeadlineTimer::shutdown()
-{
-	std::lock_guard<std::mutex> lk(m_mtx);
-	if (m_handle == NULL)
-		return;
-
-	auto res = DeleteTimerQueueTimer(
-		m_shared->handle,
-		m_handle,
-		m_completionEvt
-		);
-	if (!res)
-		CZ_LOG(logDefault, Fatal, "Error calling DeleteTimerQueueTimer: %s", getLastWin32ErrorMsg());
-	m_handle = NULL;
+	m_q = getDefaultQueue();
+	expiresFromNow(milliseconds);
 }
 
 DeadlineTimer::~DeadlineTimer()
 {
-	if (m_handle)
-		shutdown();
-
-	auto waitRes = WaitForSingleObject(m_completionEvt, INFINITE);
-	if (waitRes != WAIT_OBJECT_0)
-		CZ_LOG(logDefault, Fatal, "Error waiting for timer-queue timer shutdown event %s", getLastWin32ErrorMsg());
-
-	CZ_CHECK(CloseHandle(m_completionEvt));
-}
-
-void DeadlineTimer::asyncWait(DeadlineTimerHandler handler)
-{
 	std::lock_guard<std::mutex> lk(m_mtx);
-	m_handlers.push_back(std::move(handler));
-	if (isSignaled())
-		queueHandlers(DeadlineTimerResult::Code::Ok);
-}
-
-size_t DeadlineTimer::expiresFromNow(unsigned milliseconds)
-{
-	std::lock_guard<std::mutex> lk(m_mtx);
-	auto count = m_handlers.size();
-	queueHandlers(DeadlineTimerResult::Code::Aborted);
-
-	auto res = ChangeTimerQueueTimer(
-		m_shared->handle,
-		m_handle,
-		milliseconds,
-		0 );
-	if (!res)
-		CZ_LOG(logDefault, Fatal, "Error calling ChangeTimerQueueTimer: %s", getLastWin32ErrorMsg());
-	return count;
+	auto h = m_handlers.lock();
+	if (h)
+	{
+		// Canceling our TimerQueue::add. Two things can happen
+		// - It cancels successfully, and the handlers are queued for execution as aborted
+		// - It fails to cancel because we are too late, and the handlers already will be queued for execution
+		// Either case, the handlers will be queued as fast as possible, so we don't need to do anything else other
+		// than calling cancel.
+		m_q->cancel(m_qid);
+	}
+	m_pending.wait();
+	CZ_ASSERT(h == nullptr || (h->size() == 0 && h.unique()));
 }
 
 size_t DeadlineTimer::cancel()
 {
 	std::lock_guard<std::mutex> lk(m_mtx);
-	auto ret = m_handlers.size();
-	queueHandlers(DeadlineTimerResult::Code::Aborted);
-	return ret;
+	return cancelImpl();
 }
+
+size_t DeadlineTimer::expiresFromNow(unsigned milliseconds)
+{
+	std::lock_guard<std::mutex> lk(m_mtx);
+	auto count = cancelImpl();
+
+	// A call to expireFromNow means cancel the current set, and start a new one.
+	// In code terms, it means:
+	//		- Cancel the current set. Doesn't matter if its sucessful or not
+	//		- Start a new set, since we are setting a new expiry time
+	// So we just create a new shared_ptr to pass to the new TimerQueue::add call, and set our weak_ptr to that one
+	auto handlers = std::make_shared<std::vector<DeadlineTimerHandler>>();
+	m_handlers = handlers;
+
+	m_pending.increment();
+	m_qid = m_q->add(milliseconds, [this, handlers](bool aborted) mutable
+	{
+		std::lock_guard<std::mutex> lk(m_mtx);
+		for (auto&& handler : *handlers)
+			queueHandler(std::move(handler), aborted);
+		// Before we are done with the handler (and unlock the mutex), we need to check if there are any other copies.
+		// We are done with this set of handlers.
+		// Also, we need to set release the shared_ptr explicitly here, instead of letting it go out of scope, so everything
+		// is still done while holding the lock
+		CZ_ASSERT(handlers.unique());
+		handlers.reset();
+		m_pending.decrement(); // This NEEDS to be last, so ::wait can wait on everything to finish
+	});
+
+	return count;
+}
+
+void DeadlineTimer::asyncWait(DeadlineTimerHandler handler)
+{
+	std::lock_guard<std::mutex> lk(m_mtx);
+	auto h = m_handlers.lock();
+	if (h)
+	{
+		// If we can lock the set, it means it's still active (not expired yet), so we can add more handlers to that set
+		h->emplace_back(std::move(handler));
+	}
+	else
+	{
+		// The timer already expired, so there is no active set. In this case we add the handler for execution right away
+		queueHandler(std::move(handler), false);
+	}
+}
+
+void DeadlineTimer::wait()
+{
+	m_pending.wait();
+}
+
 
 CompletionPort& DeadlineTimer::getIOCP()
 {
 	return m_iocp;
 }
 
-void DeadlineTimer::_callback(bool timerOrWaitFired)
-{
-	//Sleep(1000);
-	std::lock_guard<std::mutex> lk(m_mtx);
-	CZ_ASSERT(!isSignaled());
-	m_callbackCheck.callbackCount++;
-	if (m_callbackCheck.callbackCount != m_callbackCheck.setupCount)
-		return;
 
-	queueHandlers(DeadlineTimerResult::Code::Ok);
+//////////////////////////////////////////////////////////////////////////
+// Private methods
+//////////////////////////////////////////////////////////////////////////
+
+/*!
+* This has the same behaviour as boost::deadline_timer.
+* - Forces any pending handles to queued for execution as aborted right away.
+* - It does not change the expiry time
+*/
+size_t DeadlineTimer::cancelImpl()
+{
+	size_t ret = 0;
+	auto h = m_handlers.lock();
+	if (h)
+	{
+		// If we can lock the set, we explicitly queue for execution and empty the set, without canceling the current
+		// TimerQueue::add. This means when our TimerQueue handler gets executed it will simply do nothing, since the handler
+		// set is empty
+		ret = h->size();
+		for (auto&& handler : *h)
+			queueHandler(std::move(handler), true);
+		h->clear();
+	}
+
+	// NOTE: We leave the weak_ptr still pointing to the set (if any), since we don't want to touch the current expiry time,
+	// and therefore the current set. This means any following calls to asyncWait will add the handler to the currently
+	// in-flight set, as expected.
+	return ret;
 }
 
 void DeadlineTimer::execute(details::DeadlineTimerOperation* op, uint64_t completionKey)
 {
-	auto code = completionKey==0 ? DeadlineTimerResult::Code::Ok : DeadlineTimerResult::Code::Aborted;
-	op->handler(DeadlineTimerResult(DeadlineTimerResult::Code(completionKey)));
+	op->handler(completionKey ? true : false);
 }
 
-void DeadlineTimer::queueHandlers(DeadlineTimerResult::Code code)
+void DeadlineTimer::queueHandler(DeadlineTimerHandler handler, bool aborted)
 {
-	for (auto&& handler : m_handlers)
-	{
-		auto op = std::make_unique<details::DeadlineTimerOperation>(this);
-		op->handler = std::move(handler);
-		m_iocp.post(std::move(op), 0, (uint64_t)code);
-	}
-	m_handlers.clear();
+	auto op = std::make_unique<details::DeadlineTimerOperation>(this);
+	op->handler = std::move(handler);
+	m_iocp.post(std::move(op), 0, aborted ? 1 : 0);
 }
 
 }

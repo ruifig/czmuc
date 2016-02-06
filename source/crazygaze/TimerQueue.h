@@ -7,6 +7,15 @@
 namespace cz
 {
 
+/*!
+* Allows executions of handlers at a specified time in the future.
+* NOTES:
+*	- All handlers are executed ONCE, even if canceled (aborted is set to true)
+*	- Handlers are ALWAYS executed in the timer thread created for that purpose. An handler never executes in the caller
+*	  thread.
+*	- Handlers ARE NOT guaranteed to execute in the same order they were inserted. This is due to the timer accuracy,
+*	  and the sorting algorithm used.
+*/
 class TimerQueue
 {
 public:
@@ -25,10 +34,32 @@ public:
 	* q.add(100, [](bool) {}); // Handler A
 	* q.add(100, [](bool) {}); // Handler B: Same interval as the previous, but not guaranteed it will execute after A.
 	* q.add(101, [](bool) {}); // Handler C: Even though the interval is 101, due to accuracy, you should not depend on it executing after B.
+	*
+	* \param milliseconds
+	*	Time from the point of call to wait before calling the handler
+	* \param handler
+	*	Handler to call. If the handler was canceled, the handler parameter is true
+	* \return
+	*	Id you can use to cancel the handler.
 	*/
-
 	uint64_t add(unsigned milliseconds, std::function<void(bool)> handler);
+
+	/*! Cancel the specified handler
+	* Canceling an handler causes it to be queued immediately for execution, as aborted.
+	*
+	* \return
+	* 0 - The handler was not canceled. You were to late to cancel, and the handler was either executed, or is queued
+	* for execution as successful.
+	* 1 - The handler was canceled, and it was queued immediately for execution as aborted.
+	*/
 	size_t cancel(uint64_t id);
+
+	/*! Cancels all handlers
+	* All handlers will be queued for execution as aborted
+	*
+	* \return
+	*	Number of handlers canceled.
+	*/
 	size_t cancelAll();
 private:
 

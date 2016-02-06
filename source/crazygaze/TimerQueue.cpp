@@ -148,7 +148,9 @@ void TimerQueue::run()
 					item = popHeap();
 			}
 			if (item.handler)
+			{
 				item.handler(false);
+			}
 		}
 	}
 }

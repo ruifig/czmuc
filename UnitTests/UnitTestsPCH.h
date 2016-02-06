@@ -56,4 +56,3 @@ CZ_DECLARE_LOG_CATEGORY(logTests, Log, Log)
 #endif 
 
 void spinMs(double ms);
-
