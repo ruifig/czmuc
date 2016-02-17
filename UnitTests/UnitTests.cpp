@@ -81,7 +81,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	int c = 0;
 	WindowsConsole con(120, 40, 300, 1000);
 	logTestsVerbose.setVerbosity(LogVerbosity::Fatal);
-	logTests.setVerbosity(LogVerbosity::Warning);
+	//logTests.setVerbosity(LogVerbosity::Warning);
 
 	// So Sleep calls are as accurate as possible
 	timeBeginPeriod(1);
