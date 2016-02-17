@@ -40,7 +40,6 @@ struct Buffer
 	
 	Buffer(const Buffer& buf) : ptr(buf.ptr), size(buf.size)
 	{
-		printf("copied\n");
 	}
 
 	template<typename T>

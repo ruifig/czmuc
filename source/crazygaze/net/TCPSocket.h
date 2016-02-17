@@ -61,6 +61,8 @@ enum class SocketOperationCode
 	Disconnected
 };
 
+
+// #TODO : Add a bool operator to this, so we can check for errors like with boost. e.g: "if (ec) handleerror();"
 struct SocketCompletionError
 {
 	enum class Code
@@ -123,7 +125,16 @@ class TCPSocket
 	explicit TCPSocket(CompletionPort& iocp);
 	virtual ~TCPSocket();
 	Future<bool> connect(const std::string& ip, int port);
+
+	//! Sends the specified buffer in its entirety.
+	// The supplied buffer must remain valid until the handler is executed.
+	// \note
+	//	The handler is only executed when all the data is sent, or an error occurs.
 	void asyncSend(Buffer buf, SocketCompletionHandler handler);
+
+	//! Sends the specified buffer in its entirety.
+	// The supplied buffer, is copied, so it doesn't need to remain valid 
+	// 
 	template<typename HANDLER>
 	void asyncSend(const void* data, int size, HANDLER handler )
 	{
@@ -135,9 +146,62 @@ class TCPSocket
 			handler(err, bytesTransfered);
 		});
 	}
-	void asyncReceive(Buffer buf, SocketCompletionHandler handler);
+
+	//! Starts an asynchronous receive.
+	// The supplied buffer must remain valid until the handler is invoked
+	// \note
+	//	The operation might not receive all the requested number of bytes
+	void asyncReceiveSome(Buffer buf, SocketCompletionHandler handler);
+
+	template<typename HANDLER>
+	void processAsyncReceive(Buffer buf, HANDLER handler, const SocketCompletionError& err, unsigned bytesTransfered,
+		unsigned done, unsigned expected)
+	{
+		if (bytesTransfered == 0)
+		{
+			handler(err, bytesTransfered);
+			return;
+		}
+
+		done += bytesTransfered;
+		if (done == expected)
+		{
+			handler(err, done);
+			return;
+		}
+
+		buf = Buffer(buf.ptr + bytesTransfered, buf.size - bytesTransfered);
+		asyncReceiveSome(
+			buf, [this, buf, done, expected, handler=std::move(handler)](auto ec, auto bytesTransfered)
+		{
+			processAsyncReceive(buf, std::move(handler), ec, bytesTransfered, done, expected);
+		});
+	}
+
+	//! Starts an asynchronous receive.
+	// The supplied buffer must remain valid until the handler is invoked
+	// \note
+	// Unlike #asyncReceiveSome, this operation only calls the handler once it receives the requested number of bytes
+	// or an error occurs.
+	//
+	template<typename HANDLER>
+	void asyncReceive(Buffer buf, HANDLER handler)
+	{
+		unsigned done = 0;
+		unsigned expected = static_cast<unsigned>(buf.size);
+		asyncReceiveSome(
+			buf,
+			[this, buf, handler=std::move(handler), done, expected](auto ec, auto bytesTransfered) mutable
+		{
+			processAsyncReceive(buf, std::move(handler), ec, bytesTransfered, done, expected);
+		});
+	}
+
+	//! 
 	void asyncReceiveUntil(RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler,
 	                       int tmpBufSize = 2048);
+
+	//! 
 	void asyncReceiveUntil(RingBuffer& buf, char delim, SocketCompletionHandler handler,
 	                       int tmpBufSize = 2048)
 	{
@@ -151,7 +215,6 @@ class TCPSocket
 					auto ch = *begin;
 					if (ch == delim)
 					{
-						res.second = true;
 						res.first = ++begin; res.second = true;
 						return res;
 					}

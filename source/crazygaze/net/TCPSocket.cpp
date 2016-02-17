@@ -566,7 +566,7 @@ CompletionPort& TCPSocket::getIOCP()
 	return m_data->iocp;
 }
 
-void TCPSocket::asyncReceive(Buffer buf, SocketCompletionHandler handler)
+void TCPSocket::asyncReceiveSome(Buffer buf, SocketCompletionHandler handler)
 {
 	// According to the documentation for WSARecv, it is safe to have the WSABUF on the stack, since it will copied
 	int const numbuffers = 1;
@@ -639,7 +639,7 @@ void TCPSocket::prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize,
                                  std::pair<RingBuffer::Iterator, bool> res, RingBuffer& buf,
                                  SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler)
 {
-	asyncReceive(
+	asyncReceiveSome(
 		Buffer(tmpbuf.get(), tmpBufSize),
 		[this, tmpbuf, tmpBufSize, res, &buf,
 #if CZ_RINGBUFFER_DEBUG

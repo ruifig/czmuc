@@ -53,6 +53,7 @@ void testConnection(int count)
 		auto&& s = c[i];
 		auto buf = make_shared_array<int>(1);
 		activeClientSockets.increment();
+		// #TODO : Use asyncReceive, to read the entire request
 		s->asyncReceive(Buffer(buf.get(), 1), [buf, &s, &activeClientSockets, &msgs](const SocketCompletionError& err, unsigned bytesTransfered)
 		{
 			CHECK_EQUAL(sizeof(int), bytesTransfered);
@@ -93,6 +94,78 @@ TEST(ConnectSimple)
 TEST(ConnectMultiple)
 {
 	testConnection(10);
+}
+
+void setupSendTimer(int counter, DeadlineTimer& timer, TCPSocket& socket)
+{
+	if (counter == 0)
+	{
+		socket.shutdown();
+		return;
+	}
+	counter--;
+	timer.expiresFromNow(10);
+	timer.asyncWait([counter, &timer, &socket](bool aborted)
+	{
+		int size = 2 ;
+		auto data = make_shared_array<char>(size);
+		data.get()[0] = counter;
+		data.get()[1] = -counter;
+		socket.asyncSend(data.get(), size, [data, counter, &timer, &socket](auto err, auto bytesTransfered)
+		{
+			setupSendTimer(counter, timer, socket);
+		});
+	});
+}
+
+// Test the asyncReceive, which uses multiple calls to asyncReceiveSome to receive all the bytes requested
+// How it works:
+//	The sender makes a small pause between each send, so that the receiver receives small portions
+//	In order to work correctly, the receiver needs to wait for the entire data set, and then call the handler
+TEST(CompoundReceive)
+{
+	CompletionPort iocp;
+	DeadlineTimer sendTimer(iocp);
+	TCPServerSocket serverSocket(iocp, 28000);
+	std::vector<std::thread> ths;
+	ths.emplace_back([&]()
+	{
+		iocp.run();
+	});
+
+	TCPSocket serverSide(iocp);
+	const int numSends = 5;
+	serverSocket.asyncAccept(serverSide, [&](auto err, auto bytesTransfered)
+	{
+		CHECK(err.isOk());
+		setupSendTimer(numSends, sendTimer, serverSide);
+	});
+
+
+	TCPSocket clientSide(iocp);
+	auto ft = clientSide.connect("127.0.0.1", 28000);
+	CHECK(ft.get());
+
+	Semaphore done;
+	char buf[numSends * 2];
+	clientSide.asyncReceive(Buffer(buf), [&](auto err, auto bytesTransfered)
+	{
+		CHECK_EQUAL(sizeof(buf), bytesTransfered);
+		done.notify();
+	});
+
+	done.wait();
+	char c = numSends;
+	for (int i = 0; i < numSends*2; i+=2)
+	{
+		c--;
+		CHECK_EQUAL(c, buf[i]);
+		CHECK_EQUAL(-c, buf[i+1]);
+	}
+
+	iocp.stop();
+	for (auto&& th : ths)
+		th.join();
 }
 
 class BigDataServer
@@ -162,7 +235,7 @@ private:
 	{
 		m_pendingOps.increment();
 		auto buf = make_shared_array<char>(size);
-		m_s->asyncReceive(Buffer(buf.get(), size), [this,size, buf](const SocketCompletionError& err, unsigned bytesTransfered) mutable
+		m_s->asyncReceiveSome(Buffer(buf.get(), size), [this,size, buf](const SocketCompletionError& err, unsigned bytesTransfered) mutable
 		{
 			CZ_LOG(logTestsVerbose, Log, "Server receive: %s, %d", err.isOk() ? "true" : "false", bytesTransfered);
 			if (err.isOk())

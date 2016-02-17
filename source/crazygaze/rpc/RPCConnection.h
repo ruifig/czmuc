@@ -4,7 +4,7 @@
 	Email  : rui@crazygaze.com
 	
 	purpose:
-	
+	Represents a Client<->Server or Server<->Connection connection
 *********************************************************************/
 
 #pragma once

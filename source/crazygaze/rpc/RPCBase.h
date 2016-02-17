@@ -223,9 +223,9 @@ struct Service
 	{                                                                          \
 		using ServerInterface = SERVER_INTERFACE;                              \
 		using ClientInterface = CLIENT_INTERFACE;                              \
-		using ClientConnection = Connection<ServerInterface, ClientInterface>; \
+		using ClientToServerConnection = Connection<ServerInterface, ClientInterface>; \
 		using Server = Server<ServerInterface, ClientInterface>;               \
-		using ServerConnection = Connection<ClientInterface, ServerInterface>; \
+		using ServerToClientConnection = Connection<ClientInterface, ServerInterface>; \
 	};
 
 }  // namespace rpc
