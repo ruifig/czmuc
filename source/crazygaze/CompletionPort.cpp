@@ -101,12 +101,13 @@ size_t CompletionPort::run()
 		if (overlapped)
 		{
 			CompletionPortOperation* operation = CONTAINING_RECORD(overlapped, CompletionPortOperation, overlapped);
-			operation->execute(bytesTransfered, completionKey);
-
-			// This is needed, since we can get after the WSASend/WSARecv, but before the operation is put into the map
+			// This is needed, since we can get here after the WSASend/WSARecv but before the operation is put into
+			// the map.
 			// If it was not for this check, the send/recv could end up adding operations to the map, AFTER the handler
 			// was executed. Those operations would then never been removed from the map
 			operation->readyToExecute.wait();
+			operation->execute(bytesTransfered, completionKey);
+
 			m_data([operation](Data& data)
 			{
 				//

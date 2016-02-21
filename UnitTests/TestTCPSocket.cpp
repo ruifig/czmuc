@@ -41,11 +41,20 @@ void testConnection(int count)
 		});
 	}
 
-	std::vector<Future<bool>> fts;
+	ZeroSemaphore pendingConnects;
 	for (auto&& s : c)
-		fts.push_back(s->connect("127.0.0.1", SERVER_PORT));
-	for (auto&& ft : fts)
-		CHECK_EQUAL(true, ft.get());
+	{
+		pendingConnects.increment();
+		s->asyncConnect("127.0.0.1", SERVER_PORT,
+			[&](const SocketCompletionError& ec, unsigned bytesTransfered)
+		{
+			CHECK(ec.isOk());
+			pendingConnects.decrement();
+		});
+	}
+
+	pendingConnects.wait();
+
 	std::unordered_map<int, bool> msgs;
 	ZeroSemaphore activeClientSockets;
 	for (size_t i = 0; i < c.size(); i++)
@@ -96,6 +105,188 @@ TEST(ConnectMultiple)
 	testConnection(10);
 }
 
+TEST(VariousConnectMethods)
+{
+	CompletionPort iocp;
+	auto th = std::thread([&]
+	{
+		iocp.run();
+	});
+
+	TCPServerSocket server(iocp, SERVER_PORT);
+
+	ZeroSemaphore pending;
+
+	// Test synchronous connect
+	{
+		pending.increment();
+		TCPSocket serverSide(iocp);
+		server.asyncAccept(serverSide, [&](const SocketCompletionError& ec, unsigned)
+		{
+			CHECK(ec.isOk());
+			pending.decrement();
+		});
+
+		TCPSocket s(iocp);
+		auto ec = s.connect("127.0.0.1", SERVER_PORT);
+		CHECK(ec.isOk());
+		pending.wait();
+	}
+ 
+	// Test synchronous connect failure (on the wrong port)
+	{
+		TCPSocket s(iocp);
+		// Test on the wrong port
+		auto ec = s.connect("127.0.0.1", SERVER_PORT + 1);
+		CHECK(ec.isOk() == false);
+	}
+
+	// Test synchronous connect without a pending accept
+	// This should actually succeed, since the connection stays established, waiting for the server to accept it
+	{
+		TCPSocket s(iocp);
+		auto ec = s.connect("127.0.0.1", SERVER_PORT);
+		CHECK(ec.isOk()); // Actual connect succeeds
+		pending.increment();
+		s.asyncSend("A", 1, [&](auto ec, unsigned bytesTransfered)
+		{
+			CHECK(ec.isOk()); // Send still succeeds, even if the server hasn't accepted the connection yet
+			pending.decrement();
+		});
+		pending.wait();
+	}
+
+	// Test asynchronous connect
+	{
+		pending.increment();
+		TCPSocket serverSide(iocp);
+		server.asyncAccept(serverSide, [&](const SocketCompletionError& ec, unsigned)
+		{
+			CHECK(ec.isOk());
+			pending.decrement();
+		});
+
+		TCPSocket s(iocp);
+		pending.increment();
+		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec, unsigned)
+		{
+			CHECK(ec.isOk());
+			pending.decrement();
+		});
+		pending.wait();
+	}
+
+	// Test asynchronous connect failure (on the wrong port)
+	{
+		TCPSocket s(iocp);
+		pending.increment();
+		s.asyncConnect("127.0.0.1", SERVER_PORT+1, [&](auto ec, unsigned)
+		{
+			CHECK(ec.isOk() == false);
+			pending.decrement();
+		});
+		pending.wait();
+	}
+
+	// Test asynchronous connect without a pending accept
+	// This should succeed
+	{
+		TCPSocket s(iocp);
+		pending.increment();
+		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec, unsigned)
+		{
+			CHECK(ec.isOk()); // Connection should still succeed
+			pending.decrement();
+		});
+
+		pending.increment();
+		s.asyncSend("A", 1, [&](auto ec, unsigned bytesTransfered)
+		{
+			CHECK(ec.isOk()); // Send still succeeds, even if the server hasn't accepted the connection yet
+			pending.decrement();
+		});
+
+		pending.wait();
+	}
+	
+	iocp.stop();
+	th.join();
+}
+
+
+TEST(SynchronousSendReceive)
+{
+	CompletionPort iocp;
+	auto th = std::thread([&]
+	{
+		iocp.run();
+	});
+
+	TCPServerSocket server(iocp, SERVER_PORT);
+	ZeroSemaphore pending;
+
+	// Synchronous send and receive
+	{
+		TCPSocket serverSide(iocp);
+		server.asyncAccept(serverSide, [&serverSide](const SocketCompletionError& ec, unsigned bytesTransfered)
+		{
+			CHECK(ec.isOk());
+			SocketCompletionError e;
+			auto b = std::make_shared<char>('A'); // shared_ptr, since we need to keep it alive for the asyncSend
+			CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
+			CHECK(e.isOk());
+
+			// Mix with an asyncSend, to check if everything still works
+			(*b)++;
+			serverSide.asyncSend(b.get(), 1, [&serverSide, b](auto ec, auto bytesTransfered)
+			{
+				CHECK(ec.isOk());
+				CHECK_EQUAL(1, bytesTransfered);
+				// another synchronous send to mix
+				(*b)++;
+				SocketCompletionError e;
+				CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
+				CHECK(e.isOk());
+			});
+		});
+
+		TCPSocket s(iocp);
+		auto ec = s.connect("127.0.0.1", SERVER_PORT);
+		CHECK(ec.isOk());
+
+		char b[3];
+		pending.increment();
+		s.asyncReceive(Buffer(b, 3), [&](auto ec, auto bytesTransfered)
+		{
+			CHECK(ec.isOk());
+			CHECK_EQUAL(3, bytesTransfered);
+			CHECK_EQUAL(int('A'), (int)b[0]);
+			CHECK_EQUAL(int('B'), (int)b[1]);
+			CHECK_EQUAL(int('C'), (int)b[2]);
+			pending.decrement();
+		});
+
+		// Send until it fails (because the server is not receiving it)
+		const int size = 1024 * 1024*100;
+		auto big = make_shared_array<char>(size);
+		int sentBlocks = 0;
+		while (true)
+		{
+			int sent = s.send(big.get(), size, 1002, ec);
+			if (sent == size)
+				sentBlocks++;
+			else
+				break;
+		}
+		CHECK(sentBlocks > 0); // It should succeed in sending a few blocks, even if the server is not reading it
+
+		pending.wait();
+	}
+
+	iocp.stop();
+	th.join();
+}
+
 void setupSendTimer(int counter, DeadlineTimer& timer, TCPSocket& socket)
 {
 	if (counter == 0)
@@ -143,8 +334,7 @@ TEST(CompoundReceive)
 
 
 	TCPSocket clientSide(iocp);
-	auto ft = clientSide.connect("127.0.0.1", 28000);
-	CHECK(ft.get());
+	CHECK(clientSide.connect("127.0.0.1", 28000).isOk());
 
 	Semaphore done;
 	char buf[numSends * 2];
@@ -348,7 +538,7 @@ TEST(TestThroughput)
 #if CZ_DEBUG
 		int const MBCOUNT = 5;
 #else
-		int const MBCOUNT = 1000;
+		int const MBCOUNT = 4000;
 #endif
 
 		sendDone.wait();
@@ -556,7 +746,7 @@ TEST(Echo)
 	{
 		clients.push_back(std::make_unique<ClientConnection>(ths.iocp));
 		auto c = clients.back().get();
-		CHECK(c->socket->connect("127.0.0.1", SERVER_PORT).get() == true);
+		CHECK(c->socket->connect("127.0.0.1", SERVER_PORT).isOk());
 		c->num = i;
 		c->prepareRecv();
 		c->send();
@@ -643,7 +833,7 @@ TEST(MultipleUntil)
 	ths.start(1);
 
 	TCPSocket s(ths.iocp);
-	CHECK(s.connect("127.0.0.1", SERVER_PORT).get() == true);
+	CHECK(s.connect("127.0.0.1", SERVER_PORT).isOk());
 
 	ZeroSemaphore pending;
 	auto sendString = [&](TCPSocket& socket, std::string str)
