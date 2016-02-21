@@ -1,7 +1,5 @@
 /*!
-
-#TODO - At the moment, TCPServerSocket only has one pending accept call. This means while we are processing one accept,
-other connection requests are denied. Ideally, we should have a couple of accept calls queued up.
+TCP Sockets inspired Boost asio
 */
 
 #pragma once
@@ -31,28 +29,29 @@ namespace details
 		WSAInstance(const WSAInstance&) = delete;
 		WSAInstance& operator=(const WSAInstance&) = delete;
 	};
+
+	//! Simple SOCKET wrapper, to have the socket closed even if an exception occurs
+	//! when
+	// constructing a TCPSocketServer or TCPSocket.
+	class SocketWrapper
+	{
+	public:
+		SocketWrapper();
+		explicit SocketWrapper(SOCKET socket);
+		SocketWrapper(const SocketWrapper&) = delete;
+		SocketWrapper& operator=(const SocketWrapper&) = delete;
+		SocketWrapper& operator=(SocketWrapper&& other);
+		~SocketWrapper();
+		SOCKET get();
+		bool isValid() const;
+		void shutdown();
+
+	private:
+		SOCKET m_socket = INVALID_SOCKET;
+	};
 }
 
 
-//! Simple SOCKET wrapper, to have the socket closed even if an exception occurs
-//! when
-// constructing a TCPSocketServer or TCPSocket.
-class SocketWrapper
-{
-  public:
-	SocketWrapper();
-	explicit SocketWrapper(SOCKET socket);
-	SocketWrapper(const SocketWrapper&) = delete;
-	SocketWrapper& operator=(const SocketWrapper&) = delete;
-	SocketWrapper& operator=(SocketWrapper&& other);
-	~SocketWrapper();
-	SOCKET get();
-	bool isValid() const;
-	void shutdown();
-
-  private:
-	SOCKET m_socket = INVALID_SOCKET;
-};
 
 enum class SocketOperationCode
 {
@@ -70,7 +69,8 @@ struct SocketCompletionError
 		None,
 		NotConnected, // The socket is not connected.
 		Disconnected, // The socket was connected at some point, but it disconnected
-		NoResources // Lack of OS resources caused the operation to fail. (e.g: Sending data too fast)
+		NoResources, // Lack of OS resources caused the operation to fail. (e.g: Sending data too fast)
+		Timeout
 	};
 
 	Code code;
@@ -87,7 +87,7 @@ struct SocketCompletionError
 
 	bool isOk() const
 	{
-		return code != Code::Disconnected;
+		return code == Code::None;
 	}
 
 };
@@ -124,7 +124,45 @@ class TCPSocket
   public:
 	explicit TCPSocket(CompletionPort& iocp);
 	virtual ~TCPSocket();
-	Future<bool> connect(const std::string& ip, int port);
+
+	//! Synchronous connect
+	SocketCompletionError connect(const std::string& ip, int port);
+
+	//! Asynchronous connect
+	void asyncConnect(const std::string& ip, int port, SocketCompletionHandler handler);
+
+
+	//! Perform a synchronous send
+	// 
+	// \return
+	//	 The number of bytes sent. Not that it might be less than than the requested number of bytes.
+	int sendSome(const void* data, int size, SocketCompletionError& ec);
+
+	//! Performs a synchronous send
+	//
+	//	Unlike #sendSome, this blocks until all the data is sent, a timeout occurs (due to waiting too long to be able
+	// to send), or an error occurs
+	//
+	// \param data
+	//	Data to send
+	//
+	// \param size
+	//	Size of the data to send
+	//
+	// \param timeoutMs
+	//	Time in milliseconds to wait to be able to send more data, before it considers a timeout.
+	//	This is useful in situations where the receiver is slower than the sender. The sender sends data in multiple
+	//	steps. Whenever it can't send, it will block waiting for the socket to be ready to send again.
+	//	Possible values:
+	//	0: No blocking. It will try to send what it can, and return right away without trying again.
+	//	>0: Waiting time in milliseconds between sends.
+	//	0xFFFFFFFF : Block forever. Use this carefully, since if the other end misbehaves (e.g: Doesn't read data and
+	//		doesn't close the connection), this will indeed BLOCK FOREVER since you have no way to break out of this
+	// call.
+	//
+	// \return
+	//	The number of bytes sent. This can be lower than the requested number of bytes, if a timeout occurred.
+	int send(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec);
 
 	//! Sends the specified buffer in its entirety.
 	// The supplied buffer must remain valid until the handler is executed.
@@ -231,8 +269,13 @@ class TCPSocket
 	CompletionPort& getIOCP();
 	void shutdown();
   protected:
+
+	friend struct AsyncConnectOperation;
 	friend struct AsyncReceiveOperation;
 	friend struct AsyncSendOperation;
+	SocketCompletionError fillLocalAddr();
+	void setBlocking(bool blocking);
+	void execute(struct AsyncConnectOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize, std::pair<RingBuffer::Iterator, bool> res,

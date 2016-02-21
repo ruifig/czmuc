@@ -4,6 +4,7 @@
 #include "crazygaze/Json.h"
 #include "crazygaze/Logging.h"
 #include "crazygaze/StringUtils.h"
+#include "crazygaze/ScopeGuard.h"
 
 #pragma comment(lib, "ws2_32.lib")
 // Disable deprecation warnings
@@ -78,6 +79,56 @@ namespace details
 		WSACleanup();
 	}
 
+	//////////////////////////////////////////////////////////////////////////
+	//
+	// SocketWrapper
+	//
+	//////////////////////////////////////////////////////////////////////////
+
+	SocketWrapper::SocketWrapper() : m_socket(INVALID_SOCKET)
+	{
+	}
+
+	SocketWrapper::SocketWrapper(SOCKET socket) : m_socket(socket)
+	{
+	}
+
+	SocketWrapper::~SocketWrapper()
+	{
+		if (m_socket != INVALID_SOCKET)
+		{
+			::shutdown(m_socket, SD_BOTH);
+			closesocket(m_socket);
+		}
+	}
+
+	void SocketWrapper::shutdown()
+	{
+		if (m_socket != INVALID_SOCKET)
+		{
+			::shutdown(m_socket, SD_BOTH);
+			closesocket(m_socket);
+		}
+	}
+
+	SOCKET SocketWrapper::get()
+	{
+		CZ_ASSERT(m_socket != INVALID_SOCKET);
+		return m_socket;
+	}
+
+	bool SocketWrapper::isValid() const
+	{
+		return m_socket != INVALID_SOCKET;
+	}
+
+	SocketWrapper& SocketWrapper::operator=(SocketWrapper&& other)
+	{
+		m_socket = other.m_socket;
+		other.m_socket = INVALID_SOCKET;
+		return *this;
+	}
+
 
 } // namespace details
 
@@ -86,23 +137,6 @@ namespace details
 // Utility code
 //
 //////////////////////////////////////////////////////////////////////////
-
-static const char* getLastWin32ErrorMsg(int err = 0)
-{
-	DWORD errCode = (err == 0) ? GetLastError() : err;
-	thread_local char buf[512];
-	// http://msdn.microsoft.com/en-us/library/ms679351(VS.85).aspx
-	int size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_MAX_WIDTH_MASK ,  // use windows internal message table
-							  0,						   // 0 since source is internal message table
-							  errCode,					   // this is the error code returned by WSAGetLastError()
-							  // Could just as well have been an error code from generic
-							  // Windows errors from GetLastError()
-							  0,		// auto-determine language to use
-							  &buf[0],  // this is WHERE we want FormatMessage
-							  sizeof(buf),
-							  0);  // 0, since getting message from system tables
-	return buf;
-}
 
 // #TODO Delete these when not needed
 static std::vector<std::string> logs;
@@ -187,7 +221,7 @@ struct TCPServerSocketData
 	}
 	CompletionPort& iocp;
 	SocketState state = SocketState::None;
-	SocketWrapper listenSocket;
+	details::SocketWrapper listenSocket;
 	LPFN_ACCEPTEX lpfnAcceptEx = NULL;
 	LPFN_GETACCEPTEXSOCKADDRS lpfnGetAcceptExSockaddrs = NULL;
 };
@@ -195,9 +229,8 @@ struct TCPServerSocketData
 struct TCPSocketData
 {
 	CompletionPort& iocp;
-	SocketWrapper socket;
+	details::SocketWrapper socket;
 	SocketState state = SocketState::None;
-	Future<bool> connectingFt;
 	SocketAddress localAddr;
 	SocketAddress remoteAddr;
 	TCPSocket* owner;
@@ -278,7 +311,8 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 {
 	LOG("TCPServerSocket %p: Enter\n", this);
 	m_data = std::make_shared<TCPServerSocketData>(iocp);
-	m_data->listenSocket = SocketWrapper(WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
+	m_data->listenSocket = details::SocketWrapper(
+		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
 	if (!m_data->listenSocket.isValid())
 		CZ_LOG(logDefault, Fatal, "Error creating listen socket: %s", getLastWin32ErrorMsg());
 
@@ -435,7 +469,9 @@ TCPSocket::TCPSocket(CompletionPort& iocp)
 	debugData.socketCreated(this);
 	m_data = std::make_shared<TCPSocketData>(this, iocp);
 
-	m_data->socket = SocketWrapper(WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
+	m_data->socket = details::SocketWrapper(
+		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
+
 	if (!m_data->socket.isValid())
 	{
 		CZ_LOG(logDefault, Fatal, "Error creating client socket: %s", getLastWin32ErrorMsg());
@@ -450,6 +486,9 @@ TCPSocket::TCPSocket(CompletionPort& iocp)
 	{
 		CZ_LOG(logDefault, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
 	}
+
+	// Set non-blocking, so sendSome/receiveSome doesn't block forever
+	setBlocking(false);
 
 	// This disables IOCP notification if the request completes immediately at the point of call.
 	/*
@@ -466,15 +505,22 @@ TCPSocket::~TCPSocket()
 	LOG("~TCPSocket %p: Exit\n", this);
 }
 
+void TCPSocket::setBlocking(bool blocking)
+{
+	 // 0: Blocking. !=0 : Non-blocking
+	u_long mode = blocking ? 0 : 1;
+	int res = ioctlsocket(m_data->socket.get(), FIONBIO, &mode);
+	if (res != 0)
+	{
+		CZ_LOG(logDefault, Fatal, "Error set non-blocking mode: %s", getLastWin32ErrorMsg());
+	}
+
+}
 
 void TCPSocket::shutdown()
 {
 	if (m_data->state == SocketState::Disconnected)
 		return;
-
-	// If we are connecting, there is an async operation in fly which reference us, so we need for it to finish
-	if (m_data->connectingFt.valid())
-		m_data->connectingFt.get();
 
 	// Notes:
 	// CancelIo - Cancels I/O operations that are issued by calling thread
@@ -505,7 +551,22 @@ void TCPSocket::shutdown()
 	m_userData.reset();
 }
 
-Future<bool> TCPSocket::connect(const std::string& ip, int port)
+SocketCompletionError TCPSocket::fillLocalAddr()
+{
+	sockaddr_in localinfo;
+	int size = sizeof(localinfo);
+	if (getsockname(m_data->socket.get(), (SOCKADDR*)&localinfo, &size) == SOCKET_ERROR)
+	{
+		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
+		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
+		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
+	}
+
+	m_data->localAddr = SocketAddress(localinfo);
+	return SocketCompletionError(SocketCompletionError::Code::None);
+}
+
+SocketCompletionError TCPSocket::connect(const std::string& ip, int port)
 {
 	CZ_ASSERT(m_data->state == SocketState::None);
 
@@ -513,42 +574,133 @@ Future<bool> TCPSocket::connect(const std::string& ip, int port)
 	CZ_ASSERT(m_data->state == SocketState::None);
 	m_data->state = SocketState::Connecting;
 
-	m_data->connectingFt = cz::async([this, ip, port]
+	SocketAddress remoteAddr(ip.c_str(), port);
+	m_data->remoteAddr = remoteAddr;
+	sockaddr_in addr;
+	ZeroMemory(&addr, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = remoteAddr.ip.full;
+	addr.sin_port = htons(remoteAddr.port);
+
+	setBlocking(true);
+	SCOPE_EXIT{ setBlocking(false); };
+	auto res = WSAConnect(m_data->socket.get(), (SOCKADDR*)&addr, sizeof(addr), NULL, NULL, NULL, NULL);
+
+	if (res == SOCKET_ERROR)
 	{
-		SocketAddress remoteAddr(ip.c_str(), port);
-		sockaddr_in addr;
-		ZeroMemory(&addr, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = remoteAddr.ip.full;
-		addr.sin_port = htons(remoteAddr.port);
-		auto res =
-			WSAConnect(m_data->socket.get(), (SOCKADDR*)&addr, sizeof(addr), NULL, NULL, NULL, NULL);
+		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
+		CZ_LOG(logDefault, Warning, "Could not connect. Error '%s'", errMsg);
+		m_data->state = SocketState::Disconnected;
+		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
+	}
+
+	SocketCompletionError ec = fillLocalAddr();
+	if (!ec.isOk())
+	{
+		m_data->state = SocketState::Disconnected;
+		return std::move(ec);
+	}
+
+	return SocketCompletionError(SocketCompletionError::Code::None);
+}
+
+struct AsyncConnectOperation : public CompletionPortOperation
+{
+	AsyncConnectOperation(TCPSocket* owner) : owner(owner) { }
+	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) override
+	{
+		owner->execute(this, bytesTransfered, completionKey);
+	}
+	TCPSocket* owner;
+	SocketCompletionHandler handler;
+	SocketCompletionError err;
+};
+
+void TCPSocket::asyncConnect(const std::string& ip, int port, SocketCompletionHandler handler)
+{
+	CZ_ASSERT(m_data->state == SocketState::None);
+	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
+
+	//
+	// Get ConnectEx pointer
+	LPFN_CONNECTEX lpfnConnectEx = NULL;
+	{
+		GUID guid = WSAID_CONNECTEX;
+		DWORD dwBytes = 0;
+		int res = WSAIoctl(
+			m_data->socket.get(), SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
+			&lpfnConnectEx, sizeof(lpfnConnectEx), &dwBytes, NULL, NULL);
 
 		if (res == SOCKET_ERROR)
 		{
-			int err = WSAGetLastError();
-			CZ_LOG(logDefault, Log, "Could not connect. Error '%s'", getLastWin32ErrorMsg(err));
-			m_data->state = SocketState::Disconnected;
-			return false;
+			CZ_LOG(logDefault, Fatal, "Error getting pointer for ConnectEx : %s", getLastWin32ErrorMsg());
+			return;
 		}
+	}
 
-		sockaddr_in localinfo;
-		int size = sizeof(localinfo);
-		if (getsockname(m_data->socket.get(), (SOCKADDR*)&localinfo, &size) == SOCKET_ERROR)
+	// ConnectEx required the socket to be bound
+	{
+		sockaddr_in addr;
+		ZeroMemory(&addr, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = INADDR_ANY;
+		addr.sin_port = 0;
+		if (bind(m_data->socket.get(), (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
 		{
-			int err = WSAGetLastError();
-			CZ_LOG(logDefault, Log, "Could not get address information. Error '%s'", getLastWin32ErrorMsg(err));
-			m_data->state = SocketState::Disconnected;
-			return false;
+			CZ_LOG(logDefault, Fatal, "Error binding socket: %s", getLastWin32ErrorMsg());
+			return;
 		}
+	}
 
-		m_data->localAddr = SocketAddress(localinfo);
-		m_data->remoteAddr = remoteAddr;
-		m_data->state = SocketState::Connected;
-		return true;
-	});
+	m_data->state = SocketState::Connecting;
 
-	return m_data->connectingFt;
+	auto op = std::make_unique<AsyncConnectOperation>(this);
+	op->handler = std::move(handler);
+
+	// Connect
+	SocketAddress remoteAddr(ip.c_str(), port);
+	m_data->remoteAddr = remoteAddr;
+	sockaddr_in addr;
+	ZeroMemory(&addr, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = remoteAddr.ip.full;
+	addr.sin_port = htons(remoteAddr.port);
+	BOOL res = lpfnConnectEx(m_data->socket.get(), (SOCKADDR*)&addr, sizeof(addr), NULL, NULL, NULL, &op->overlapped);
+	int err = WSAGetLastError();
+
+	if (err==0 )
+	{
+		CZ_UNEXPECTED(); // #TODO : Check what do to here
+	}
+	else if (err == WSA_IO_PENDING)
+	{
+		// Nothing to do
+	}
+	else
+	{
+		op->err.msg = getLastWin32ErrorMsg();
+		op->err.code = SocketCompletionError::Code::NotConnected;
+		// Manually queue the operation, so the handler is executed as part of the completion port
+		m_data->iocp.post(std::move(op), 0, 0);
+		return;
+	}
+
+	m_data->iocp.add(std::move(op));
+}
+
+void TCPSocket::execute(struct AsyncConnectOperation* op, unsigned bytesTransfered, uint64_t completionKey)
+{
+	int seconds;
+	int bytes = sizeof(seconds);
+	int res = getsockopt(m_data->socket.get(), SOL_SOCKET, SO_CONNECT_TIME, (char*)&seconds, (PINT)&bytes);
+
+	if (res!=NO_ERROR || seconds==-1)
+	{
+		op->err.msg = "Connect failed";
+		op->err.code = SocketCompletionError::Code::NotConnected;
+	}
+
+	op->handler(op->err, bytesTransfered);
 }
 
 const SocketAddress& TCPSocket::getLocalAddress() const
@@ -834,56 +986,99 @@ void TCPSocket::execute(struct AsyncSendOperation* op, unsigned bytesTransfered,
 	op->handler(op->err, bytesTransfered);
 }
 
-//////////////////////////////////////////////////////////////////////////
-//
-// SocketWrapper
-//
-//////////////////////////////////////////////////////////////////////////
-
-SocketWrapper::SocketWrapper() : m_socket(INVALID_SOCKET)
+int TCPSocket::sendSome(const void* data, int size, SocketCompletionError& ec)
 {
-}
-
-SocketWrapper::SocketWrapper(SOCKET socket) : m_socket(socket)
-{
-}
-
-SocketWrapper::~SocketWrapper()
-{
-	if (m_socket != INVALID_SOCKET)
+	int sent = ::send(m_data->socket.get(), (const char*)data, size, 0);
+	if (sent != SOCKET_ERROR)
 	{
-		::shutdown(m_socket, SD_BOTH);
-		closesocket(m_socket);
+		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		return sent;
+	}
+
+	int err = WSAGetLastError();
+	if (err == WSAENOBUFS || err == WSAEWOULDBLOCK)
+	{
+		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		return 0;
+	}
+	else
+	{
+		ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+		return 0;
 	}
 }
 
-void SocketWrapper::shutdown()
+/*
+int TCPSocket::send(void* data, int size, SocketCompletionError& ec)
 {
-	if (m_socket != INVALID_SOCKET)
+	int done = 0;
+	FD_SET set;
+
+	while (done != size && ec.isOk())
 	{
-		::shutdown(m_socket, SD_BOTH);
-		closesocket(m_socket);
+		FD_ZERO(&set);
+		FD_SET(m_data->socket.get(), &set);
+		int res = select(0, NULL, &set, NULL, NULL);
+		if (res == 1)
+		{
+			done += sendSome((const char*)data + done, size - done, ec);
+		}
+		else if (res==SOCKET_ERROR)
+		{
+			ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+		}
+		else // == 0
+		{
+			// This should not happen since the timeout is NULL (infinite)
+			CZ_UNEXPECTED();
+		}
 	}
-}
 
-SOCKET SocketWrapper::get()
+	return done;
+}
+*/
+
+int TCPSocket::send(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec)
 {
-	CZ_ASSERT(m_socket != INVALID_SOCKET);
-	return m_socket;
-}
+	int done = 0;
+	FD_SET set;
 
-bool SocketWrapper::isValid() const
-{
-	return m_socket != INVALID_SOCKET;
-}
+	if (timeoutMs == 0)
+		return sendSome(data, size, ec);
 
-SocketWrapper& SocketWrapper::operator=(SocketWrapper&& other)
-{
-	m_socket = other.m_socket;
-	other.m_socket = INVALID_SOCKET;
-	return *this;
-}
+	TIMEVAL t;
+	t.tv_sec = timeoutMs / 1000;
+	t.tv_usec = (timeoutMs % 1000) * 1000;
 
+	while (true)
+	{
+		FD_ZERO(&set);
+		FD_SET(m_data->socket.get(), &set);
+		int res = select(0, NULL, &set, NULL, timeoutMs==0xFFFFFFFF ? NULL : &t);
+		if (res == 1)
+		{
+			done += sendSome((const char*)data + done, size - done, ec);
+			if (done == size || !ec.isOk())
+				return done;
+		}
+		else if (res==SOCKET_ERROR)
+		{
+			ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+			return done;
+		}
+		else if (res==0) // timeout expired
+		{
+			ec = SocketCompletionError(SocketCompletionError::Code::Timeout, "");
+			return done;
+		}
+		else
+		{
+			CZ_UNEXPECTED();
+		}
+	}
+
+	return done;
+}
 } // namespace net
 
 std::string to_json(const net::SocketAddress& val)
