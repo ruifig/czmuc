@@ -300,6 +300,78 @@ TEST(SynchronousSendReceive)
 	th.join();
 }
 
+TEST(SynchronousAcceptAndConnect)
+{
+	CompletionPort iocp;
+	auto ioth = std::thread([&]
+	{
+		iocp.run();
+	});
+
+	timeBeginPeriod(1);
+	
+	Semaphore checkpoint;
+	const int acceptTimeout = 200;
+	auto serverTh = std::thread([&iocp, acceptTimeout, &checkpoint]()
+	{
+		TCPServerSocket server(iocp, SERVER_PORT);
+		TCPSocket s(iocp);
+
+		UnitTest::Timer timer;
+		timer.Start();
+
+		auto t = timer.GetTimeInMs();
+		auto ec = server.accept(s, 0); // no blocking
+		CHECK_CLOSE(0, timer.GetTimeInMs() - t, 5);
+		CHECK(ec.code==SocketCompletionError::Code::Timeout);
+
+		t = timer.GetTimeInMs();
+		ec = server.accept(s, acceptTimeout); // with timeout
+		CHECK_CLOSE(acceptTimeout, timer.GetTimeInMs() - t, 5);
+		CHECK(ec.code==SocketCompletionError::Code::Timeout);
+
+		checkpoint.notify();
+		// And try one with success
+		ec = server.accept(s, 0xFFFFFFFF);
+
+		CZ_LOG(logDefault, Log, "Server: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
+		CHECK(ec.isOk());
+
+		char buf[5];
+		CHECK_EQUAL(sizeof(buf), s.receive(buf, sizeof(buf), 0xFFFFFFFF, ec));
+		CHECK(ec.isOk());
+		CHECK_EQUAL("ABCD", buf);
+
+		CHECK_EQUAL(sizeof(buf), s.send(buf, sizeof(buf), 0xFFFFFFFF, ec));
+		CHECK(ec.isOk());
+	});
+
+	//
+	// Client
+	TCPSocket s(iocp);
+
+	// Try to connect to the wrong port
+	CHECK(!s.connect("127.0.0.1", SERVER_PORT+1).isOk());
+
+	// Try a successful accept
+	checkpoint.wait();
+	CHECK(s.connect("127.0.0.1", SERVER_PORT).isOk());
+	CZ_LOG(logDefault, Log, "Client: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
+
+	SocketCompletionError ec;
+	CHECK_EQUAL(5, s.send("ABCD", 5, 0xFFFFFFFF, ec));
+	CHECK(ec.isOk());
+	char buf[5];
+	CHECK_EQUAL(5, s.receive(buf, 5, 0xFFFFFFFF, ec));
+	CHECK_EQUAL("ABCD", buf);
+	CHECK(ec.isOk());
+	s.shutdown();
+
+	iocp.stop();
+	ioth.join();
+	serverTh.join();
+}
+
 void setupSendTimer(int counter, DeadlineTimer& timer, TCPSocket& socket)
 {
 	if (counter == 0)

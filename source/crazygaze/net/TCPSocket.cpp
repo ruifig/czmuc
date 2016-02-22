@@ -362,7 +362,7 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
-	m_data->state = SocketState::Connected;
+	m_data->state = SocketState::Connected; // #TODO : Change this to state Listen
 	debugData.serverSocketCreated(this);
 	LOG("TCPServerSocket %p: Exit\n", this);
 }
@@ -405,6 +405,38 @@ void TCPServerSocket::shutdown()
 
 	m_data->listenSocket.shutdown();
 	m_data->state = SocketState::Disconnected;
+}
+
+SocketCompletionError TCPServerSocket::accept(TCPSocket& socket, unsigned timeoutMs)
+{
+	FD_SET set;
+	TIMEVAL t;
+	t.tv_sec = timeoutMs / 1000;
+	t.tv_usec = (timeoutMs % 1000) * 1000;
+
+	FD_ZERO(&set);
+	FD_SET(m_data->listenSocket.get(), &set);
+	int res = select(0, &set, NULL, NULL, timeoutMs == 0xFFFFFFFF ? NULL : &t);
+
+	if (res == 0)
+	{
+		return SocketCompletionError(SocketCompletionError::Code::Timeout, "");
+	}
+	else if (res==SOCKET_ERROR)
+	{
+		CZ_UNEXPECTED();
+		return SocketCompletionError(SocketCompletionError::Code::NoResources, "");
+	}
+	else
+	{
+		SOCKET s = ::accept(m_data->listenSocket.get(), NULL, NULL);
+		// Since select passed, accept should not fail
+		CZ_ASSERT(s != INVALID_SOCKET);
+		socket.init(s, socket.getIOCP());
+		socket.fillLocalAddr();
+		socket.fillRemoteAddr();
+		return SocketCompletionError(SocketCompletionError::Code::None, "");
+	}
 }
 
 void TCPServerSocket::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler)
@@ -467,11 +499,15 @@ TCPSocket::TCPSocket(CompletionPort& iocp)
 {
 	LOG("TCPSocket %p: Enter\n", this);
 	debugData.socketCreated(this);
+	init(INVALID_SOCKET, iocp);
+	LOG("TCPSocket %p: Exit\n", this);
+}
+
+void TCPSocket::init(SOCKET s, CompletionPort& iocp)
+{
 	m_data = std::make_shared<TCPSocketData>(this, iocp);
-
 	m_data->socket = details::SocketWrapper(
-		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
-
+		(s==INVALID_SOCKET) ? WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED) : s);
 	if (!m_data->socket.isValid())
 	{
 		CZ_LOG(logDefault, Fatal, "Error creating client socket: %s", getLastWin32ErrorMsg());
@@ -495,7 +531,6 @@ TCPSocket::TCPSocket(CompletionPort& iocp)
 	if (SetFileCompletionNotificationModes((HANDLE)m_socket.get(), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)==FALSE)
 		throw std::runtime_error(formatString("Error initializing accept socket: %s", getLastWin32ErrorMsg()));
 	*/
-	LOG("TCPSocket %p: Exit\n", this);
 }
 
 TCPSocket::~TCPSocket()
@@ -553,26 +588,38 @@ void TCPSocket::shutdown()
 
 SocketCompletionError TCPSocket::fillLocalAddr()
 {
-	sockaddr_in localinfo;
-	int size = sizeof(localinfo);
-	if (getsockname(m_data->socket.get(), (SOCKADDR*)&localinfo, &size) == SOCKET_ERROR)
+	sockaddr_in addr;
+	int size = sizeof(addr);
+	if (getsockname(m_data->socket.get(), (SOCKADDR*)&addr, &size) == SOCKET_ERROR)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
 		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
 		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
 	}
 
-	m_data->localAddr = SocketAddress(localinfo);
+	m_data->localAddr = SocketAddress(addr);
+	return SocketCompletionError(SocketCompletionError::Code::None);
+}
+
+SocketCompletionError TCPSocket::fillRemoteAddr()
+{
+	sockaddr_in addr;
+	int size = sizeof(addr);
+	if (getpeername(m_data->socket.get(), (SOCKADDR*)&addr, &size) == SOCKET_ERROR)
+	{
+		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
+		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
+		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
+	}
+
+	m_data->remoteAddr = SocketAddress(addr);
 	return SocketCompletionError(SocketCompletionError::Code::None);
 }
 
 SocketCompletionError TCPSocket::connect(const std::string& ip, int port)
 {
 	CZ_ASSERT(m_data->state == SocketState::None);
-
 	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
-	CZ_ASSERT(m_data->state == SocketState::None);
-	m_data->state = SocketState::Connecting;
 
 	SocketAddress remoteAddr(ip.c_str(), port);
 	m_data->remoteAddr = remoteAddr;
@@ -590,17 +637,16 @@ SocketCompletionError TCPSocket::connect(const std::string& ip, int port)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
 		CZ_LOG(logDefault, Warning, "Could not connect. Error '%s'", errMsg);
-		m_data->state = SocketState::Disconnected;
 		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
 	}
 
 	SocketCompletionError ec = fillLocalAddr();
 	if (!ec.isOk())
 	{
-		m_data->state = SocketState::Disconnected;
 		return std::move(ec);
 	}
 
+	m_data->state = SocketState::Connected;
 	return SocketCompletionError(SocketCompletionError::Code::None);
 }
 
@@ -698,6 +744,10 @@ void TCPSocket::execute(struct AsyncConnectOperation* op, unsigned bytesTransfer
 	{
 		op->err.msg = "Connect failed";
 		op->err.code = SocketCompletionError::Code::NotConnected;
+	}
+	else
+	{
+		m_data->state = SocketState::Connected;
 	}
 
 	op->handler(op->err, bytesTransfered);

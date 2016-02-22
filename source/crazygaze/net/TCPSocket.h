@@ -101,6 +101,10 @@ class TCPServerSocket
   public:
 	TCPServerSocket(CompletionPort& iocp, int listenPort);
 	~TCPServerSocket();
+
+
+	//! Synchronous accept
+	SocketCompletionError accept(TCPSocket& socket, unsigned timeoutMs);
 	void asyncAccept(TCPSocket& socket, SocketCompletionHandler handler);
 	void shutdown();
 
@@ -297,14 +301,16 @@ class TCPSocket
 	friend struct AsyncConnectOperation;
 	friend struct AsyncReceiveOperation;
 	friend struct AsyncSendOperation;
+	friend class TCPServerSocket;
+	void init(SOCKET s, CompletionPort& iocp);
 	SocketCompletionError fillLocalAddr();
+	SocketCompletionError fillRemoteAddr();
 	void setBlocking(bool blocking);
 	void execute(struct AsyncConnectOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize, std::pair<RingBuffer::Iterator, bool> res,
 	                      RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
-	friend class TCPServerSocket;
 	std::shared_ptr<TCPSocketData> m_data;
 	std::shared_ptr<TCPSocketUserData> m_userData;
 	details::WSAInstance m_wsainstance;
