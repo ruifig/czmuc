@@ -164,6 +164,30 @@ class TCPSocket
 	//	The number of bytes sent. This can be lower than the requested number of bytes, if a timeout occurred.
 	int send(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec);
 
+	//! Performs a synchronous receive
+	//
+	// \return
+	//	The number of bytes received. This might be lower than the number of bytes requested
+	int receiveSome(void* data, int size, SocketCompletionError& ec);
+
+	//! Performs a synchronous receive
+	//
+	// Unlike #receiveSome, this blocks until it received the requested number of bytes, a timeout occurs, or an error
+	// occurs.
+	//
+	// \param timeoutMs
+	//	Time milliseconds to wait for the socket to have incoming data. If no data arrived it will timeout.
+	//	0: No blocking. It will try to send what it can, and return right away without trying again.
+	//	>0: Waiting time in milliseconds between sends.
+	//	0xFFFFFFFF : Block forever. Use this carefully, since if the other end misbehaves (e.g: Doesn't read data and
+	//		doesn't close the connection), this will indeed BLOCK FOREVER since you have no way to break out of this
+	// call.
+	//
+	// \return
+	//	The number of bytes received. This can be lower than the requested number of bytes, if a timeout or an error
+	//	occurred.
+	int receive(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec);
+
 	//! Sends the specified buffer in its entirety.
 	// The supplied buffer must remain valid until the handler is executed.
 	// \note

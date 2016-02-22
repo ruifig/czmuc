@@ -1008,36 +1008,6 @@ int TCPSocket::sendSome(const void* data, int size, SocketCompletionError& ec)
 	}
 }
 
-/*
-int TCPSocket::send(void* data, int size, SocketCompletionError& ec)
-{
-	int done = 0;
-	FD_SET set;
-
-	while (done != size && ec.isOk())
-	{
-		FD_ZERO(&set);
-		FD_SET(m_data->socket.get(), &set);
-		int res = select(0, NULL, &set, NULL, NULL);
-		if (res == 1)
-		{
-			done += sendSome((const char*)data + done, size - done, ec);
-		}
-		else if (res==SOCKET_ERROR)
-		{
-			ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
-		}
-		else // == 0
-		{
-			// This should not happen since the timeout is NULL (infinite)
-			CZ_UNEXPECTED();
-		}
-	}
-
-	return done;
-}
-*/
-
 int TCPSocket::send(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec)
 {
 	int done = 0;
@@ -1079,6 +1049,87 @@ int TCPSocket::send(void* data, int size, unsigned timeoutMs, SocketCompletionEr
 
 	return done;
 }
+
+int TCPSocket::receiveSome(void* data, int size, SocketCompletionError& ec)
+{
+	if (size == 0)
+	{
+		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		return 0;
+	}
+
+	int received = ::recv(m_data->socket.get(), (char*)data, size, 0);
+
+	if (received != SOCKET_ERROR) // Data received
+	{
+		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		return received;
+	}
+
+	if (received==0) // Connection was gracefully closed
+	{
+		shutdown();
+		return 0;
+	}
+
+	CZ_ASSERT(received == SOCKET_ERROR);
+	int err = WSAGetLastError();
+	if (err == WSAENOBUFS || err == WSAEWOULDBLOCK)
+	{
+		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		return 0;
+	}
+	else
+	{
+		shutdown();
+		ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+		return 0;
+	}
+}
+
+int TCPSocket::receive(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec)
+{
+	int done = 0;
+	FD_SET set;
+
+	if (timeoutMs == 0)
+		return receiveSome(data, size, ec);
+
+	TIMEVAL t;
+	t.tv_sec = timeoutMs / 1000;
+	t.tv_usec = (timeoutMs % 1000) * 1000;
+
+	while (true)
+	{
+		FD_ZERO(&set);
+		FD_SET(m_data->socket.get(), &set);
+		int res = select(0, &set, NULL, NULL, timeoutMs==0xFFFFFFFF ? NULL : &t);
+		if (res == 1)
+		{
+			done += receiveSome((char*)data + done, size - done, ec);
+			if (done == size || !ec.isOk())
+				return done;
+		}
+		else if (res==SOCKET_ERROR)
+		{
+			ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+			return done;
+		}
+		else if (res==0) // timeout expired
+		{
+			ec = SocketCompletionError(SocketCompletionError::Code::Timeout, "");
+			return done;
+		}
+		else
+		{
+			CZ_UNEXPECTED();
+		}
+	}
+
+	return done;
+
+}
+
 } // namespace net
 
 std::string to_json(const net::SocketAddress& val)

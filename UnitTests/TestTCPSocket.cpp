@@ -235,6 +235,9 @@ TEST(SynchronousSendReceive)
 			auto b = std::make_shared<char>('A'); // shared_ptr, since we need to keep it alive for the asyncSend
 			CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
 			CHECK(e.isOk());
+			(*b)++;
+			CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
+			CHECK(e.isOk());
 
 			// Mix with an asyncSend, to check if everything still works
 			(*b)++;
@@ -254,17 +257,27 @@ TEST(SynchronousSendReceive)
 		auto ec = s.connect("127.0.0.1", SERVER_PORT);
 		CHECK(ec.isOk());
 
-		char b[3];
+		char b[4];
 		pending.increment();
-		s.asyncReceive(Buffer(b, 3), [&](auto ec, auto bytesTransfered)
+		// Receive with a mix of async and synchronous
+		s.asyncReceive(Buffer(b, 1), [&](auto ec, auto bytesTransfered)
 		{
 			CHECK(ec.isOk());
-			CHECK_EQUAL(3, bytesTransfered);
-			CHECK_EQUAL(int('A'), (int)b[0]);
-			CHECK_EQUAL(int('B'), (int)b[1]);
-			CHECK_EQUAL(int('C'), (int)b[2]);
+			CHECK_EQUAL(1, bytesTransfered);
 			pending.decrement();
 		});
+
+		// Receive the rest of the data synchronously. This can't be inside the asyncReceive, since we are exchange
+		// data with another socket being served by the same CompletionPort, and it would block forever, since handlers
+		// won't be executed for the other socket
+		pending.wait();
+		SocketCompletionError e;
+		CHECK_EQUAL(3, s.receive(&b[1], 3, 0xFFFFFFFF, e));
+		CHECK(e.isOk());
+		CHECK_EQUAL(int('A'), (int)b[0]);
+		CHECK_EQUAL(int('B'), (int)b[1]);
+		CHECK_EQUAL(int('C'), (int)b[2]);
+		CHECK_EQUAL(int('D'), (int)b[3]);
 
 		// Send until it fails (because the server is not receiving it)
 		const int size = 1024 * 1024*100;
@@ -538,7 +551,7 @@ TEST(TestThroughput)
 #if CZ_DEBUG
 		int const MBCOUNT = 5;
 #else
-		int const MBCOUNT = 4000;
+		int const MBCOUNT = 1000;
 #endif
 
 		sendDone.wait();
