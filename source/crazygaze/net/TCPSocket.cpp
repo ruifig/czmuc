@@ -285,7 +285,7 @@ struct AsyncReceiveOperation : public CompletionPortOperation
 	}
 	TCPSocket* owner;
 	SocketCompletionHandler handler;
-	SocketCompletionError err;
+	Error err;
 	Buffer buf;
 };
 
@@ -298,7 +298,7 @@ struct AsyncSendOperation : public CompletionPortOperation
 	}
 	TCPSocket* owner;
 	SocketCompletionHandler handler;
-	SocketCompletionError err;
+	Error err;
 	Buffer buf;
 };
 //////////////////////////////////////////////////////////////////////////
@@ -407,7 +407,7 @@ void TCPServerSocket::shutdown()
 	m_data->state = SocketState::Disconnected;
 }
 
-SocketCompletionError TCPServerSocket::accept(TCPSocket& socket, unsigned timeoutMs)
+Error TCPServerSocket::accept(TCPSocket& socket, unsigned timeoutMs)
 {
 	FD_SET set;
 	TIMEVAL t;
@@ -420,12 +420,12 @@ SocketCompletionError TCPServerSocket::accept(TCPSocket& socket, unsigned timeou
 
 	if (res == 0)
 	{
-		return SocketCompletionError(SocketCompletionError::Code::Timeout, "");
+		return Error(Error::Code::Timeout, "");
 	}
 	else if (res==SOCKET_ERROR)
 	{
 		CZ_UNEXPECTED();
-		return SocketCompletionError(SocketCompletionError::Code::NoResources, "");
+		return Error(Error::Code::Other, getLastWin32ErrorMsg());
 	}
 	else
 	{
@@ -435,7 +435,7 @@ SocketCompletionError TCPServerSocket::accept(TCPSocket& socket, unsigned timeou
 		socket.init(s, socket.getIOCP());
 		socket.fillLocalAddr();
 		socket.fillRemoteAddr();
-		return SocketCompletionError(SocketCompletionError::Code::None, "");
+		return Error(Error::Code::Success);
 	}
 }
 
@@ -486,7 +486,7 @@ void TCPServerSocket::execute(struct AsyncAcceptOperation* op, unsigned bytesTra
 	op->socket->m_data->localAddr = SocketAddress(*localSockAddr);
 	op->socket->m_data->remoteAddr = SocketAddress(*remoteSockAddr);
 	op->socket->m_data->state = SocketState::Connected;
-	op->handler(SocketCompletionError(), bytesTransfered);
+	op->handler(Error(), bytesTransfered);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -586,7 +586,7 @@ void TCPSocket::shutdown()
 	m_userData.reset();
 }
 
-SocketCompletionError TCPSocket::fillLocalAddr()
+Error TCPSocket::fillLocalAddr()
 {
 	sockaddr_in addr;
 	int size = sizeof(addr);
@@ -594,14 +594,14 @@ SocketCompletionError TCPSocket::fillLocalAddr()
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
 		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
-		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
+		return Error(Error::Code::Other, errMsg);
 	}
 
 	m_data->localAddr = SocketAddress(addr);
-	return SocketCompletionError(SocketCompletionError::Code::None);
+	return Error();
 }
 
-SocketCompletionError TCPSocket::fillRemoteAddr()
+Error TCPSocket::fillRemoteAddr()
 {
 	sockaddr_in addr;
 	int size = sizeof(addr);
@@ -609,14 +609,14 @@ SocketCompletionError TCPSocket::fillRemoteAddr()
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
 		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
-		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
+		return Error(Error::Code::Other, errMsg);
 	}
 
 	m_data->remoteAddr = SocketAddress(addr);
-	return SocketCompletionError(SocketCompletionError::Code::None);
+	return Error();
 }
 
-SocketCompletionError TCPSocket::connect(const std::string& ip, int port)
+Error TCPSocket::connect(const std::string& ip, int port)
 {
 	CZ_ASSERT(m_data->state == SocketState::None);
 	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
@@ -637,17 +637,15 @@ SocketCompletionError TCPSocket::connect(const std::string& ip, int port)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
 		CZ_LOG(logDefault, Warning, "Could not connect. Error '%s'", errMsg);
-		return SocketCompletionError(SocketCompletionError::Code::NotConnected, errMsg);
+		return Error(Error::Code::Other, errMsg);
 	}
 
-	SocketCompletionError ec = fillLocalAddr();
-	if (!ec.isOk())
-	{
+	Error ec = fillLocalAddr();
+	if (ec)
 		return std::move(ec);
-	}
 
 	m_data->state = SocketState::Connected;
-	return SocketCompletionError(SocketCompletionError::Code::None);
+	return Error();
 }
 
 struct AsyncConnectOperation : public CompletionPortOperation
@@ -659,7 +657,7 @@ struct AsyncConnectOperation : public CompletionPortOperation
 	}
 	TCPSocket* owner;
 	SocketCompletionHandler handler;
-	SocketCompletionError err;
+	Error err;
 };
 
 void TCPSocket::asyncConnect(const std::string& ip, int port, SocketCompletionHandler handler)
@@ -724,8 +722,7 @@ void TCPSocket::asyncConnect(const std::string& ip, int port, SocketCompletionHa
 	}
 	else
 	{
-		op->err.msg = getLastWin32ErrorMsg();
-		op->err.code = SocketCompletionError::Code::NotConnected;
+		op->err = Error(Error::Code::Other, getLastWin32ErrorMsg());
 		// Manually queue the operation, so the handler is executed as part of the completion port
 		m_data->iocp.post(std::move(op), 0, 0);
 		return;
@@ -742,8 +739,7 @@ void TCPSocket::execute(struct AsyncConnectOperation* op, unsigned bytesTransfer
 
 	if (res!=NO_ERROR || seconds==-1)
 	{
-		op->err.msg = "Connect failed";
-		op->err.code = SocketCompletionError::Code::NotConnected;
+		op->err = Error(Error::Code::Other, "Connect failed");
 	}
 	else
 	{
@@ -807,18 +803,18 @@ void TCPSocket::asyncReceiveSome(Buffer buf, SocketCompletionHandler handler)
 		}
 		else  // Any other error, we close this connection
 		{
-			op->err.msg = getLastWin32ErrorMsg();
+			op->err.setMsg(getLastWin32ErrorMsg());
 			switch(err)
 			{
 			case WSAENOTCONN: // Socket was not connected at all;
-				op->err.code = SocketCompletionError::Code::NotConnected;
+				op->err.code = Error::Code::Other;
 				break;
 			case WSAENOBUFS:
-				op->err.code = SocketCompletionError::Code::NoResources;
+				op->err.code = Error::Code::Other;
 				m_data->state = SocketState::Disconnected;
 				break;
 			default: // Any other error we just consider as disconnection
-				op->err.code = SocketCompletionError::Code::Disconnected;
+				op->err.code = Error::Code::Other;
 				m_data->state = SocketState::Disconnected;
 			}
 			// Manually queue the handler
@@ -847,7 +843,7 @@ void TCPSocket::prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize,
 #if CZ_RINGBUFFER_DEBUG
 		bufReadCounter = buf.getReadCounter(),
 #endif
-		untilHandler=std::move(untilHandler), handler=std::move(handler)](const SocketCompletionError& err, unsigned bytesTransfered) mutable
+		untilHandler=std::move(untilHandler), handler=std::move(handler)](const Error& err, unsigned bytesTransfered) mutable
 	{
 
 #if CZ_RINGBUFFER_DEBUG
@@ -886,17 +882,17 @@ void TCPSocket::asyncReceiveUntil(RingBuffer& buf, SocketCompletionUntilHandler 
 		auto op = std::make_unique<AsyncReceiveOperation>(this);
 		op->handler = [
 			this, tmpbuf, &buf, tmpBufSize, untilHandler=std::move(untilHandler), handler=std::move(handler),
-			err = SocketCompletionError()
+			err = Error()
 #if CZ_RINGBUFFER_DEBUG
 			, bufReadCounter = buf.getReadCounter()
 #endif
-		](const SocketCompletionError& err, unsigned bytesTransfered)
+		](const Error& err, unsigned bytesTransfered)
 		{
 
 #if CZ_RINGBUFFER_DEBUG
 			CZ_ASSERT_F(bufReadCounter == buf.getReadCounter(), "You Should not perform any read operations on the buffer while there are pending read-until operations");
 #endif
-			if (bytesTransfered == 0 || !err.isOk())
+			if (bytesTransfered == 0 || err)
 			{
 				handler(err, bytesTransfered);
 				return;
@@ -929,8 +925,8 @@ void TCPSocket::execute(struct AsyncReceiveOperation* op, unsigned bytesTransfer
 		if (bytesTransfered==0) // When a receive gives us 0 bytes, it means the peer disconnected
 		{
 			m_data->state = SocketState::Disconnected;
-			if (op->err.isOk())
-				op->err = SocketCompletionError(SocketCompletionError::Code::Disconnected, "Disconnected");
+			if (!op->err) // Set the error if not set
+				op->err = Error(Error::Code::Other, "Disconnected");
 		}
 	}
 	else if (completionKey==1) // The operation failed, and we queued it manually
@@ -988,18 +984,18 @@ void TCPSocket::asyncSend(Buffer buf, SocketCompletionHandler handler)
 		else
 		{
 			// Operation failed
-			op->err.msg = getLastWin32ErrorMsg();
+			op->err.setMsg(getLastWin32ErrorMsg());
 			switch(err)
 			{
 			case WSAENOTCONN: // Socket was not connected at all;
-				op->err.code = SocketCompletionError::Code::NotConnected;
+				op->err.code = Error::Code::Other;
 				break;
 			case WSAENOBUFS:
-				op->err.code = SocketCompletionError::Code::NoResources;
+				op->err.code = Error::Code::Other;
 				m_data->state = SocketState::Disconnected;
 				break;
 			default: // Any other error we just consider as disconnection
-				op->err.code = SocketCompletionError::Code::Disconnected;
+				op->err.code = Error::Code::Other;
 				m_data->state = SocketState::Disconnected;
 			}
 			// Manually queue the handler
@@ -1036,29 +1032,29 @@ void TCPSocket::execute(struct AsyncSendOperation* op, unsigned bytesTransfered,
 	op->handler(op->err, bytesTransfered);
 }
 
-int TCPSocket::sendSome(const void* data, int size, SocketCompletionError& ec)
+int TCPSocket::sendSome(const void* data, int size, Error& ec)
 {
 	int sent = ::send(m_data->socket.get(), (const char*)data, size, 0);
 	if (sent != SOCKET_ERROR)
 	{
-		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		ec = Error();
 		return sent;
 	}
 
 	int err = WSAGetLastError();
 	if (err == WSAENOBUFS || err == WSAEWOULDBLOCK)
 	{
-		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		ec = Error();
 		return 0;
 	}
 	else
 	{
-		ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+		ec = Error(Error::Code::Other, getLastWin32ErrorMsg());
 		return 0;
 	}
 }
 
-int TCPSocket::send(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec)
+int TCPSocket::send(void* data, int size, unsigned timeoutMs, Error& ec)
 {
 	int done = 0;
 	FD_SET set;
@@ -1078,17 +1074,17 @@ int TCPSocket::send(void* data, int size, unsigned timeoutMs, SocketCompletionEr
 		if (res == 1)
 		{
 			done += sendSome((const char*)data + done, size - done, ec);
-			if (done == size || !ec.isOk())
+			if (done == size || ec)
 				return done;
 		}
 		else if (res==SOCKET_ERROR)
 		{
-			ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+			ec = Error(Error::Code::Other, getLastWin32ErrorMsg());
 			return done;
 		}
 		else if (res==0) // timeout expired
 		{
-			ec = SocketCompletionError(SocketCompletionError::Code::Timeout, "");
+			ec = Error(Error::Code::Timeout, "");
 			return done;
 		}
 		else
@@ -1100,11 +1096,11 @@ int TCPSocket::send(void* data, int size, unsigned timeoutMs, SocketCompletionEr
 	return done;
 }
 
-int TCPSocket::receiveSome(void* data, int size, SocketCompletionError& ec)
+int TCPSocket::receiveSome(void* data, int size, Error& ec)
 {
 	if (size == 0)
 	{
-		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		ec = Error();
 		return 0;
 	}
 
@@ -1112,7 +1108,7 @@ int TCPSocket::receiveSome(void* data, int size, SocketCompletionError& ec)
 
 	if (received != SOCKET_ERROR) // Data received
 	{
-		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		ec = Error();
 		return received;
 	}
 
@@ -1126,18 +1122,18 @@ int TCPSocket::receiveSome(void* data, int size, SocketCompletionError& ec)
 	int err = WSAGetLastError();
 	if (err == WSAENOBUFS || err == WSAEWOULDBLOCK)
 	{
-		ec = SocketCompletionError(SocketCompletionError::Code::None, "");
+		ec = Error();
 		return 0;
 	}
 	else
 	{
 		shutdown();
-		ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+		ec = Error(Error::Code::Other, getLastWin32ErrorMsg());
 		return 0;
 	}
 }
 
-int TCPSocket::receive(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec)
+int TCPSocket::receive(void* data, int size, unsigned timeoutMs, Error& ec)
 {
 	int done = 0;
 	FD_SET set;
@@ -1157,17 +1153,17 @@ int TCPSocket::receive(void* data, int size, unsigned timeoutMs, SocketCompletio
 		if (res == 1)
 		{
 			done += receiveSome((char*)data + done, size - done, ec);
-			if (done == size || !ec.isOk())
+			if (done == size || ec)
 				return done;
 		}
 		else if (res==SOCKET_ERROR)
 		{
-			ec = SocketCompletionError(SocketCompletionError::Code::NoResources, getLastWin32ErrorMsg());
+			ec = Error(Error::Code::Other, getLastWin32ErrorMsg());
 			return done;
 		}
 		else if (res==0) // timeout expired
 		{
-			ec = SocketCompletionError(SocketCompletionError::Code::Timeout, "");
+			ec = Error(Error::Code::Timeout, "");
 			return done;
 		}
 		else

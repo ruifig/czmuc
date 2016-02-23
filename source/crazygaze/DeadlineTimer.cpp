@@ -82,7 +82,7 @@ size_t DeadlineTimer::expiresFromNow(unsigned milliseconds)
 
 	// A call to expireFromNow means cancel the current set, and start a new one.
 	// In code terms, it means:
-	//		- Cancel the current set. Doesn't matter if its sucessful or not
+	//		- Cancel the current set. Doesn't matter if its successful or not
 	//		- Start a new set, since we are setting a new expiry time
 	// So we just create a new shared_ptr to pass to the new TimerQueue::add call, and set our weak_ptr to that one
 	auto handlers = std::make_shared<std::vector<DeadlineTimerHandler>>();
