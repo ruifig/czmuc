@@ -69,16 +69,12 @@ void WindowsConsole::init(int width, int height, int bufferWidth, int bufferHeig
 
 void WindowsConsole::redirectStd(bool redirectStdOut, bool redirectStdIn, bool redirectStdErr, bool redirectCPP)
 {
-	int descriptor;
-	long lStdHandle;
-	FILE *fp;
-
 	if (redirectStdOut)
 	{
 		// redirect unbuffered STDOUT to the console
-		lStdHandle = (long)GetStdHandle(STD_OUTPUT_HANDLE);
-		descriptor = _open_osfhandle(lStdHandle, _O_TEXT);
-		fp = _fdopen( descriptor, "w" );
+		auto h = (intptr_t)GetStdHandle(STD_OUTPUT_HANDLE);
+		auto descriptor = _open_osfhandle(h, _O_TEXT);
+		auto fp = _fdopen( descriptor, "w" );
 		*stdout = *fp;
 		setvbuf( stdout, NULL, _IONBF, 0 );	
 	}
@@ -86,9 +82,9 @@ void WindowsConsole::redirectStd(bool redirectStdOut, bool redirectStdIn, bool r
 	if (redirectStdIn)
 	{
 		// redirect unbuffered STDIN to the console
-		lStdHandle = (long)GetStdHandle(STD_INPUT_HANDLE);
-		descriptor = _open_osfhandle(lStdHandle, _O_TEXT);
-		fp = _fdopen( descriptor, "r" );
+		auto h = (intptr_t)GetStdHandle(STD_INPUT_HANDLE);
+		auto descriptor = _open_osfhandle(h, _O_TEXT);
+		auto fp = _fdopen( descriptor, "r" );
 		*stdin = *fp;
 		setvbuf( stdin, NULL, _IONBF, 0 );	
 	}
@@ -96,9 +92,9 @@ void WindowsConsole::redirectStd(bool redirectStdOut, bool redirectStdIn, bool r
 	if (redirectStdErr)
 	{
 		// redirect unbuffered STDERR to the console
-		lStdHandle = (long)GetStdHandle(STD_ERROR_HANDLE);
-		descriptor = _open_osfhandle(lStdHandle, _O_TEXT);
-		fp = _fdopen( descriptor, "w" );
+		auto h = (intptr_t)GetStdHandle(STD_ERROR_HANDLE);
+		auto descriptor = _open_osfhandle(h, _O_TEXT);
+		auto fp = _fdopen( descriptor, "w" );
 		*stderr = *fp;
 		setvbuf( stderr, NULL, _IONBF, 0 );	
 	}
