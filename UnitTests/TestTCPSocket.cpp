@@ -26,12 +26,12 @@ void testConnection(int count)
 		s.push_back(std::make_unique<TCPSocket>(iocp));
 		c.push_back(std::make_unique<TCPSocket>(iocp));
 		connected.increment();
-		server.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const SocketCompletionError& err, unsigned)
+		server.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const Error& err, unsigned)
 		{
 			auto buf = make_shared_array<int>(1);
 			*buf.get() = i;
 			pendingSend.increment();
-			s[i]->asyncSend(Buffer(buf.get(), 1), [buf, i, &s, &pendingSend](const SocketCompletionError& err, unsigned bytesTransfered)
+			s[i]->asyncSend(Buffer(buf.get(), 1), [buf, i, &s, &pendingSend](const Error& err, unsigned bytesTransfered)
 			{
 				CHECK_EQUAL(sizeof(int), bytesTransfered);
 				s[i]->shutdown();
@@ -46,9 +46,9 @@ void testConnection(int count)
 	{
 		pendingConnects.increment();
 		s->asyncConnect("127.0.0.1", SERVER_PORT,
-			[&](const SocketCompletionError& ec, unsigned bytesTransfered)
+			[&](const Error& ec, unsigned bytesTransfered)
 		{
-			CHECK(ec.isOk());
+			CHECK(!ec);
 			pendingConnects.decrement();
 		});
 	}
@@ -63,12 +63,12 @@ void testConnection(int count)
 		auto buf = make_shared_array<int>(1);
 		activeClientSockets.increment();
 		// #TODO : Use asyncReceive, to read the entire request
-		s->asyncReceive(Buffer(buf.get(), 1), [buf, &s, &activeClientSockets, &msgs](const SocketCompletionError& err, unsigned bytesTransfered)
+		s->asyncReceive(Buffer(buf.get(), 1), [buf, &s, &activeClientSockets, &msgs](const Error& err, unsigned bytesTransfered)
 		{
 			CHECK_EQUAL(sizeof(int), bytesTransfered);
 			msgs[*buf.get()] = true;
 			// Queue another receive, so we can detect socket shutdown
-			s->asyncReceive(Buffer(buf.get(), 1), [buf, &activeClientSockets](const SocketCompletionError& err, unsigned bytesTransfered)
+			s->asyncReceive(Buffer(buf.get(), 1), [buf, &activeClientSockets](const Error& err, unsigned bytesTransfered)
 			{
 				CHECK_EQUAL(0, bytesTransfered);
 				activeClientSockets.decrement();
@@ -121,15 +121,15 @@ TEST(VariousConnectMethods)
 	{
 		pending.increment();
 		TCPSocket serverSide(iocp);
-		server.asyncAccept(serverSide, [&](const SocketCompletionError& ec, unsigned)
+		server.asyncAccept(serverSide, [&](const Error& ec, unsigned)
 		{
-			CHECK(ec.isOk());
+			CHECK(!ec);
 			pending.decrement();
 		});
 
 		TCPSocket s(iocp);
 		auto ec = s.connect("127.0.0.1", SERVER_PORT);
-		CHECK(ec.isOk());
+		CHECK(!ec);
 		pending.wait();
 	}
  
@@ -138,7 +138,7 @@ TEST(VariousConnectMethods)
 		TCPSocket s(iocp);
 		// Test on the wrong port
 		auto ec = s.connect("127.0.0.1", SERVER_PORT + 1);
-		CHECK(ec.isOk() == false);
+		CHECK(ec);
 	}
 
 	// Test synchronous connect without a pending accept
@@ -146,11 +146,11 @@ TEST(VariousConnectMethods)
 	{
 		TCPSocket s(iocp);
 		auto ec = s.connect("127.0.0.1", SERVER_PORT);
-		CHECK(ec.isOk()); // Actual connect succeeds
+		CHECK(!ec); // Actual connect succeeds
 		pending.increment();
 		s.asyncSend("A", 1, [&](auto ec, unsigned bytesTransfered)
 		{
-			CHECK(ec.isOk()); // Send still succeeds, even if the server hasn't accepted the connection yet
+			CHECK(!ec); // Send still succeeds, even if the server hasn't accepted the connection yet
 			pending.decrement();
 		});
 		pending.wait();
@@ -160,9 +160,9 @@ TEST(VariousConnectMethods)
 	{
 		pending.increment();
 		TCPSocket serverSide(iocp);
-		server.asyncAccept(serverSide, [&](const SocketCompletionError& ec, unsigned)
+		server.asyncAccept(serverSide, [&](const Error& ec, unsigned)
 		{
-			CHECK(ec.isOk());
+			CHECK(!ec);
 			pending.decrement();
 		});
 
@@ -170,7 +170,7 @@ TEST(VariousConnectMethods)
 		pending.increment();
 		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec, unsigned)
 		{
-			CHECK(ec.isOk());
+			CHECK(!ec);
 			pending.decrement();
 		});
 		pending.wait();
@@ -182,7 +182,7 @@ TEST(VariousConnectMethods)
 		pending.increment();
 		s.asyncConnect("127.0.0.1", SERVER_PORT+1, [&](auto ec, unsigned)
 		{
-			CHECK(ec.isOk() == false);
+			CHECK(ec);
 			pending.decrement();
 		});
 		pending.wait();
@@ -195,14 +195,14 @@ TEST(VariousConnectMethods)
 		pending.increment();
 		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec, unsigned)
 		{
-			CHECK(ec.isOk()); // Connection should still succeed
+			CHECK(!ec); // Connection should still succeed
 			pending.decrement();
 		});
 
 		pending.increment();
 		s.asyncSend("A", 1, [&](auto ec, unsigned bytesTransfered)
 		{
-			CHECK(ec.isOk()); // Send still succeeds, even if the server hasn't accepted the connection yet
+			CHECK(!ec); // Send still succeeds, even if the server hasn't accepted the connection yet
 			pending.decrement();
 		});
 
@@ -228,41 +228,41 @@ TEST(SynchronousSendReceive)
 	// Synchronous send and receive
 	{
 		TCPSocket serverSide(iocp);
-		server.asyncAccept(serverSide, [&serverSide](const SocketCompletionError& ec, unsigned bytesTransfered)
+		server.asyncAccept(serverSide, [&serverSide](const Error& ec, unsigned bytesTransfered)
 		{
-			CHECK(ec.isOk());
-			SocketCompletionError e;
+			CHECK(!ec);
+			Error e;
 			auto b = std::make_shared<char>('A'); // shared_ptr, since we need to keep it alive for the asyncSend
 			CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
-			CHECK(e.isOk());
+			CHECK(!e);
 			(*b)++;
 			CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
-			CHECK(e.isOk());
+			CHECK(!e);
 
 			// Mix with an asyncSend, to check if everything still works
 			(*b)++;
 			serverSide.asyncSend(b.get(), 1, [&serverSide, b](auto ec, auto bytesTransfered)
 			{
-				CHECK(ec.isOk());
+				CHECK(!ec);
 				CHECK_EQUAL(1, bytesTransfered);
 				// another synchronous send to mix
 				(*b)++;
-				SocketCompletionError e;
+				Error e;
 				CHECK_EQUAL(1, serverSide.send(b.get(), 1, 0xFFFFFFFF, e));
-				CHECK(e.isOk());
+				CHECK(!e);
 			});
 		});
 
 		TCPSocket s(iocp);
 		auto ec = s.connect("127.0.0.1", SERVER_PORT);
-		CHECK(ec.isOk());
+		CHECK(!ec);
 
 		char b[4];
 		pending.increment();
 		// Receive with a mix of async and synchronous
 		s.asyncReceive(Buffer(b, 1), [&](auto ec, auto bytesTransfered)
 		{
-			CHECK(ec.isOk());
+			CHECK(!ec);
 			CHECK_EQUAL(1, bytesTransfered);
 			pending.decrement();
 		});
@@ -271,9 +271,9 @@ TEST(SynchronousSendReceive)
 		// data with another socket being served by the same CompletionPort, and it would block forever, since handlers
 		// won't be executed for the other socket
 		pending.wait();
-		SocketCompletionError e;
+		Error e;
 		CHECK_EQUAL(3, s.receive(&b[1], 3, 0xFFFFFFFF, e));
-		CHECK(e.isOk());
+		CHECK(!e);
 		CHECK_EQUAL(int('A'), (int)b[0]);
 		CHECK_EQUAL(int('B'), (int)b[1]);
 		CHECK_EQUAL(int('C'), (int)b[2]);
@@ -323,27 +323,27 @@ TEST(SynchronousAcceptAndConnect)
 		auto t = timer.GetTimeInMs();
 		auto ec = server.accept(s, 0); // no blocking
 		CHECK_CLOSE(0, timer.GetTimeInMs() - t, 5);
-		CHECK(ec.code==SocketCompletionError::Code::Timeout);
+		CHECK(ec.code==Error::Code::Timeout);
 
 		t = timer.GetTimeInMs();
 		ec = server.accept(s, acceptTimeout); // with timeout
 		CHECK_CLOSE(acceptTimeout, timer.GetTimeInMs() - t, 5);
-		CHECK(ec.code==SocketCompletionError::Code::Timeout);
+		CHECK(ec.code==Error::Code::Timeout);
 
 		checkpoint.notify();
 		// And try one with success
 		ec = server.accept(s, 0xFFFFFFFF);
 
 		CZ_LOG(logDefault, Log, "Server: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
-		CHECK(ec.isOk());
+		CHECK(!ec);
 
 		char buf[5];
 		CHECK_EQUAL(sizeof(buf), s.receive(buf, sizeof(buf), 0xFFFFFFFF, ec));
-		CHECK(ec.isOk());
+		CHECK(!ec);
 		CHECK_EQUAL("ABCD", buf);
 
 		CHECK_EQUAL(sizeof(buf), s.send(buf, sizeof(buf), 0xFFFFFFFF, ec));
-		CHECK(ec.isOk());
+		CHECK(!ec);
 	});
 
 	//
@@ -351,20 +351,20 @@ TEST(SynchronousAcceptAndConnect)
 	TCPSocket s(iocp);
 
 	// Try to connect to the wrong port
-	CHECK(!s.connect("127.0.0.1", SERVER_PORT+1).isOk());
+	CHECK(s.connect("127.0.0.1", SERVER_PORT + 1));
 
 	// Try a successful accept
 	checkpoint.wait();
-	CHECK(s.connect("127.0.0.1", SERVER_PORT).isOk());
+	CHECK(!s.connect("127.0.0.1", SERVER_PORT));
 	CZ_LOG(logDefault, Log, "Client: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
 
-	SocketCompletionError ec;
+	Error ec;
 	CHECK_EQUAL(5, s.send("ABCD", 5, 0xFFFFFFFF, ec));
-	CHECK(ec.isOk());
+	CHECK(!ec);
 	char buf[5];
 	CHECK_EQUAL(5, s.receive(buf, 5, 0xFFFFFFFF, ec));
 	CHECK_EQUAL("ABCD", buf);
-	CHECK(ec.isOk());
+	CHECK(!ec);
 	s.shutdown();
 
 	iocp.stop();
@@ -411,19 +411,19 @@ TEST(CompoundReceive)
 
 	TCPSocket serverSide(iocp);
 	const int numSends = 5;
-	serverSocket.asyncAccept(serverSide, [&](auto err, auto bytesTransfered)
+	serverSocket.asyncAccept(serverSide, [&](auto ec, auto bytesTransfered)
 	{
-		CHECK(err.isOk());
+		CHECK(!ec);
 		setupSendTimer(numSends, sendTimer, serverSide);
 	});
 
 
 	TCPSocket clientSide(iocp);
-	CHECK(clientSide.connect("127.0.0.1", 28000).isOk());
+	CHECK(!clientSide.connect("127.0.0.1", 28000));
 
 	Semaphore done;
 	char buf[numSends * 2];
-	clientSide.asyncReceive(Buffer(buf), [&](auto err, auto bytesTransfered)
+	clientSide.asyncReceive(Buffer(buf), [&](auto ec, auto bytesTransfered)
 	{
 		CHECK_EQUAL(sizeof(buf), bytesTransfered);
 		done.notify();
@@ -450,9 +450,9 @@ public:
 	{
 		m_s = std::make_unique<TCPSocket>(m_iocp);
 		m_serverSocket = std::make_unique<TCPServerSocket>(m_iocp, 28000);
-		m_serverSocket->asyncAccept(*m_s, [this](const SocketCompletionError& err, unsigned)
+		m_serverSocket->asyncAccept(*m_s, [this](const Error& ec, unsigned)
 		{
-			CZ_ASSERT(err.isOk());
+			CZ_ASSERT(!ec);
 			start();
 		});
 
@@ -510,10 +510,10 @@ private:
 	{
 		m_pendingOps.increment();
 		auto buf = make_shared_array<char>(size);
-		m_s->asyncReceiveSome(Buffer(buf.get(), size), [this,size, buf](const SocketCompletionError& err, unsigned bytesTransfered) mutable
+		m_s->asyncReceiveSome(Buffer(buf.get(), size), [this,size, buf](const Error& ec, unsigned bytesTransfered) mutable
 		{
-			CZ_LOG(logTestsVerbose, Log, "Server receive: %s, %d", err.isOk() ? "true" : "false", bytesTransfered);
-			if (err.isOk())
+			CZ_LOG(logTestsVerbose, Log, "Server receive: %s, %d", ec.msg(), bytesTransfered);
+			if (!ec)
 			{
 				CZ_ASSERT(bytesTransfered);
 				m_received += bytesTransfered;
@@ -529,7 +529,7 @@ private:
 			}
 			else
 			{
-				CZ_LOG(logTestsVerbose, Warning, "Receive failed with '%s'", err.msg.c_str());
+				CZ_LOG(logTestsVerbose, Warning, "Receive failed with '%s'", ec.msg());
 			}
 			m_pendingOps.decrement();
 		});
@@ -600,10 +600,10 @@ TEST(TestThroughput)
 	std::atomic<uint64_t> totalSentQueued = 0;
 	while(count--)
 	{
-		client.asyncSend(buf, [&totalSent, &totalSentQueued, &sendDone](const SocketCompletionError& err, unsigned bytesTransfered)
+		client.asyncSend(buf, [&totalSent, &totalSentQueued, &sendDone](const Error& ec, unsigned bytesTransfered)
 		{
-			CZ_LOG(logTestsVerbose, Log, "Client send: %s, %d", err.isOk() ? "true" : "false", bytesTransfered);
-			if (err.isOk())
+			CZ_LOG(logTestsVerbose, Log, "Client send: %s, %d", ec.msg(), bytesTransfered);
+			if (!ec)
 			{
 				totalSent += bytesTransfered;
 				totalSentQueued -= bytesTransfered;
@@ -611,7 +611,7 @@ TEST(TestThroughput)
 			}
 			else
 			{
-				CZ_LOG(logTestsVerbose, Log, "Send failed with '%s'", err.msg.c_str());
+				CZ_LOG(logTestsVerbose, Log, "Send failed with '%s'", ec.msg());
 			}
 
 		});
@@ -629,10 +629,10 @@ TEST(TestThroughput)
 		sendDone.wait();
 		if (totalSent >= (uint64_t)1000*1000*MBCOUNT)
 			break;
-		client.asyncSend(buf, [&totalSent, &totalSentQueued, &sendDone](const SocketCompletionError& err, unsigned bytesTransfered)
+		client.asyncSend(buf, [&totalSent, &totalSentQueued, &sendDone](const Error& ec, unsigned bytesTransfered)
 		{
-			CZ_LOG(logTestsVerbose, Log, "Client send: %s, %d", err.isOk() ? "true" : "false", bytesTransfered);
-			if (err.isOk())
+			CZ_LOG(logTestsVerbose, Log, "Client send: %s, %d", ec.msg(), bytesTransfered);
+			if (!ec)
 			{
 				totalSent += bytesTransfered;
 				totalSentQueued -= bytesTransfered;
@@ -640,7 +640,7 @@ TEST(TestThroughput)
 			}
 			else
 			{
-				CZ_LOG(logTestsVerbose, Log, "Send failed with '%s'", err.msg.c_str());
+				CZ_LOG(logTestsVerbose, Log, "Send failed with '%s'", ec.msg());
 			}
 		});
 		totalSentQueued += buf.size();
@@ -674,7 +674,7 @@ private:
 	{
 		m_pending.increment();
 		m_socket->asyncReceiveUntil(m_buf, '\n',
-			[this](const SocketCompletionError& err, unsigned bytesTransfered)
+			[this](const Error& err, unsigned bytesTransfered)
 			{
 				SCOPE_EXIT{ m_pending.decrement(); };
 				if (bytesTransfered==0)
@@ -692,9 +692,9 @@ private:
 				CZ_LOG(logTests, Log, "EchoServerConnection:Received: %d bytes, %s,", bytesTransfered, msg.c_str());
 				CZ_LOG(logTests, Log, "EchoServerConnection: Buf fillcount: %d bytes", m_buf.getUsedSize());
 				setupRecv(); // This needs to be done AFTER reading our data from the buffer
-				m_socket->asyncSend(msg.c_str(), static_cast<int>(msg.size()), [this](auto err, auto bytesTransfered)
+				m_socket->asyncSend(msg.c_str(), static_cast<int>(msg.size()), [this](auto ec, auto bytesTransfered)
 				{
-					CZ_ASSERT(err.isOk() && bytesTransfered!=0);
+					CZ_ASSERT(!ec && bytesTransfered!=0);
 					CZ_LOG(logTests, Log, "EchoServerConnection: Sent %d bytes", bytesTransfered);
 				});
 			});
@@ -730,10 +730,10 @@ public:
 		auto socket = std::make_shared<TCPSocket>(m_ths.iocp);
 		m_pending.increment();
 		m_serverSocket->asyncAccept(*socket,
-			[this, socket=socket](const SocketCompletionError& err, unsigned bytesTransfered)
+			[this, socket=socket](const Error& ec, unsigned bytesTransfered)
 		{
 			SCOPE_EXIT{ m_pending.decrement(); };
-			if (!err.isOk())
+			if (ec)
 				return;
 			m_inPrepare++;
 			CZ_LOG(logTests, Log, "Client from %s connected", socket->getRemoteAddress().toString(true));
@@ -782,10 +782,10 @@ struct ClientConnection
 		CZ_LOG(logTests, Log, formatString("Sending %s", str));
 		socket->asyncSend(
 			str, static_cast<int>(strlen(str)),
-			[this](const SocketCompletionError& err, unsigned bytesTransfered)
+			[this](const Error& ec, unsigned bytesTransfered)
 
 		{
-			if (!err.isOk() || bytesTransfered==0)
+			if (ec || bytesTransfered==0)
 			{
 				CZ_LOG(logTests, Warning, "ClientConnection: Failed to send.");
 			}
@@ -801,7 +801,7 @@ struct ClientConnection
 	{
 		pending.increment();
 		socket->asyncReceiveUntil(recvBuf, '\n',
-			[this](const SocketCompletionError& err, unsigned bytesTranfered)
+			[this](const Error& ec, unsigned bytesTranfered)
 		{
 			SCOPE_EXIT{ pending.decrement(); };
 			if (bytesTranfered == 0)
@@ -831,7 +831,7 @@ TEST(Echo)
 	{
 		clients.push_back(std::make_unique<ClientConnection>(ths.iocp));
 		auto c = clients.back().get();
-		CHECK(c->socket->connect("127.0.0.1", SERVER_PORT).isOk());
+		CHECK(!c->socket->connect("127.0.0.1", SERVER_PORT));
 		c->num = i;
 		c->prepareRecv();
 		c->send();
@@ -861,9 +861,9 @@ struct MultipleUntilServer
 		clientSocket = std::make_unique<TCPSocket>(ths.iocp);
 		expected = multipleUntilExpected;
 		expectedRemaining = multipleUntilLeftovers;
-		serverSocket->asyncAccept(*clientSocket, [this](const SocketCompletionError& err, unsigned bytesTransfered)
+		serverSocket->asyncAccept(*clientSocket, [this](const Error& ec, unsigned bytesTransfered)
 		{
-			CHECK(err.isOk());
+			CHECK(!ec);
 			prepareRecv();
 		});
 	}
@@ -880,10 +880,10 @@ struct MultipleUntilServer
 	{
 		pending.increment();
 		clientSocket->asyncReceiveUntil(
-			buf, '\n', [this](const SocketCompletionError& err, unsigned bytesTransfered)
+			buf, '\n', [this](const Error& ec, unsigned bytesTransfered)
 		{
 			SCOPE_EXIT{ pending.decrement(); };
-			CHECK(err.isOk());
+			CHECK(!ec);
 			std::string msg(buf.begin(), buf.begin() + bytesTransfered-1);
 			buf.skip(bytesTransfered);
 			CZ_LOG(logTestsVerbose, Log, "MultipleUntilServer:Recv: %d, %s", bytesTransfered, msg.c_str());
@@ -918,13 +918,13 @@ TEST(MultipleUntil)
 	ths.start(1);
 
 	TCPSocket s(ths.iocp);
-	CHECK(s.connect("127.0.0.1", SERVER_PORT).isOk());
+	CHECK(!s.connect("127.0.0.1", SERVER_PORT));
 
 	ZeroSemaphore pending;
 	auto sendString = [&](TCPSocket& socket, std::string str)
 	{
 		pending.increment();
-		socket.asyncSend(str.c_str(), (int)str.size(), [&, len=(unsigned)str.size()](const SocketCompletionError& err, unsigned bytesTransfered)
+		socket.asyncSend(str.c_str(), (int)str.size(), [&, len=(unsigned)str.size()](const Error& ec, unsigned bytesTransfered)
 		{
 			CHECK_EQUAL(len, bytesTransfered);
 			pending.decrement();

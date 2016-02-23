@@ -30,9 +30,7 @@ namespace details
 		WSAInstance& operator=(const WSAInstance&) = delete;
 	};
 
-	//! Simple SOCKET wrapper, to have the socket closed even if an exception occurs
-	//! when
-	// constructing a TCPSocketServer or TCPSocket.
+	//! Simple SOCKET wrapper, to have the socket closed
 	class SocketWrapper
 	{
 	public:
@@ -51,49 +49,63 @@ namespace details
 	};
 }
 
-
-
-enum class SocketOperationCode
-{
-	None,
-	NotConnected,
-	Disconnected
-};
-
-
-// #TODO : Add a bool operator to this, so we can check for errors like with boost. e.g: "if (ec) handleerror();"
-struct SocketCompletionError
+struct Error
 {
 	enum class Code
 	{
-		None,
-		NotConnected, // The socket is not connected.
-		Disconnected, // The socket was connected at some point, but it disconnected
-		NoResources, // Lack of OS resources caused the operation to fail. (e.g: Sending data too fast)
-		Timeout
+		Success,
+		Timeout,
+		Other
 	};
 
-	Code code;
-	std::string msg; // Provides extra information (OS dependent), if there is an error
-
-	SocketCompletionError()
-		: code(Code::None) { }
-
-	SocketCompletionError(Code code) :
-		code(code) { }
-
-	SocketCompletionError(Code code, std::string msg) :
-		code(code), msg(std::move(msg)) { }
-
-	bool isOk() const
+	Error(Code c=Code::Success) : code(c)
 	{
-		return code == Code::None;
 	}
 
+	Error(Code c, const char* msg)
+		: code(c)
+	{
+		setMsg(msg);
+	}
+
+	const char* msg() const
+	{
+		if (optionalMsg)
+			return optionalMsg->c_str();
+		switch(code)
+		{
+			case Code::Success: return "Success";
+			case Code::Timeout: return "Timeout";
+			case Code::Other: return "Other";
+			default: return "Unknown";
+		}
+	}
+
+	void setMsg(const char* msg)
+	{
+		if (!optionalMsg)
+			optionalMsg = std::make_shared<std::string>(msg);
+		else
+			*optionalMsg = msg;
+	}
+
+	//! Checks if there is an error.
+	// Note that this means failure, not success, so it's shorter to type for error handling. E.g:
+	//
+	// if (ec) handleError(...);
+	//
+	operator bool() const
+	{
+		return code != Code::Success;
+	}
+
+	Code code;
+	std::shared_ptr<std::string> optionalMsg;
 };
 
+
 class TCPSocket;
-using SocketCompletionHandler = std::function<void(const SocketCompletionError& err, unsigned)>;
+using SocketCompletionHandler = std::function<void(const Error& err, unsigned)>;
 using SocketCompletionUntilHandler = std::function<std::pair<RingBuffer::Iterator,bool>(RingBuffer::Iterator begin, RingBuffer::Iterator end)>;
 
 class TCPServerSocket
@@ -104,7 +116,7 @@ class TCPServerSocket
 
 
 	//! Synchronous accept
-	SocketCompletionError accept(TCPSocket& socket, unsigned timeoutMs);
+	Error accept(TCPSocket& socket, unsigned timeoutMs);
 	void asyncAccept(TCPSocket& socket, SocketCompletionHandler handler);
 	void shutdown();
 
@@ -130,7 +142,7 @@ class TCPSocket
 	virtual ~TCPSocket();
 
 	//! Synchronous connect
-	SocketCompletionError connect(const std::string& ip, int port);
+	Error connect(const std::string& ip, int port);
 
 	//! Asynchronous connect
 	void asyncConnect(const std::string& ip, int port, SocketCompletionHandler handler);
@@ -140,7 +152,7 @@ class TCPSocket
 	// 
 	// \return
 	//	 The number of bytes sent. Not that it might be less than than the requested number of bytes.
-	int sendSome(const void* data, int size, SocketCompletionError& ec);
+	int sendSome(const void* data, int size, Error& ec);
 
 	//! Performs a synchronous send
 	//
@@ -166,13 +178,13 @@ class TCPSocket
 	//
 	// \return
 	//	The number of bytes sent. This can be lower than the requested number of bytes, if a timeout occurred.
-	int send(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec);
+	int send(void* data, int size, unsigned timeoutMs, Error& ec);
 
 	//! Performs a synchronous receive
 	//
 	// \return
 	//	The number of bytes received. This might be lower than the number of bytes requested
-	int receiveSome(void* data, int size, SocketCompletionError& ec);
+	int receiveSome(void* data, int size, Error& ec);
 
 	//! Performs a synchronous receive
 	//
@@ -190,7 +202,7 @@ class TCPSocket
 	// \return
 	//	The number of bytes received. This can be lower than the requested number of bytes, if a timeout or an error
 	//	occurred.
-	int receive(void* data, int size, unsigned timeoutMs, SocketCompletionError& ec);
+	int receive(void* data, int size, unsigned timeoutMs, Error& ec);
 
 	//! Sends the specified buffer in its entirety.
 	// The supplied buffer must remain valid until the handler is executed.
@@ -220,7 +232,7 @@ class TCPSocket
 	void asyncReceiveSome(Buffer buf, SocketCompletionHandler handler);
 
 	template<typename HANDLER>
-	void processAsyncReceive(Buffer buf, HANDLER handler, const SocketCompletionError& err, unsigned bytesTransfered,
+	void processAsyncReceive(Buffer buf, HANDLER handler, const Error& err, unsigned bytesTransfered,
 		unsigned done, unsigned expected)
 	{
 		if (bytesTransfered == 0)
@@ -303,8 +315,8 @@ class TCPSocket
 	friend struct AsyncSendOperation;
 	friend class TCPServerSocket;
 	void init(SOCKET s, CompletionPort& iocp);
-	SocketCompletionError fillLocalAddr();
-	SocketCompletionError fillRemoteAddr();
+	Error fillLocalAddr();
+	Error fillRemoteAddr();
 	void setBlocking(bool blocking);
 	void execute(struct AsyncConnectOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey);
