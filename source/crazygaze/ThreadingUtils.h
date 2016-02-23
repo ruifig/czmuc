@@ -120,5 +120,24 @@ namespace cz
 			return f(m_t);
 		}
 	};
-	
+
+
+	/*!
+	* Allows the easy creation of a shared instance that work similar to a singleton, but will get destroyed when
+	* there are no more strong references to it.
+	*/
+	template<typename T>
+	std::shared_ptr<T> getSharedData()
+	{
+		static std::mutex mtx;
+		static std::weak_ptr<T> ptr;
+		std::lock_guard<std::mutex> lk(mtx);
+		auto p = ptr.lock();
+		if (p)
+			return p;
+		p = std::make_shared<T>();
+		ptr = p;
+		return p;
+	}
+
 }  // namespace cz

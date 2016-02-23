@@ -43,17 +43,7 @@ struct DeadlineTimerOperation : public CompletionPortOperation
 
 std::shared_ptr<TimerQueue> DeadlineTimer::getDefaultQueue()
 {
-	static std::mutex mtx;
-	static std::weak_ptr<TimerQueue> ptr;
-	std::lock_guard<std::mutex> lk(mtx);
-	auto p = ptr.lock();
-	if (p)
-		return std::move(p);
-
-	p = std::make_shared<TimerQueue>();
-	ptr = p;
-	return std::move(p);
-
+	return getSharedData<TimerQueue>();
 }
 
 DeadlineTimer::DeadlineTimer(CompletionPort& iocp, unsigned milliseconds) : m_iocp(iocp)
