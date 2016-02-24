@@ -636,7 +636,7 @@ Error TCPSocket::connect(const std::string& ip, int port)
 	if (res == SOCKET_ERROR)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
-		CZ_LOG(logDefault, Warning, "Could not connect. Error '%s'", errMsg);
+		CZ_LOG(logDefault, Warning, "Could not connect: %s", errMsg);
 		return Error(Error::Code::Other, errMsg);
 	}
 

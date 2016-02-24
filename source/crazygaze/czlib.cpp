@@ -92,6 +92,16 @@ const char* getLastWin32ErrorMsg(int err)
 		errString, // this is WHERE we want FormatMessage
 		CZ_TEMPORARY_STRING_MAX_SIZE,
 		0 );               // 0, since getting message from system tables
+
+
+	// FormatMessage leaves a new line (\r\n) at the end, so remove if that's the case.
+	int i = strlen(errString);
+	while (errString[i] < ' ')
+	{
+		errString[i] = 0;
+		i--;
+	}
+
 	return errString;
 }
 #endif
