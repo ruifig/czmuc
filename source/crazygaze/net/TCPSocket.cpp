@@ -196,7 +196,7 @@ static bool movepop(Q& q, T& dst)
 
 struct AsyncAcceptOperation : public CompletionPortOperation
 {
-	AsyncAcceptOperation(TCPServerSocket* owner) : owner(owner) { }
+	AsyncAcceptOperation(TCPAcceptor* owner) : owner(owner) { }
 	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) override
 	{
 		owner->execute(this, bytesTransfered, completionKey);
@@ -206,7 +206,7 @@ struct AsyncAcceptOperation : public CompletionPortOperation
 	{
 		AddrLen = sizeof(sockaddr_in) + 16
 	};
-	TCPServerSocket* owner;
+	TCPAcceptor* owner;
 	SocketCompletionHandler handler;
 	char outputBuffer[2 * AddrLen];
 	TCPSocket* socket = nullptr;
@@ -244,14 +244,14 @@ struct AsyncSendOperation : public CompletionPortOperation
 };
 //////////////////////////////////////////////////////////////////////////
 //
-// TCPServerSocket
+// TCPAcceptor
 //
 //////////////////////////////////////////////////////////////////////////
 
-TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
+TCPAcceptor::TCPAcceptor(CompletionPort& iocp, int listenPort)
 	: m_iocp(iocp)
 {
-	LOG("TCPServerSocket %p: Enter\n", this);
+	LOG("TCPAcceptor %p: Enter\n", this);
 	m_listenSocket = details::SocketWrapper(
 		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
 	if (!m_listenSocket.isValid())
@@ -305,18 +305,18 @@ TCPServerSocket::TCPServerSocket(CompletionPort& iocp, int listenPort)
 
 	m_state = details::SocketState::Connected; // #TODO : Change this to state Listen
 	debugData.serverSocketCreated(this);
-	LOG("TCPServerSocket %p: Exit\n", this);
+	LOG("TCPAcceptor %p: Exit\n", this);
 }
 
-TCPServerSocket::~TCPServerSocket()
+TCPAcceptor::~TCPAcceptor()
 {
-	LOG("~TCPServerSocket %p: Enter\n", this);
+	LOG("~TCPAcceptor %p: Enter\n", this);
 	shutdown();
 	debugData.serverSocketDestroyed(this);
-	LOG("~TCPServerSocket %p: Exit\n", this);
+	LOG("~TCPAcceptor %p: Exit\n", this);
 }
 
-void TCPServerSocket::shutdown()
+void TCPAcceptor::shutdown()
 {
 
 	if (m_state == details::SocketState::Disconnected)
@@ -348,7 +348,7 @@ void TCPServerSocket::shutdown()
 	m_state = details::SocketState::Disconnected;
 }
 
-Error TCPServerSocket::accept(TCPSocket& socket, unsigned timeoutMs)
+Error TCPAcceptor::accept(TCPSocket& socket, unsigned timeoutMs)
 {
 	FD_SET set;
 	TIMEVAL t;
@@ -380,7 +380,7 @@ Error TCPServerSocket::accept(TCPSocket& socket, unsigned timeoutMs)
 	}
 }
 
-void TCPServerSocket::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler)
+void TCPAcceptor::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler)
 {
 	DWORD dwBytes;
 
@@ -409,7 +409,7 @@ void TCPServerSocket::asyncAccept(TCPSocket& socket, SocketCompletionHandler han
 	m_iocp.add(std::move(op));
 }
 
-void TCPServerSocket::execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey)
+void TCPAcceptor::execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey)
 {
 	if (completionKey!=0)
 	{

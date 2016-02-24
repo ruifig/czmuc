@@ -22,7 +22,7 @@ namespace net
 {
 
 class TCPSocket;
-class TCPServerSocket;
+class TCPAcceptor;
 struct TCPSocketData;
 
 //
@@ -82,7 +82,7 @@ class DebugData
 	};
 
 	Set<CompletionPortOperation*> operations;
-	Set<TCPServerSocket*> serverSockets;
+	Set<TCPAcceptor*> serverSockets;
 	Set<TCPSocket*> sockets;
 
 	struct ReceivedData
@@ -95,8 +95,8 @@ class DebugData
 	~DebugData();
 	void operationCreated(CompletionPortOperation* op);
 	void operationDestroyed(CompletionPortOperation* op);
-	void serverSocketCreated(TCPServerSocket* s);
-	void serverSocketDestroyed(TCPServerSocket* s);
+	void serverSocketCreated(TCPAcceptor* s);
+	void serverSocketDestroyed(TCPAcceptor* s);
 	void socketCreated(TCPSocket* s);
 	void socketDestroyed(TCPSocket* s);
 	void receivedData(TCPSocketData* owner, const char* data, int size);
@@ -107,8 +107,8 @@ class DebugData
   public:
 	void operationCreated(CompletionPortOperation* op) {}
 	void operationDestroyed(CompletionPortOperation* op) {}
-	void serverSocketCreated(TCPServerSocket* s) {}
-	void serverSocketDestroyed(TCPServerSocket* s) {}
+	void serverSocketCreated(TCPAcceptor* s) {}
+	void serverSocketDestroyed(TCPAcceptor* s) {}
 	void socketCreated(TCPSocket* s) {}
 	void socketDestroyed(TCPSocket* s) {}
 	void receivedData(TCPSocketData* owner, const char* data, int size) {}

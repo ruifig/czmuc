@@ -116,11 +116,11 @@ class TCPSocket;
 using SocketCompletionHandler = std::function<void(const Error& err, unsigned)>;
 using SocketCompletionUntilHandler = std::function<std::pair<RingBuffer::Iterator,bool>(RingBuffer::Iterator begin, RingBuffer::Iterator end)>;
 
-class TCPServerSocket
+class TCPAcceptor
 {
   public:
-	TCPServerSocket(CompletionPort& iocp, int listenPort);
-	~TCPServerSocket();
+	TCPAcceptor(CompletionPort& iocp, int listenPort);
+	~TCPAcceptor();
 
 
 	//! Synchronous accept
@@ -325,7 +325,7 @@ class TCPSocket
 	friend struct AsyncConnectOperation;
 	friend struct AsyncReceiveOperation;
 	friend struct AsyncSendOperation;
-	friend class TCPServerSocket;
+	friend class TCPAcceptor;
 	void init(SOCKET s, CompletionPort& iocp);
 	Error fillLocalAddr();
 	Error fillRemoteAddr();

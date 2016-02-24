@@ -43,13 +43,13 @@ void DebugData::operationDestroyed(CompletionPortOperation* op)
 	operations.remove(op);
 }
 
-void DebugData::serverSocketCreated(TCPServerSocket* s)
+void DebugData::serverSocketCreated(TCPAcceptor* s)
 {
 	++activeServerSockets;
 	serverSockets.add(s);
 }
 
-void DebugData::serverSocketDestroyed(TCPServerSocket* s)
+void DebugData::serverSocketDestroyed(TCPAcceptor* s)
 {
 	--activeServerSockets;
 	serverSockets.remove(s);
