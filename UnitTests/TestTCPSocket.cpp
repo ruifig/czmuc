@@ -27,7 +27,7 @@ void testConnection(int count)
 		s.push_back(std::make_unique<TCPSocket>(iocp));
 		c.push_back(std::make_unique<TCPSocket>(iocp));
 		connected.increment();
-		acceptor.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const Error& err, unsigned)
+		acceptor.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const Error& err)
 		{
 			auto buf = make_shared_array<int>(1);
 			*buf.get() = i;
@@ -40,7 +40,13 @@ void testConnection(int count)
 			});
 			connected.decrement();
 		});
+
+		acceptor.shutdown();
+		Sleep(1000);
+		Sleep(1000);
 	}
+
+	printf("Derp derp\n");
 
 	ZeroSemaphore pendingConnects;
 	for (auto&& s : c)
@@ -123,7 +129,7 @@ TEST(VariousConnectMethods)
 	{
 		pending.increment();
 		TCPSocket serverSide(iocp);
-		acceptor.asyncAccept(serverSide, [&](const Error& ec, unsigned)
+		acceptor.asyncAccept(serverSide, [&](const Error& ec)
 		{
 			CHECK(!ec);
 			pending.decrement();
@@ -162,7 +168,7 @@ TEST(VariousConnectMethods)
 	{
 		pending.increment();
 		TCPSocket serverSide(iocp);
-		acceptor.asyncAccept(serverSide, [&](const Error& ec, unsigned)
+		acceptor.asyncAccept(serverSide, [&](const Error& ec)
 		{
 			CHECK(!ec);
 			pending.decrement();
@@ -231,7 +237,7 @@ TEST(SynchronousSendReceive)
 	// Synchronous send and receive
 	{
 		TCPSocket serverSide(iocp);
-		acceptor.asyncAccept(serverSide, [&serverSide](const Error& ec, unsigned bytesTransfered)
+		acceptor.asyncAccept(serverSide, [&serverSide](const Error& ec)
 		{
 			CHECK(!ec);
 			Error e;
@@ -417,7 +423,7 @@ TEST(CompoundReceive)
 
 	TCPSocket serverSide(iocp);
 	const int numSends = 5;
-	acceptor.asyncAccept(serverSide, [&](auto ec, auto bytesTransfered)
+	acceptor.asyncAccept(serverSide, [&](auto ec)
 	{
 		CHECK(!ec);
 		setupSendTimer(numSends, sendTimer, serverSide);
@@ -457,7 +463,7 @@ public:
 		m_s = std::make_unique<TCPSocket>(m_iocp);
 		m_acceptor = std::make_unique<TCPAcceptor>(m_iocp);
 		m_acceptor->listen(SERVER_PORT);
-		m_acceptor->asyncAccept(*m_s, [this](const Error& ec, unsigned)
+		m_acceptor->asyncAccept(*m_s, [this](const Error& ec)
 		{
 			CZ_ASSERT(!ec);
 			start();
@@ -737,8 +743,7 @@ public:
 	{
 		auto socket = std::make_shared<TCPSocket>(m_ths.iocp);
 		m_pending.increment();
-		m_acceptor->asyncAccept(*socket,
-			[this, socket=socket](const Error& ec, unsigned bytesTransfered)
+		m_acceptor->asyncAccept(*socket, [this, socket=socket](const Error& ec)
 		{
 			SCOPE_EXIT{ m_pending.decrement(); };
 			if (ec)
@@ -870,7 +875,7 @@ struct MultipleUntilServer
 		clientSocket = std::make_unique<TCPSocket>(ths.iocp);
 		expected = multipleUntilExpected;
 		expectedRemaining = multipleUntilLeftovers;
-		acceptor->asyncAccept(*clientSocket, [this](const Error& ec, unsigned bytesTransfered)
+		acceptor->asyncAccept(*clientSocket, [this](const Error& ec)
 		{
 			CHECK(!ec);
 			prepareRecv();

@@ -207,7 +207,7 @@ struct AsyncAcceptOperation : public CompletionPortOperation
 		AddrLen = sizeof(sockaddr_in) + 16
 	};
 	TCPAcceptor* owner;
-	SocketCompletionHandler handler;
+	AcceptHandler handler;
 	char outputBuffer[2 * AddrLen];
 	TCPSocket* socket = nullptr;
 };
@@ -386,7 +386,7 @@ Error TCPAcceptor::accept(TCPSocket& socket, unsigned timeoutMs)
 	}
 }
 
-void TCPAcceptor::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler)
+void TCPAcceptor::asyncAccept(TCPSocket& socket, AcceptHandler handler)
 {
 	DWORD dwBytes;
 
@@ -398,7 +398,7 @@ void TCPAcceptor::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler
 		m_listenSocket.get(), // sListenSocket
 		socket.m_socket.get(), // sAcceptSocket
 		&op->outputBuffer, // lpOutputBuffer
-		0, // dwReceiveDataLength
+		0, // dwReceiveDataLength : 0 means the outputBuffer will only contain the local and remote address, and not receive any data
 		AsyncAcceptOperation::AddrLen, // dwLocalAddressLength
 		AsyncAcceptOperation::AddrLen, // dwRemoteAddressLength
 		&dwBytes /*Unused for asynchronous AcceptEx*/,
@@ -417,11 +417,8 @@ void TCPAcceptor::asyncAccept(TCPSocket& socket, SocketCompletionHandler handler
 
 void TCPAcceptor::execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey)
 {
-	if (completionKey!=0)
-	{
-		// Implement this
-		CZ_UNEXPECTED();
-	}
+	CZ_ASSERT(bytesTransfered == 0);
+	CZ_ASSERT(completionKey == 0);
 
 	sockaddr* localSockAddr = NULL;
 	int localSockAddrSize;
@@ -433,7 +430,7 @@ void TCPAcceptor::execute(struct AsyncAcceptOperation* op, unsigned bytesTransfe
 	op->socket->m_localAddr = SocketAddress(*localSockAddr);
 	op->socket->m_remoteAddr = SocketAddress(*remoteSockAddr);
 	op->socket->m_state = details::SocketState::Connected;
-	op->handler(Error(), bytesTransfered);
+	op->handler(Error());
 }
 
 //////////////////////////////////////////////////////////////////////////
