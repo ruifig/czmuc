@@ -85,13 +85,13 @@ private:
 	CompletionPort* m_iocp;
 	std::unique_ptr<CompletionPort> m_owniocp; // This is only set if we created the completion port on our own
 
-	std::unique_ptr<TCPServerSocket> m_listenSocket;
+	std::unique_ptr<TCPAcceptor> m_listenSocket;
 	TCPServerClientInfoFactory m_clientInfoFactory;
 	friend TCPServerClientInfo;
 	std::unordered_map<TCPServerClientInfo*, std::unique_ptr<TCPServerClientInfo>> m_clients;
 	void init(int serverPort, uint32_t numPendingReads, uint32_t pendingReadSize);
 
-	// TCPServerSocket callbacks
+	// TCPAcceptor callbacks
 	void onAccept(std::unique_ptr<TCPSocket> socket);
 
 };

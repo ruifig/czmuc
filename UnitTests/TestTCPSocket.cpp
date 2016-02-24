@@ -16,7 +16,7 @@ void testConnection(int count)
 		iocp.run();
 	});
 
-	TCPServerSocket server(iocp, SERVER_PORT);
+	TCPAcceptor server(iocp, SERVER_PORT);
 	std::vector<std::unique_ptr<TCPSocket>> s;
 	std::vector<std::unique_ptr<TCPSocket>> c;
 	ZeroSemaphore connected;
@@ -113,7 +113,7 @@ TEST(VariousConnectMethods)
 		iocp.run();
 	});
 
-	TCPServerSocket server(iocp, SERVER_PORT);
+	TCPAcceptor server(iocp, SERVER_PORT);
 
 	ZeroSemaphore pending;
 
@@ -222,7 +222,7 @@ TEST(SynchronousSendReceive)
 		iocp.run();
 	});
 
-	TCPServerSocket server(iocp, SERVER_PORT);
+	TCPAcceptor server(iocp, SERVER_PORT);
 	ZeroSemaphore pending;
 
 	// Synchronous send and receive
@@ -314,7 +314,7 @@ TEST(SynchronousAcceptAndConnect)
 	const int acceptTimeout = 200;
 	auto serverTh = std::thread([&iocp, acceptTimeout, &checkpoint]()
 	{
-		TCPServerSocket server(iocp, SERVER_PORT);
+		TCPAcceptor server(iocp, SERVER_PORT);
 		TCPSocket s(iocp);
 
 		UnitTest::Timer timer;
@@ -402,7 +402,7 @@ TEST(CompoundReceive)
 {
 	CompletionPort iocp;
 	DeadlineTimer sendTimer(iocp);
-	TCPServerSocket serverSocket(iocp, 28000);
+	TCPAcceptor serverSocket(iocp, 28000);
 	std::vector<std::thread> ths;
 	ths.emplace_back([&]()
 	{
@@ -449,7 +449,7 @@ public:
 	BigDataServer()
 	{
 		m_s = std::make_unique<TCPSocket>(m_iocp);
-		m_serverSocket = std::make_unique<TCPServerSocket>(m_iocp, 28000);
+		m_serverSocket = std::make_unique<TCPAcceptor>(m_iocp, 28000);
 		m_serverSocket->asyncAccept(*m_s, [this](const Error& ec, unsigned)
 		{
 			CZ_ASSERT(!ec);
@@ -544,7 +544,7 @@ private:
 	bool m_finish = false;
 
 	// Need to use pointers, since CompletionPort need to be initialized first
-	std::unique_ptr<TCPServerSocket> m_serverSocket;
+	std::unique_ptr<TCPAcceptor> m_serverSocket;
 	std::unique_ptr<TCPSocket> m_s;
 	uint64_t m_received;
 	ZeroSemaphore m_pendingOps;
@@ -713,7 +713,7 @@ public:
 	EchoServer(int listenPort)
 	{
 		m_ths.start(1);
-		m_serverSocket = std::make_unique<TCPServerSocket>(m_ths.iocp, listenPort);
+		m_serverSocket = std::make_unique<TCPAcceptor>(m_ths.iocp, listenPort);
 		prepareAccept();
 	}
 
@@ -747,7 +747,7 @@ private:
 	int m_inPrepare = 0;
 	ZeroSemaphore m_pending;
 	IOCPThreads m_ths;
-	std::unique_ptr<TCPServerSocket> m_serverSocket;
+	std::unique_ptr<TCPAcceptor> m_serverSocket;
 	std::vector<std::unique_ptr<EchoServerConnection>> m_clients;
 };
 
@@ -857,7 +857,7 @@ struct MultipleUntilServer
 	MultipleUntilServer()
 	{
 		ths.start(1);
-		serverSocket = std::make_unique<TCPServerSocket>(ths.iocp, SERVER_PORT);
+		serverSocket = std::make_unique<TCPAcceptor>(ths.iocp, SERVER_PORT);
 		clientSocket = std::make_unique<TCPSocket>(ths.iocp);
 		expected = multipleUntilExpected;
 		expectedRemaining = multipleUntilLeftovers;
@@ -905,7 +905,7 @@ struct MultipleUntilServer
 	std::vector<std::string> expected;
 	std::vector<std::string> expectedRemaining;
 	ZeroSemaphore pending;
-	std::unique_ptr<TCPServerSocket> serverSocket;
+	std::unique_ptr<TCPAcceptor> serverSocket;
 	std::unique_ptr<TCPSocket> clientSocket;
 	RingBuffer buf;
 	IOCPThreads ths;
