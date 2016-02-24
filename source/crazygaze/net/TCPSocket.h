@@ -115,6 +115,7 @@ struct Error
 class TCPSocket;
 using SocketCompletionHandler = std::function<void(const Error& err, unsigned)>;
 using SocketCompletionUntilHandler = std::function<std::pair<RingBuffer::Iterator,bool>(RingBuffer::Iterator begin, RingBuffer::Iterator end)>;
+using AcceptHandler = std::function<void(const Error& err)>;
 
 class TCPAcceptor
 {
@@ -126,7 +127,7 @@ class TCPAcceptor
 
 	//! Synchronous accept
 	Error accept(TCPSocket& socket, unsigned timeoutMs);
-	void asyncAccept(TCPSocket& socket, SocketCompletionHandler handler);
+	void asyncAccept(TCPSocket& socket, AcceptHandler handler);
 	void shutdown();
 
   protected:

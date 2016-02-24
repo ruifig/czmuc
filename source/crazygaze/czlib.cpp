@@ -9,7 +9,7 @@
 
 #include "czlibPCH.h"
 #include "crazygaze/StringUtils.h"
-
+#include "crazygaze/Logging.h"
 
 #if defined(_MSC_VER)
 extern "C" {
@@ -49,6 +49,11 @@ static_assert(sizeof(u64)==8, "Size mismatch");
 
 void _doAssert(const char* file, int line, const char* fmt, ...)
 {
+	static bool executing;
+	if (executing)
+		__debugbreak();
+	executing = true;
+
 	char buf[1024];
 	va_list args;
 	va_start(args, fmt);
@@ -65,8 +70,16 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 	    mbstowcs(wbuf, buf, 1024);
 	    mbstowcs(wfile, file, 1024);
 
-	    _wassert(wbuf, wfile, line);
-	    __debugbreak(); // This will break in all builds
+		CZ_LOG(logDefault, Error, "ASSERT: %s,%d: %s\n", file, line, buf);
+		if (::IsDebuggerPresent())
+		{
+			__debugbreak(); // This will break in all builds
+		}
+		else
+		{
+			//_wassert(wbuf, wfile, line);
+			__debugbreak(); // This will break in all builds
+		}
 		//DebugBreak();
     #elif defined(__MINGW32__)
 	    DebugBreak();
@@ -74,6 +87,7 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 #else
     #error debugbreak not implemented for current platform/compiler
 #endif
+
 }
 
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32
@@ -95,7 +109,7 @@ const char* getLastWin32ErrorMsg(int err)
 
 
 	// FormatMessage leaves a new line (\r\n) at the end, so remove if that's the case.
-	int i = strlen(errString);
+	size_t i = strlen(errString);
 	while (errString[i] < ' ')
 	{
 		errString[i] = 0;
