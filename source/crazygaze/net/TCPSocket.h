@@ -47,6 +47,16 @@ namespace details
 	private:
 		SOCKET m_socket = INVALID_SOCKET;
 	};
+
+	// NOTE: The order of the enums needs to be the order things happen with typical use
+	enum class SocketState
+	{
+		None,
+		WaitingAccept,  // When being used on the server
+		Connecting,		// When it's a client connecting to a server
+		Connected,
+		Disconnected
+	};
 }
 
 struct Error
@@ -83,10 +93,8 @@ struct Error
 
 	void setMsg(const char* msg)
 	{
-		if (!optionalMsg)
-			optionalMsg = std::make_shared<std::string>(msg);
-		else
-			*optionalMsg = msg;
+		// Always create a new one, since it might be being shared by other Error instances
+		optionalMsg = std::make_shared<std::string>(msg);
 	}
 
 	//! Checks if there is an error.
@@ -125,8 +133,12 @@ class TCPServerSocket
 	  void execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 
   private:
-	std::shared_ptr<struct TCPServerSocketData> m_data;
+	CompletionPort& m_iocp;
 	details::WSAInstance m_wsainstance;
+	details::SocketState m_state = details::SocketState::None;
+	details::SocketWrapper m_listenSocket;
+	LPFN_ACCEPTEX m_lpfnAcceptEx = NULL;
+	LPFN_GETACCEPTEXSOCKADDRS m_lpfnGetAcceptExSockaddrs = NULL;
 };
 
 struct TCPSocketUserData
@@ -323,7 +335,12 @@ class TCPSocket
 	void execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey);
 	void prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize, std::pair<RingBuffer::Iterator, bool> res,
 	                      RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
-	std::shared_ptr<TCPSocketData> m_data;
+
+	CompletionPort& m_iocp;
+	details::SocketWrapper m_socket;
+	details::SocketState m_state = details::SocketState::None;
+	SocketAddress m_localAddr;
+	SocketAddress m_remoteAddr;
 	std::shared_ptr<TCPSocketUserData> m_userData;
 	details::WSAInstance m_wsainstance;
 };
