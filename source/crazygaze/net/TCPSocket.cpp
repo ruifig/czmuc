@@ -98,7 +98,7 @@ namespace details
 		if (m_socket != INVALID_SOCKET)
 		{
 			::shutdown(m_socket, SD_BOTH);
-			closesocket(m_socket);
+			::closesocket(m_socket);
 		}
 	}
 
@@ -107,7 +107,7 @@ namespace details
 		if (m_socket != INVALID_SOCKET)
 		{
 			::shutdown(m_socket, SD_BOTH);
-			closesocket(m_socket);
+			::closesocket(m_socket);
 		}
 	}
 
@@ -248,21 +248,8 @@ struct AsyncSendOperation : public CompletionPortOperation
 //
 //////////////////////////////////////////////////////////////////////////
 
-TCPAcceptor::TCPAcceptor(CompletionPort& iocp, int listenPort)
-	: m_iocp(iocp)
+Error TCPAcceptor::listen(int listenPort)
 {
-	LOG("TCPAcceptor %p: Enter\n", this);
-	m_listenSocket = details::SocketWrapper(
-		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
-	if (!m_listenSocket.isValid())
-		CZ_LOG(logDefault, Fatal, "Error creating listen socket: %s", getLastWin32ErrorMsg());
-
-	// Set this, so no other applications can bind to the same port
-	int iOptval = 1;
-	if (setsockopt(m_listenSocket.get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&iOptval, sizeof(iOptval)) ==
-		SOCKET_ERROR)
-		throw std::runtime_error(formatString("Error setting SO_EXCLUSIVEADDRUSE: %s", getLastWin32ErrorMsg()));
-
 	sockaddr_in serverAddress;
 	ZeroMemory(&serverAddress, sizeof(serverAddress));
 	serverAddress.sin_family = AF_INET;
@@ -270,7 +257,7 @@ TCPAcceptor::TCPAcceptor(CompletionPort& iocp, int listenPort)
 	serverAddress.sin_port = htons(listenPort);
 
 	if (bind(m_listenSocket.get(), (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR ||
-		listen(m_listenSocket.get(), SOMAXCONN) == SOCKET_ERROR)
+		::listen(m_listenSocket.get(), SOMAXCONN) == SOCKET_ERROR)
 	{
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
@@ -291,7 +278,7 @@ TCPAcceptor::TCPAcceptor(CompletionPort& iocp, int listenPort)
 						sizeof(GuidGetAcceptExSockaddrs), &m_lpfnGetAcceptExSockaddrs,
 						sizeof(m_lpfnGetAcceptExSockaddrs), &dwBytes, NULL, NULL);
 	if (res1 == SOCKET_ERROR || res2 == SOCKET_ERROR)
-		throw std::runtime_error(formatString("Error initializing listen socket: %s", getLastWin32ErrorMsg()));
+		return Error(Error::Code::Other, getLastWin32ErrorMsg());
 
 	if (CreateIoCompletionPort(
 			reinterpret_cast<HANDLE>(m_listenSocket.get()), // FileHandle
@@ -303,7 +290,26 @@ TCPAcceptor::TCPAcceptor(CompletionPort& iocp, int listenPort)
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
-	m_state = details::SocketState::Connected; // #TODO : Change this to state Listen
+	m_listening = true;
+
+	return Error();
+}
+
+TCPAcceptor::TCPAcceptor(CompletionPort& iocp)
+	: m_iocp(iocp)
+{
+	LOG("TCPAcceptor %p: Enter\n", this);
+	m_listenSocket = details::SocketWrapper(
+		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
+	if (!m_listenSocket.isValid())
+		CZ_LOG(logDefault, Fatal, "Error creating listen socket: %s", getLastWin32ErrorMsg());
+
+	// Set this, so no other applications can bind to the same port
+	int iOptval = 1;
+	if (setsockopt(m_listenSocket.get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&iOptval, sizeof(iOptval)) ==
+		SOCKET_ERROR)
+		throw std::runtime_error(formatString("Error setting SO_EXCLUSIVEADDRUSE: %s", getLastWin32ErrorMsg()));
+
 	debugData.serverSocketCreated(this);
 	LOG("TCPAcceptor %p: Exit\n", this);
 }
@@ -319,7 +325,7 @@ TCPAcceptor::~TCPAcceptor()
 void TCPAcceptor::shutdown()
 {
 
-	if (m_state == details::SocketState::Disconnected)
+	if (!m_listening)
 		return;
 
 	// Notes:
@@ -345,7 +351,7 @@ void TCPAcceptor::shutdown()
 	}
 
 	m_listenSocket.shutdown();
-	m_state = details::SocketState::Disconnected;
+	m_listening = false;
 }
 
 Error TCPAcceptor::accept(TCPSocket& socket, unsigned timeoutMs)

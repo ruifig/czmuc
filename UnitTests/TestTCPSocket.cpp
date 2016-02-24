@@ -16,7 +16,8 @@ void testConnection(int count)
 		iocp.run();
 	});
 
-	TCPAcceptor server(iocp, SERVER_PORT);
+	TCPAcceptor acceptor(iocp);
+	acceptor.listen(SERVER_PORT);
 	std::vector<std::unique_ptr<TCPSocket>> s;
 	std::vector<std::unique_ptr<TCPSocket>> c;
 	ZeroSemaphore connected;
@@ -26,7 +27,7 @@ void testConnection(int count)
 		s.push_back(std::make_unique<TCPSocket>(iocp));
 		c.push_back(std::make_unique<TCPSocket>(iocp));
 		connected.increment();
-		server.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const Error& err, unsigned)
+		acceptor.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const Error& err, unsigned)
 		{
 			auto buf = make_shared_array<int>(1);
 			*buf.get() = i;
@@ -75,7 +76,7 @@ void testConnection(int count)
 			});
 		});
 	}
-	connected.wait(); // make sure all the handlers on the server were called
+	connected.wait(); // make sure all the handlers on the acceptor were called
 
 	for (int i = 0; i < count; i++)
 	{
@@ -113,7 +114,8 @@ TEST(VariousConnectMethods)
 		iocp.run();
 	});
 
-	TCPAcceptor server(iocp, SERVER_PORT);
+	TCPAcceptor acceptor(iocp);
+	acceptor.listen(SERVER_PORT);
 
 	ZeroSemaphore pending;
 
@@ -121,7 +123,7 @@ TEST(VariousConnectMethods)
 	{
 		pending.increment();
 		TCPSocket serverSide(iocp);
-		server.asyncAccept(serverSide, [&](const Error& ec, unsigned)
+		acceptor.asyncAccept(serverSide, [&](const Error& ec, unsigned)
 		{
 			CHECK(!ec);
 			pending.decrement();
@@ -142,7 +144,7 @@ TEST(VariousConnectMethods)
 	}
 
 	// Test synchronous connect without a pending accept
-	// This should actually succeed, since the connection stays established, waiting for the server to accept it
+	// This should actually succeed, since the connection stays established, waiting for the acceptor to accept it
 	{
 		TCPSocket s(iocp);
 		auto ec = s.connect("127.0.0.1", SERVER_PORT);
@@ -150,7 +152,7 @@ TEST(VariousConnectMethods)
 		pending.increment();
 		s.asyncSend("A", 1, [&](auto ec, unsigned bytesTransfered)
 		{
-			CHECK(!ec); // Send still succeeds, even if the server hasn't accepted the connection yet
+			CHECK(!ec); // Send still succeeds, even if the acceptor hasn't accepted the connection yet
 			pending.decrement();
 		});
 		pending.wait();
@@ -160,7 +162,7 @@ TEST(VariousConnectMethods)
 	{
 		pending.increment();
 		TCPSocket serverSide(iocp);
-		server.asyncAccept(serverSide, [&](const Error& ec, unsigned)
+		acceptor.asyncAccept(serverSide, [&](const Error& ec, unsigned)
 		{
 			CHECK(!ec);
 			pending.decrement();
@@ -222,13 +224,14 @@ TEST(SynchronousSendReceive)
 		iocp.run();
 	});
 
-	TCPAcceptor server(iocp, SERVER_PORT);
+	TCPAcceptor acceptor(iocp);
+	acceptor.listen(SERVER_PORT);
 	ZeroSemaphore pending;
 
 	// Synchronous send and receive
 	{
 		TCPSocket serverSide(iocp);
-		server.asyncAccept(serverSide, [&serverSide](const Error& ec, unsigned bytesTransfered)
+		acceptor.asyncAccept(serverSide, [&serverSide](const Error& ec, unsigned bytesTransfered)
 		{
 			CHECK(!ec);
 			Error e;
@@ -314,25 +317,26 @@ TEST(SynchronousAcceptAndConnect)
 	const int acceptTimeout = 200;
 	auto serverTh = std::thread([&iocp, acceptTimeout, &checkpoint]()
 	{
-		TCPAcceptor server(iocp, SERVER_PORT);
+		TCPAcceptor acceptor(iocp);
+		acceptor.listen(SERVER_PORT);
 		TCPSocket s(iocp);
 
 		UnitTest::Timer timer;
 		timer.Start();
 
 		auto t = timer.GetTimeInMs();
-		auto ec = server.accept(s, 0); // no blocking
+		auto ec = acceptor.accept(s, 0); // no blocking
 		CHECK_CLOSE(0, timer.GetTimeInMs() - t, 5);
 		CHECK(ec.code==Error::Code::Timeout);
 
 		t = timer.GetTimeInMs();
-		ec = server.accept(s, acceptTimeout); // with timeout
+		ec = acceptor.accept(s, acceptTimeout); // with timeout
 		CHECK_CLOSE(acceptTimeout, timer.GetTimeInMs() - t, 5);
 		CHECK(ec.code==Error::Code::Timeout);
 
 		checkpoint.notify();
 		// And try one with success
-		ec = server.accept(s, 0xFFFFFFFF);
+		ec = acceptor.accept(s, 0xFFFFFFFF);
 
 		CZ_LOG(logDefault, Log, "Server: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
 		CHECK(!ec);
@@ -402,7 +406,9 @@ TEST(CompoundReceive)
 {
 	CompletionPort iocp;
 	DeadlineTimer sendTimer(iocp);
-	TCPAcceptor serverSocket(iocp, 28000);
+	TCPAcceptor acceptor(iocp);
+	acceptor.listen(SERVER_PORT);
+
 	std::vector<std::thread> ths;
 	ths.emplace_back([&]()
 	{
@@ -411,7 +417,7 @@ TEST(CompoundReceive)
 
 	TCPSocket serverSide(iocp);
 	const int numSends = 5;
-	serverSocket.asyncAccept(serverSide, [&](auto ec, auto bytesTransfered)
+	acceptor.asyncAccept(serverSide, [&](auto ec, auto bytesTransfered)
 	{
 		CHECK(!ec);
 		setupSendTimer(numSends, sendTimer, serverSide);
@@ -419,7 +425,7 @@ TEST(CompoundReceive)
 
 
 	TCPSocket clientSide(iocp);
-	CHECK(!clientSide.connect("127.0.0.1", 28000));
+	CHECK(!clientSide.connect("127.0.0.1", SERVER_PORT));
 
 	Semaphore done;
 	char buf[numSends * 2];
@@ -449,8 +455,9 @@ public:
 	BigDataServer()
 	{
 		m_s = std::make_unique<TCPSocket>(m_iocp);
-		m_serverSocket = std::make_unique<TCPAcceptor>(m_iocp, 28000);
-		m_serverSocket->asyncAccept(*m_s, [this](const Error& ec, unsigned)
+		m_acceptor = std::make_unique<TCPAcceptor>(m_iocp);
+		m_acceptor->listen(SERVER_PORT);
+		m_acceptor->asyncAccept(*m_s, [this](const Error& ec, unsigned)
 		{
 			CZ_ASSERT(!ec);
 			start();
@@ -544,7 +551,7 @@ private:
 	bool m_finish = false;
 
 	// Need to use pointers, since CompletionPort need to be initialized first
-	std::unique_ptr<TCPAcceptor> m_serverSocket;
+	std::unique_ptr<TCPAcceptor> m_acceptor;
 	std::unique_ptr<TCPSocket> m_s;
 	uint64_t m_received;
 	ZeroSemaphore m_pendingOps;
@@ -587,7 +594,7 @@ TEST(TestThroughput)
 
 	TCPSocket client(ths.iocp);
 
-	auto ft = client.connect("127.0.0.1", 28000);
+	auto ft = client.connect("127.0.0.1", SERVER_PORT);
 	CZ_LOG(logTestsVerbose, Log, "S2 accepted. LocalAddr=%s, RemoteAddr=%s", client.getLocalAddress().toString(true), client.getRemoteAddress().toString(true));
 
 	std::vector<char> buf;
@@ -713,13 +720,14 @@ public:
 	EchoServer(int listenPort)
 	{
 		m_ths.start(1);
-		m_serverSocket = std::make_unique<TCPAcceptor>(m_ths.iocp, listenPort);
+		m_acceptor = std::make_unique<TCPAcceptor>(m_ths.iocp);
+		m_acceptor->listen(listenPort);
 		prepareAccept();
 	}
 
 	~EchoServer()
 	{
-		m_serverSocket->shutdown();
+		m_acceptor->shutdown();
 		m_pending.wait();
 		m_clients.clear();
 		m_ths.stop();
@@ -729,7 +737,7 @@ public:
 	{
 		auto socket = std::make_shared<TCPSocket>(m_ths.iocp);
 		m_pending.increment();
-		m_serverSocket->asyncAccept(*socket,
+		m_acceptor->asyncAccept(*socket,
 			[this, socket=socket](const Error& ec, unsigned bytesTransfered)
 		{
 			SCOPE_EXIT{ m_pending.decrement(); };
@@ -747,7 +755,7 @@ private:
 	int m_inPrepare = 0;
 	ZeroSemaphore m_pending;
 	IOCPThreads m_ths;
-	std::unique_ptr<TCPAcceptor> m_serverSocket;
+	std::unique_ptr<TCPAcceptor> m_acceptor;
 	std::vector<std::unique_ptr<EchoServerConnection>> m_clients;
 };
 
@@ -857,11 +865,12 @@ struct MultipleUntilServer
 	MultipleUntilServer()
 	{
 		ths.start(1);
-		serverSocket = std::make_unique<TCPAcceptor>(ths.iocp, SERVER_PORT);
+		acceptor = std::make_unique<TCPAcceptor>(ths.iocp);
+		acceptor->listen(SERVER_PORT);
 		clientSocket = std::make_unique<TCPSocket>(ths.iocp);
 		expected = multipleUntilExpected;
 		expectedRemaining = multipleUntilLeftovers;
-		serverSocket->asyncAccept(*clientSocket, [this](const Error& ec, unsigned bytesTransfered)
+		acceptor->asyncAccept(*clientSocket, [this](const Error& ec, unsigned bytesTransfered)
 		{
 			CHECK(!ec);
 			prepareRecv();
@@ -871,7 +880,7 @@ struct MultipleUntilServer
 	~MultipleUntilServer()
 	{
 		pending.wait();
-		serverSocket->shutdown();
+		acceptor->shutdown();
 		clientSocket->shutdown();
 		ths.stop();
 	}
@@ -905,7 +914,7 @@ struct MultipleUntilServer
 	std::vector<std::string> expected;
 	std::vector<std::string> expectedRemaining;
 	ZeroSemaphore pending;
-	std::unique_ptr<TCPAcceptor> serverSocket;
+	std::unique_ptr<TCPAcceptor> acceptor;
 	std::unique_ptr<TCPSocket> clientSocket;
 	RingBuffer buf;
 	IOCPThreads ths;

@@ -119,9 +119,10 @@ using SocketCompletionUntilHandler = std::function<std::pair<RingBuffer::Iterato
 class TCPAcceptor
 {
   public:
-	TCPAcceptor(CompletionPort& iocp, int listenPort);
+	TCPAcceptor(CompletionPort& iocp);
 	~TCPAcceptor();
 
+	Error listen(int listenPort);
 
 	//! Synchronous accept
 	Error accept(TCPSocket& socket, unsigned timeoutMs);
@@ -135,7 +136,7 @@ class TCPAcceptor
   private:
 	CompletionPort& m_iocp;
 	details::WSAInstance m_wsainstance;
-	details::SocketState m_state = details::SocketState::None;
+	bool m_listening = false;
 	details::SocketWrapper m_listenSocket;
 	LPFN_ACCEPTEX m_lpfnAcceptEx = NULL;
 	LPFN_GETACCEPTEXSOCKADDRS m_lpfnGetAcceptExSockaddrs = NULL;
