@@ -57,6 +57,7 @@ namespace details
 		Connected,
 		Disconnected
 	};
+
 }
 
 struct Error
@@ -133,20 +134,22 @@ class TCPAcceptor
 
 	//! Synchronous accept
 	Error accept(TCPSocket& socket, unsigned timeoutMs);
-	void asyncAccept(TCPSocket& socket, AcceptHandler handler);
-	void shutdown();
 
-  protected:
-	  friend struct AsyncAcceptOperation;
-	  void execute(struct AsyncAcceptOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
+	//! Initiates an asynchronous accept
+	// \param peer
+	//	The socket into which the new connection will be accepted. It must remain valid until the handler is called.
+	void asyncAccept(TCPSocket& peer, AcceptHandler handler);
+
+	//! Cancels all asynchronous operations
+	void cancel();
 
   private:
+
+	void close();
 	CompletionPort& m_iocp;
 	details::WSAInstance m_wsainstance;
 	bool m_listening = false;
 	details::SocketWrapper m_listenSocket;
-	LPFN_ACCEPTEX m_lpfnAcceptEx = NULL;
-	LPFN_GETACCEPTEXSOCKADDRS m_lpfnGetAcceptExSockaddrs = NULL;
 };
 
 struct TCPSocketUserData
@@ -163,6 +166,9 @@ class TCPSocket
 
 	//! Synchronous connect
 	Error connect(const std::string& ip, int port);
+
+	//! Cancels all asynchronous operations
+	void cancel();
 
 	//! Asynchronous connect
 	void asyncConnect(const std::string& ip, int port, ConnectHandler handler);
@@ -326,9 +332,13 @@ class TCPSocket
 	const SocketAddress& getLocalAddress() const;
 	const SocketAddress& getRemoteAddress() const;
 	CompletionPort& getIOCP();
-	void shutdown();
+
+
   protected:
 
+	void close();
+
+	friend struct AsyncAcceptOperation;
 	friend struct AsyncConnectOperation;
 	friend struct AsyncReceiveOperation;
 	friend struct AsyncSendOperation;
@@ -337,9 +347,6 @@ class TCPSocket
 	Error fillLocalAddr();
 	Error fillRemoteAddr();
 	void setBlocking(bool blocking);
-	void execute(struct AsyncConnectOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
-	void execute(struct AsyncReceiveOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
-	void execute(struct AsyncSendOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
 	void prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize, std::pair<RingBuffer::Iterator, bool> res,
 	                      RingBuffer& buf, MatchCondition matchCondition, ReceiveHandler handler);
 
