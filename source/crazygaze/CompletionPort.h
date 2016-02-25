@@ -25,7 +25,7 @@ struct CompletionPortOperation
 	CompletionPortOperation(const CompletionPortOperation& other) = delete;
 	CompletionPortOperation& operator=(const CompletionPortOperation& other) = delete;
 	virtual ~CompletionPortOperation() {}
-	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) = 0;
+	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) = 0;
 	WSAOVERLAPPED overlapped;
 	Semaphore readyToExecute;
 };

@@ -65,6 +65,8 @@ struct Error
 	{
 		Success,
 		Timeout,
+		Cancelled,
+		ConnectionClosed,
 		Other
 	};
 
@@ -86,6 +88,8 @@ struct Error
 		{
 			case Code::Success: return "Success";
 			case Code::Timeout: return "Timeout";
+			case Code::Cancelled: return "Cancelled";
+			case Code::ConnectionClosed: return "Connection closed";
 			case Code::Other: return "Other";
 			default: return "Unknown";
 		}
@@ -113,9 +117,11 @@ struct Error
 
 
 class TCPSocket;
-using SocketCompletionHandler = std::function<void(const Error& err, unsigned)>;
-using SocketCompletionUntilHandler = std::function<std::pair<RingBuffer::Iterator,bool>(RingBuffer::Iterator begin, RingBuffer::Iterator end)>;
 using AcceptHandler = std::function<void(const Error& err)>;
+using ConnectHandler = std::function<void(const Error& err)>;
+using SendHandler = std::function<void(const Error& err, unsigned)>;
+using ReceiveHandler = std::function<void(const Error& err, unsigned)>;
+using MatchCondition = std::function<std::pair<RingBuffer::Iterator,bool>(RingBuffer::Iterator begin, RingBuffer::Iterator end)>;
 
 class TCPAcceptor
 {
@@ -132,7 +138,7 @@ class TCPAcceptor
 
   protected:
 	  friend struct AsyncAcceptOperation;
-	  void execute(struct AsyncAcceptOperation* op, unsigned bytesTransfered, uint64_t completionKey);
+	  void execute(struct AsyncAcceptOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
 
   private:
 	CompletionPort& m_iocp;
@@ -159,8 +165,7 @@ class TCPSocket
 	Error connect(const std::string& ip, int port);
 
 	//! Asynchronous connect
-	void asyncConnect(const std::string& ip, int port, SocketCompletionHandler handler);
-
+	void asyncConnect(const std::string& ip, int port, ConnectHandler handler);
 
 	//! Perform a synchronous send
 	// 
@@ -222,7 +227,7 @@ class TCPSocket
 	// The supplied buffer must remain valid until the handler is executed.
 	// \note
 	//	The handler is only executed when all the data is sent, or an error occurs.
-	void asyncSend(Buffer buf, SocketCompletionHandler handler);
+	void asyncSend(Buffer buf, SendHandler handler);
 
 	//! Sends the specified buffer in its entirety.
 	// The supplied buffer, is copied, so it doesn't need to remain valid 
@@ -243,7 +248,7 @@ class TCPSocket
 	// The supplied buffer must remain valid until the handler is invoked
 	// \note
 	//	The operation might not receive all the requested number of bytes
-	void asyncReceiveSome(Buffer buf, SocketCompletionHandler handler);
+	void asyncReceiveSome(Buffer buf, ReceiveHandler handler);
 
 	template<typename HANDLER>
 	void processAsyncReceive(Buffer buf, HANDLER handler, const Error& err, unsigned bytesTransfered,
@@ -290,11 +295,11 @@ class TCPSocket
 	}
 
 	//! 
-	void asyncReceiveUntil(RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler,
+	void asyncReceiveUntil(RingBuffer& buf, MatchCondition matchCondition, ReceiveHandler handler,
 	                       int tmpBufSize = 2048);
 
 	//! 
-	void asyncReceiveUntil(RingBuffer& buf, char delim, SocketCompletionHandler handler,
+	void asyncReceiveUntil(RingBuffer& buf, char delim, ReceiveHandler handler,
 	                       int tmpBufSize = 2048)
 	{
 		asyncReceiveUntil(
@@ -332,11 +337,11 @@ class TCPSocket
 	Error fillLocalAddr();
 	Error fillRemoteAddr();
 	void setBlocking(bool blocking);
-	void execute(struct AsyncConnectOperation* op, unsigned bytesTransfered, uint64_t completionKey);
-	void execute(struct AsyncReceiveOperation* op, unsigned bytesTransfered, uint64_t completionKey);
-	void execute(struct AsyncSendOperation* op, unsigned bytesTransfered, uint64_t completionKey);
+	void execute(struct AsyncConnectOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
+	void execute(struct AsyncReceiveOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
+	void execute(struct AsyncSendOperation* op, bool aborted, unsigned bytesTransfered, uint64_t completionKey);
 	void prepareRecvUntil(std::shared_ptr<char> tmpbuf, int tmpBufSize, std::pair<RingBuffer::Iterator, bool> res,
-	                      RingBuffer& buf, SocketCompletionUntilHandler untilHandler, SocketCompletionHandler handler);
+	                      RingBuffer& buf, MatchCondition matchCondition, ReceiveHandler handler);
 
 	CompletionPort& m_iocp;
 	details::SocketWrapper m_socket;

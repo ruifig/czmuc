@@ -50,6 +50,8 @@ static_assert(sizeof(u64)==8, "Size mismatch");
 void _doAssert(const char* file, int line, const char* fmt, ...)
 {
 	static bool executing;
+
+	// Detect reentrancy, since we call a couple of things from here, that might end up asserting
 	if (executing)
 		__debugbreak();
 	executing = true;
@@ -78,9 +80,9 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 		else
 		{
 			//_wassert(wbuf, wfile, line);
+			//DebugBreak();
 			__debugbreak(); // This will break in all builds
 		}
-		//DebugBreak();
     #elif defined(__MINGW32__)
 	    DebugBreak();
     #endif

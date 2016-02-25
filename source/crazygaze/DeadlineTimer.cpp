@@ -30,8 +30,9 @@ struct DeadlineTimerOperation : public CompletionPortOperation
 	DeadlineTimerOperation(DeadlineTimer* owner) : owner(owner)
 	{
 	}
-	virtual void execute(unsigned bytesTransfered, uint64_t completionKey) override
+	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
 	{
+		CZ_ASSERT(aborted == false && bytesTransfered == false);
 		owner->execute(this, completionKey);
 	}
 	DeadlineTimer* owner;
