@@ -27,6 +27,7 @@ void testConnection(int count)
 		s.push_back(std::make_unique<TCPSocket>(iocp));
 		c.push_back(std::make_unique<TCPSocket>(iocp));
 		connected.increment();
+
 		acceptor.asyncAccept(*s.back().get(), [&connected, &pendingSend, &s, i](const Error& err)
 		{
 			auto buf = make_shared_array<int>(1);
@@ -38,22 +39,17 @@ void testConnection(int count)
 				s[i]->shutdown();
 				pendingSend.decrement();
 			});
+
 			connected.decrement();
 		});
 
-		acceptor.shutdown();
-		Sleep(1000);
-		Sleep(1000);
 	}
-
-	printf("Derp derp\n");
 
 	ZeroSemaphore pendingConnects;
 	for (auto&& s : c)
 	{
 		pendingConnects.increment();
-		s->asyncConnect("127.0.0.1", SERVER_PORT,
-			[&](const Error& ec, unsigned bytesTransfered)
+		s->asyncConnect("127.0.0.1", SERVER_PORT, [&](const Error& ec)
 		{
 			CHECK(!ec);
 			pendingConnects.decrement();
@@ -176,7 +172,7 @@ TEST(VariousConnectMethods)
 
 		TCPSocket s(iocp);
 		pending.increment();
-		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec, unsigned)
+		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec)
 		{
 			CHECK(!ec);
 			pending.decrement();
@@ -188,7 +184,7 @@ TEST(VariousConnectMethods)
 	{
 		TCPSocket s(iocp);
 		pending.increment();
-		s.asyncConnect("127.0.0.1", SERVER_PORT+1, [&](auto ec, unsigned)
+		s.asyncConnect("127.0.0.1", SERVER_PORT+1, [&](auto ec)
 		{
 			CHECK(ec);
 			pending.decrement();
@@ -201,7 +197,7 @@ TEST(VariousConnectMethods)
 	{
 		TCPSocket s(iocp);
 		pending.increment();
-		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec, unsigned)
+		s.asyncConnect("127.0.0.1", SERVER_PORT, [&](auto ec)
 		{
 			CHECK(!ec); // Connection should still succeed
 			pending.decrement();
