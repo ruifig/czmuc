@@ -729,7 +729,7 @@ public:
 
 	~EchoServer()
 	{
-		m_acceptor->shutdown();
+		m_acceptor->cancel();
 		m_pending.wait();
 		m_clients.clear();
 		m_ths.stop();
@@ -881,7 +881,7 @@ struct MultipleUntilServer
 	~MultipleUntilServer()
 	{
 		pending.wait();
-		acceptor->shutdown();
+		acceptor->cancel();
 		clientSocket->shutdown();
 		ths.stop();
 	}
@@ -953,6 +953,61 @@ TEST(MultipleUntil)
 	server = nullptr;
 	s.shutdown();
 	ths.stop();
+}
+
+}
+
+SUITE(TCPSocket_Failures)
+{
+
+struct IOThread
+{
+public:
+	IOThread()
+	{
+		th = std::thread([this]
+		{
+			iocp.run();
+		});
+	}
+
+	~IOThread()
+	{
+		iocp.stop();
+		th.join();
+	}
+
+	CompletionPort iocp;
+	std::thread th;
+};
+
+TEST(AcceptCancel)
+{
+	IOThread ioth;
+
+	ZeroSemaphore pending;
+
+	{
+		TCPAcceptor acceptor(ioth.iocp);
+		acceptor.listen(SERVER_PORT);
+		TCPSocket s1(ioth.iocp);
+		TCPSocket s2(ioth.iocp);
+		pending.increment();
+		acceptor.asyncAccept(s1, [&](const Error& ec)
+		{
+			pending.decrement();
+			CHECK(ec.code==Error::Code::Cancelled);
+		});
+		pending.increment();
+		acceptor.asyncAccept(s2, [&](const Error& ec)
+		{
+			pending.decrement();
+			CHECK(ec.code==Error::Code::Cancelled);
+		});
+		// The acceptor going out of scope will cause the handlers to be cancelled
+	}
+
+	pending.decrement();
 }
 
 }
