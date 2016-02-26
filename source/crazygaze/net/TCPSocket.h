@@ -68,6 +68,7 @@ struct Error
 		Timeout,
 		Cancelled,
 		ConnectionClosed,
+		NoResources,
 		Other
 	};
 
@@ -91,6 +92,7 @@ struct Error
 			case Code::Timeout: return "Timeout";
 			case Code::Cancelled: return "Cancelled";
 			case Code::ConnectionClosed: return "Connection closed";
+			case Code::NoResources: return "No resources";
 			case Code::Other: return "Other";
 			default: return "Unknown";
 		}
@@ -130,7 +132,7 @@ class TCPAcceptor
 	TCPAcceptor(CompletionPort& iocp);
 	~TCPAcceptor();
 
-	Error listen(int listenPort);
+	Error listen(int listenPort, int backlog = SOMAXCONN);
 
 	//! Synchronous accept
 	Error accept(TCPSocket& socket, unsigned timeoutMs);
