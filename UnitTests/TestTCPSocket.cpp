@@ -36,7 +36,7 @@ void testConnection(int count)
 			s[i]->asyncSend(Buffer(buf.get(), 1), [buf, i, &s, &pendingSend](const Error& err, unsigned bytesTransfered)
 			{
 				CHECK_EQUAL(sizeof(int), bytesTransfered);
-				s[i]->shutdown();
+				s[i]->close();
 				pendingSend.decrement();
 			});
 
@@ -371,7 +371,7 @@ TEST(SynchronousAcceptAndConnect)
 	CHECK_EQUAL(5, s.receive(buf, 5, 0xFFFFFFFF, ec));
 	CHECK_EQUAL("ABCD", buf);
 	CHECK(!ec);
-	s.shutdown();
+	s.close();
 
 	iocp.stop();
 	ioth.join();
@@ -382,7 +382,7 @@ void setupSendTimer(int counter, DeadlineTimer& timer, TCPSocket& socket)
 {
 	if (counter == 0)
 	{
-		socket.shutdown();
+		socket.close();
 		return;
 	}
 	counter--;
@@ -656,7 +656,7 @@ TEST(TestThroughput)
 	}
 
 	// Shutdown the client socket, so the server pending reads can complete (with error)
-	client.shutdown();
+	client.close();
 	server = nullptr;
 	ths.stop();
 }
@@ -674,7 +674,7 @@ public:
 	~EchoServerConnection()
 	{
 		CZ_LOG(logTests, Log, "EchoServerConnection: Destructor");
-		m_socket->shutdown();
+		m_socket->close();
 		m_pending.wait();
 	}
 
@@ -689,7 +689,7 @@ private:
 				if (bytesTransfered==0)
 				{
 					CZ_LOG(logTests, Log, "EchoServerConnection: Disconnected");
-					m_socket->shutdown();
+					m_socket->close();
 					return;
 				}
 
@@ -779,7 +779,7 @@ struct ClientConnection
 	~ClientConnection()
 	{
 		pendingEchos.wait();
-		socket->shutdown();
+		socket->close();
 		pending.wait();
 	}
 
@@ -882,7 +882,7 @@ struct MultipleUntilServer
 	{
 		pending.wait();
 		acceptor->cancel();
-		clientSocket->shutdown();
+		clientSocket->cancel();
 		ths.stop();
 	}
 
@@ -906,7 +906,7 @@ struct MultipleUntilServer
 			expectedRemaining.erase(expectedRemaining.begin());
 
 			if (expected.empty())
-				clientSocket->shutdown();
+				clientSocket->cancel();
 			else
 				prepareRecv();
 		}, 1024);
@@ -951,7 +951,7 @@ TEST(MultipleUntil)
 
 	pending.wait();
 	server = nullptr;
-	s.shutdown();
+	s.cancel();
 	ths.stop();
 }
 
