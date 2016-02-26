@@ -981,33 +981,232 @@ public:
 	std::thread th;
 };
 
-TEST(AcceptCancel)
+TEST(AsyncAcceptCancel)
 {
 	IOThread ioth;
-
 	ZeroSemaphore pending;
 
 	{
 		TCPAcceptor acceptor(ioth.iocp);
 		acceptor.listen(SERVER_PORT);
-		TCPSocket s1(ioth.iocp);
-		TCPSocket s2(ioth.iocp);
-		pending.increment();
-		acceptor.asyncAccept(s1, [&](const Error& ec)
+
+		auto add = [&]()
 		{
-			pending.decrement();
-			CHECK(ec.code==Error::Code::Cancelled);
-		});
-		pending.increment();
-		acceptor.asyncAccept(s2, [&](const Error& ec)
-		{
-			pending.decrement();
-			CHECK(ec.code==Error::Code::Cancelled);
-		});
+			pending.increment();
+			auto sock = std::make_shared<TCPSocket>(ioth.iocp);
+			acceptor.asyncAccept(*sock, [&, sock](const Error& ec)
+			{
+				CHECK(ec.code == Error::Code::Cancelled);
+				pending.decrement();
+			});
+		};
+
+		add();
+		add();
+		acceptor.cancel(); // cancel all operations
+		pending.wait();
+
+		add();
+		add();
 		// The acceptor going out of scope will cause the handlers to be cancelled
 	}
 
-	pending.decrement();
+	pending.wait();
 }
+
+void doSend(ZeroSemaphore& pending, TCPSocket& sock, Buffer buf)
+{
+	pending.increment();
+	sock.asyncSend(buf, [buf, &sock, &pending](const Error& ec, unsigned sent)
+	{
+		if (ec)
+			return;
+		CHECK_EQUAL(buf.size, sent);
+		doSend(pending, sock, buf);
+		pending.decrement();
+	});
+}
+
+TEST(TestAcceptorBacklog)
+{
+	IOThread ioth;
+	ZeroSemaphore pending;
+
+	TCPAcceptor acceptor(ioth.iocp);
+	acceptor.listen(SERVER_PORT, 1);
+
+	//
+	// Try synchronous connect fail
+	//
+	{
+		// This one connects
+		TCPSocket c(ioth.iocp);
+		CHECK(!c.connect("127.0.0.1", SERVER_PORT));
+		// This one fails because the backlog is only 1
+		TCPSocket c2(ioth.iocp);
+		CHECK(c2.connect("127.0.0.1", SERVER_PORT));
+		{
+			// Accept the first one
+			TCPSocket s(ioth.iocp);
+			CHECK(!acceptor.accept(s, 0));
+		}
+		{
+			// This fails because there is no socket waiting to be accepted
+			TCPSocket s(ioth.iocp);
+			CHECK(acceptor.accept(s, 0));
+		}
+	}
+
+
+	// This one connects because there is a backlog
+	{
+		TCPSocket c(ioth.iocp);
+		pending.increment();
+		c.asyncConnect("127.0.0.1", SERVER_PORT, [&](const Error& ec)
+		{
+			CHECK(!ec);
+			pending.decrement();
+		});
+		pending.wait();
+	}
+	// This one fails because
+	{
+		TCPSocket c(ioth.iocp);
+		pending.increment();
+		c.asyncConnect("127.0.0.1", SERVER_PORT, [&](const Error& ec)
+		{
+			CHECK(ec);
+			pending.decrement();
+		});
+		pending.wait();
+	}
+}
+
+TEST(AsyncConnectCancel)
+{
+	IOThread ioth;
+	ZeroSemaphore pending;
+
+	TCPAcceptor acceptor(ioth.iocp);
+	acceptor.listen(SERVER_PORT,1);
+
+	{
+		TCPSocket c(ioth.iocp);
+		pending.increment();
+		c.asyncConnect("127.0.0.1", SERVER_PORT, [&pending](const Error& ec)
+		{
+			pending.decrement();
+			CHECK(!ec); // success
+		});
+		pending.wait();
+	}
+
+	// Operation cancelled because the socket went out of scope
+	{
+		TCPSocket c(ioth.iocp);
+		pending.increment();
+		c.asyncConnect("127.0.0.1", SERVER_PORT, [&pending](const Error& ec)
+		{
+			pending.decrement();
+			CHECK(ec.code==Error::Code::Cancelled); // failure
+		});
+	}
+	// Operation cancelled explicitly
+	{
+		TCPSocket c(ioth.iocp);
+		pending.increment();
+		c.asyncConnect("127.0.0.1", SERVER_PORT, [&pending](const Error& ec)
+		{
+			pending.decrement();
+			CHECK(ec.code==Error::Code::Cancelled); // failure
+		});
+		c.cancel();
+		pending.wait();
+	}
+
+	pending.wait();
+}
+
+TEST(AsyncSendCancel)
+{
+	IOThread ioth;
+	ZeroSemaphore pending;
+
+	TCPAcceptor acceptor(ioth.iocp);
+	acceptor.listen(SERVER_PORT);
+
+	TCPSocket s1(ioth.iocp);
+	acceptor.asyncAccept(s1, [](const Error& ec)
+	{
+		CHECK(!ec);
+	});
+	
+	TCPSocket c(ioth.iocp);
+	CHECK(!c.connect("127.0.0.1", SERVER_PORT));
+
+	// Synchronous send until it fails (since the peer is not reading anything)
+	std::vector<char> buf(1024 * 1024 * 5);
+	Error ec;
+	while(c.send(buf.data(), (int)buf.size(), 0, ec)==buf.size())
+	{
+		CHECK(!ec);
+	}
+	CHECK(ec.code==Error::Code::NoResources);
+
+	// Since we filled the OS send buffers with the previous synchronous sends, doing an asyncSend now should not cause
+	// the handler be be called
+	pending.increment();
+	c.asyncSend(Buffer(buf), [&buf, &pending](const Error& ec, unsigned sent)
+	{
+		CHECK(ec.code == Error::Code::Cancelled);
+		pending.decrement();
+	});
+	Sleep(10); // So we can check that the handler is still pending
+	CHECK(pending.trywait() == false);
+	c.cancel();
+	pending.wait();
+}
+
+
+TEST(AsyncReceiveCancel)
+{
+	IOThread ioth;
+	ZeroSemaphore pending;
+
+	TCPAcceptor acceptor(ioth.iocp);
+	acceptor.listen(SERVER_PORT);
+
+	{
+		TCPSocket c(ioth.iocp);
+		CHECK(!c.connect("127.0.0.1", SERVER_PORT));
+		char buf[2];
+
+		//
+		// Test cancelling explicitly
+		pending.increment();
+		c.asyncReceiveSome(Buffer(buf), [&pending](const Error& ec, unsigned received)
+		{
+			CHECK(ec.code == Error::Code::Cancelled);
+			CHECK(received == 0);
+			pending.decrement();
+		});
+		c.cancel();
+		pending.wait();
+
+		//
+		// Test cancelling by going out of scope
+		pending.increment();
+		c.asyncReceiveSome(Buffer(buf), [&pending](const Error& ec, unsigned received)
+		{
+			CHECK(ec.code == Error::Code::Cancelled);
+			CHECK(received == 0);
+			pending.decrement();
+		});
+	}
+
+	pending.wait();
+}
+
+
 
 }

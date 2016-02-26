@@ -357,7 +357,7 @@ struct AsyncSendOperation : public CompletionPortOperation
 //
 //////////////////////////////////////////////////////////////////////////
 
-Error TCPAcceptor::listen(int listenPort)
+Error TCPAcceptor::listen(int listenPort, int backlog)
 {
 	CZ_ASSERT(m_listening == false);
 
@@ -368,7 +368,7 @@ Error TCPAcceptor::listen(int listenPort)
 	serverAddress.sin_port = htons(listenPort);
 
 	if (bind(m_listenSocket.get(), (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR ||
-		::listen(m_listenSocket.get(), SOMAXCONN) == SOCKET_ERROR)
+		::listen(m_listenSocket.get(), backlog) == SOCKET_ERROR)
 	{
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
@@ -1005,7 +1005,7 @@ int TCPSocket::sendSome(const void* data, int size, Error& ec)
 	// In this case we don't consider it an error, and just tell the caller it sent 0 bytes
 	if (err == WSAENOBUFS || err == WSAEWOULDBLOCK)
 	{
-		ec = Error();
+		ec = Error(Error::Code::NoResources);
 		return 0;
 	}
 	else
