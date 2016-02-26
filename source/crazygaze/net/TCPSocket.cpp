@@ -55,6 +55,12 @@ http://www.serverframework.com/products---the-free-framework.html
 
 namespace cz
 {
+
+std::string to_json(const net::SocketAddress& val)
+{
+	return to_json(val.toString(true));
+}
+
 namespace net
 {
 
@@ -67,11 +73,14 @@ WSAInstance::WSAInstance()
 	WSADATA wsaData;
 	int err = WSAStartup(wVersionRequested, &wsaData);
 	if (err != 0)
-		throw std::runtime_error(getLastWin32ErrorMsg());
+	{
+		CZ_LOG(logDefault, Fatal, "Error calling WSAStartup: %s", getLastWin32ErrorMsg());
+	}
+
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 	{
 		WSACleanup();
-		throw std::runtime_error("Could not find a usable version of Winsock.dll");
+		CZ_LOG(logDefault, Fatal, "Could not find a usable version of Winsock.dll");
 	}
 }
 
@@ -224,6 +233,38 @@ static const char* getAddr(sockaddr* sa)
 	return formatString("%s:%d", buf, port);
 }
 
+struct AsyncConnectOperation : public CompletionPortOperation
+{
+	AsyncConnectOperation() {}
+	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
+	{
+		if (aborted)
+		{
+			err = Error(Error::Code::Cancelled);
+		}
+		else if (err)
+		{
+			// Do nothing
+		}
+		else
+		{
+			int seconds;
+			int bytes = sizeof(seconds);
+			int res = getsockopt(sock, SOL_SOCKET, SO_CONNECT_TIME, (char*)&seconds, (PINT)&bytes);
+			if (res != NO_ERROR || seconds == -1)
+				err = Error(Error::Code::Other, "Connect failed");
+		}
+
+		handler(err);
+	}
+
+	// holding the SOCKET directly, instead of TCPSocket, so TCPSocket can be deleted while there are still handlers
+	// in flight
+	SOCKET sock; 
+	ConnectHandler handler;
+	Error err;
+};
+
 struct AsyncAcceptOperation : public CompletionPortOperation
 {
 	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
@@ -279,7 +320,7 @@ struct AsyncReceiveOperation : public CompletionPortOperation
 		else if (bytesTransfered == 0)
 		{
 			// When we don't have an error, but the bytes transfered are zero, it means the peer disconnected gracefully
-			err = Error(Error::Code::Other, "Disconnected");
+			err = Error(Error::Code::ConnectionClosed);
 		}
 
 		handler(err, bytesTransfered);
@@ -332,7 +373,6 @@ Error TCPAcceptor::listen(int listenPort)
 		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
-
 	if (CreateIoCompletionPort(
 			reinterpret_cast<HANDLE>(m_listenSocket.get()), // FileHandle
 			m_iocp.getHandle(), // ExistingCompletionPort
@@ -361,7 +401,9 @@ TCPAcceptor::TCPAcceptor(CompletionPort& iocp)
 	int iOptval = 1;
 	if (setsockopt(m_listenSocket.get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&iOptval, sizeof(iOptval)) ==
 		SOCKET_ERROR)
-		throw std::runtime_error(formatString("Error setting SO_EXCLUSIVEADDRUSE: %s", getLastWin32ErrorMsg()));
+	{
+		CZ_LOG(logDefault, Fatal, "Error setting SO_EXCLUSIVEADDRUSE: %s", getLastWin32ErrorMsg());
+	}
 
 	debugData.serverSocketCreated(this);
 	LOG("TCPAcceptor %p: Exit\n", this);
@@ -524,7 +566,9 @@ void TCPSocket::init(SOCKET s, CompletionPort& iocp)
 	// This disables IOCP notification if the request completes immediately at the point of call.
 	/*
 	if (SetFileCompletionNotificationModes((HANDLE)m_socket.get(), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)==FALSE)
-		throw std::runtime_error(formatString("Error initializing accept socket: %s", getLastWin32ErrorMsg()));
+	{
+		CZ_LOG(logDefault, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
+	}
 	*/
 }
 
@@ -649,38 +693,6 @@ Error TCPSocket::connect(const std::string& ip, int port)
 	m_state = details::SocketState::Connected;
 	return Error();
 }
-
-struct AsyncConnectOperation : public CompletionPortOperation
-{
-	AsyncConnectOperation() {}
-	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
-	{
-		if (aborted)
-		{
-			err = Error(Error::Code::Cancelled);
-		}
-		else if (err)
-		{
-			// Do nothing
-		}
-		else
-		{
-			int seconds;
-			int bytes = sizeof(seconds);
-			int res = getsockopt(sock, SOL_SOCKET, SO_CONNECT_TIME, (char*)&seconds, (PINT)&bytes);
-			if (res != NO_ERROR || seconds == -1)
-				err = Error(Error::Code::Other, "Connect failed");
-		}
-
-		handler(err);
-	}
-
-	// holding the SOCKET directly, instead of TCPSocket, so TCPSocket can be deleted while there are still handlers
-	// in flight
-	SOCKET sock; 
-	ConnectHandler handler;
-	Error err;
-};
 
 void TCPSocket::asyncConnect(const std::string& ip, int port, ConnectHandler handler)
 {
@@ -1127,9 +1139,5 @@ int TCPSocket::receive(void* data, int size, unsigned timeoutMs, Error& ec)
 
 } // namespace net
 
-std::string to_json(const net::SocketAddress& val)
-{
-	return to_json(val.toString(true));
-}
 
 } // namespace cz

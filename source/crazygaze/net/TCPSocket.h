@@ -170,6 +170,10 @@ class TCPSocket
 	//! Cancels all asynchronous operations
 	void cancel();
 
+	//! Cancels all asynchronous operations, and closes the socket
+	// No more operations on the socket are allowed after this
+	void close();
+
 	//! Asynchronous connect
 	void asyncConnect(const std::string& ip, int port, ConnectHandler handler);
 
@@ -335,8 +339,6 @@ class TCPSocket
 
 
   protected:
-
-	void close();
 
 	friend struct AsyncAcceptOperation;
 	friend struct AsyncConnectOperation;
