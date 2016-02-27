@@ -59,12 +59,13 @@ class CompletionPort
 	void post(std::unique_ptr<CompletionPortOperation> op, unsigned bytesTransfered, uint64_t completionKey);
   protected:
 	HANDLE m_port;
-
 	struct Data
 	{
 		std::unordered_map<CompletionPortOperation*, std::unique_ptr<CompletionPortOperation>> items;
 	};
 	Monitor<Data> m_data;
+
+	size_t runImpl(DWORD timeoutMs);
 
 };
 

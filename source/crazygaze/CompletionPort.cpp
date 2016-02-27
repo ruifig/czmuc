@@ -83,7 +83,9 @@ void CompletionPort::post(std::unique_ptr<CompletionPortOperation> op, unsigned 
 	add(std::move(op));
 }
 
-size_t CompletionPort::run()
+
+
+size_t CompletionPort::runImpl(DWORD timeoutMs)
 {
 	size_t counter = 0;
 	while (true)
@@ -91,7 +93,7 @@ size_t CompletionPort::run()
 		DWORD bytesTransfered = 0;
 		ULONG_PTR completionKey = 0;
 		OVERLAPPED* overlapped = NULL;
-		BOOL res = ::GetQueuedCompletionStatus(m_port, &bytesTransfered, &completionKey, &overlapped, INFINITE);
+		BOOL res = ::GetQueuedCompletionStatus(m_port, &bytesTransfered, &completionKey, &overlapped, timeoutMs);
 		int err = 0;
 		if (res == FALSE)
 			err = ::GetLastError();
@@ -100,6 +102,11 @@ size_t CompletionPort::run()
 		// Note: If overlapped was NOT NULL, it means an operation was dequeued, successful or not.
 		if (overlapped)
 		{
+			// If overlapped was set, but we have an error, it means the operation was dequeued, and
+			// The error is treated in the handler itself.
+			// It has nothing to do with the CompletionPort
+			//
+
 			CompletionPortOperation* operation = CONTAINING_RECORD(overlapped, CompletionPortOperation, overlapped);
 			// This is needed, since we can get here after the WSASend/WSARecv but before the operation is put into
 			// the map.
@@ -107,6 +114,7 @@ size_t CompletionPort::run()
 			// was executed. Those operations would then never been removed from the map
 			operation->readyToExecute.wait();
 			operation->execute(err==ERROR_OPERATION_ABORTED ? true : false, bytesTransfered, completionKey);
+			counter++;
 
 			m_data([operation](Data& data)
 			{
@@ -117,24 +125,13 @@ size_t CompletionPort::run()
 				data.items.erase(it);
 			});
 		}
-
-		if (err==0)
-		{
-			// Operation successful
-		}
 		else if (
-			err == ERROR_ABANDONED_WAIT_0 || // handle closed||
+			res==FALSE || // "res==FALSE && overlapped==NULL" means a timeout
+			err == ERROR_ABANDONED_WAIT_0 || // handle closed
 			err ==ERROR_INVALID_HANDLE // m_port was set to INVALID_HANDLE, has part of #stop
-			)
+			) 
 		{
 			return counter;
-		}
-		else if (overlapped)
-		{
-			// If overlapped was set, but we have an error, it means the operation was dequeued, and
-			// The error is treated in the handler itself.
-			// It has nothing to do with the CompletionPort
-			//
 		}
 		else
 		{
@@ -142,12 +139,14 @@ size_t CompletionPort::run()
 		}
 	};
 }
+size_t CompletionPort::run()
+{
+	return runImpl(INFINITE);
+}
 
 size_t CompletionPort::poll()
 {
-	// #TODO : Implement this
-	CZ_UNEXPECTED();
-	return 0;
+	return runImpl(0);
 }
 
 } // namespace cz
