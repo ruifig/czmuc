@@ -686,8 +686,6 @@ TEST(TestThroughput)
 	ths.stop();
 }
 
-/*
-
 class EchoServerConnection
 {
 public:
@@ -982,6 +980,41 @@ TEST(MultipleUntil)
 	ths.stop();
 }
 
+
+TEST(Poll)
+{
+	CompletionPort iocp;
+	ZeroSemaphore pending;
+
+	TCPAcceptor acceptor(iocp);
+	acceptor.listen(SERVER_PORT);
+
+	const int numConns = 10;
+	for (int i = 0; i < numConns; i++)
+	{
+		auto s = std::make_shared<TCPSocket>(iocp);
+		pending.increment();
+		acceptor.asyncAccept(*s, [&pending, s](const Error& ec)
+		{
+			CHECK(!ec);
+			pending.decrement();
+		});
+	}
+
+	CHECK_EQUAL(0, iocp.poll());
+
+	for (int i = 0; i < numConns; i++)
+	{
+		TCPSocket c(iocp);
+		CHECK(!c.connect("127.0.0.1", SERVER_PORT));
+	}
+
+	CHECK_EQUAL(numConns, iocp.poll());
+	pending.wait();
+
+}
+
+
 }
 
 SUITE(TCPSocket_Failures)
@@ -1203,7 +1236,5 @@ TEST(AsyncReceiveCancel)
 
 	pending.wait();
 }
-
-*/
 
 }
