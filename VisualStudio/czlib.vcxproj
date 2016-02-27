@@ -45,7 +45,6 @@
     <ClInclude Include="..\source\crazygaze\IniFile.h" />
     <ClInclude Include="..\source\crazygaze\Json.h" />
     <ClInclude Include="..\source\crazygaze\Logging.h" />
-    <ClInclude Include="..\source\crazygaze\net\details\TCPSocketDebug.h" />
     <ClInclude Include="..\source\crazygaze\net\SocketAddress.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
     <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
@@ -98,7 +97,6 @@
     <ClCompile Include="..\source\crazygaze\IniFile.cpp" />
     <ClCompile Include="..\source\crazygaze\Json.cpp" />
     <ClCompile Include="..\source\crazygaze\Logging.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\details\TCPSocketDebug.cpp" />
     <ClCompile Include="..\source\crazygaze\net\SocketAddress.cpp" />
     <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

@@ -1,8 +1,6 @@
 #include "czlibPCH.h"
 #include "crazygaze/net/TCPSocket.h"
-#include "crazygaze/net/details/TCPSocketDebug.h"
 #include "crazygaze/Json.h"
-#include "crazygaze/Logging.h"
 #include "crazygaze/StringUtils.h"
 #include "crazygaze/ScopeGuard.h"
 
@@ -56,6 +54,8 @@ http://www.serverframework.com/products---the-free-framework.html
 namespace cz
 {
 
+CZ_DEFINE_LOG_CATEGORY(logNet)
+
 std::string to_json(const net::SocketAddress& val)
 {
 	return to_json(val.toString(true));
@@ -67,6 +67,20 @@ namespace net
 namespace details
 {
 
+void setBlocking(SOCKET sock, bool blocking)
+{
+	CZ_ASSERT(sock != INVALID_SOCKET);
+
+	// 0: Blocking. !=0 : Non-blocking
+	u_long mode = blocking ? 0 : 1;
+	int res = ioctlsocket(sock, FIONBIO, &mode);
+	if (res != 0)
+	{
+		auto err = GetLastError();
+		CZ_LOG(logNet, Fatal, "Error set non-blocking mode: %s", getLastWin32ErrorMsg());
+	}
+}
+
 WSAInstance::WSAInstance()
 {
 	WORD wVersionRequested = MAKEWORD(2, 2);
@@ -74,13 +88,13 @@ WSAInstance::WSAInstance()
 	int err = WSAStartup(wVersionRequested, &wsaData);
 	if (err != 0)
 	{
-		CZ_LOG(logDefault, Fatal, "Error calling WSAStartup: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error calling WSAStartup: %s", getLastWin32ErrorMsg());
 	}
 
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 	{
 		WSACleanup();
-		CZ_LOG(logDefault, Fatal, "Could not find a usable version of Winsock.dll");
+		CZ_LOG(logNet, Fatal, "Could not find a usable version of Winsock.dll");
 	}
 }
 
@@ -105,20 +119,18 @@ SocketWrapper::SocketWrapper(SOCKET socket) : m_socket(socket)
 
 SocketWrapper::~SocketWrapper()
 {
-	if (m_socket != INVALID_SOCKET)
-	{
-		::shutdown(m_socket, SD_BOTH);
-		::closesocket(m_socket);
-	}
+	close();
 }
 
-void SocketWrapper::shutdown()
+void SocketWrapper::close()
 {
-	if (m_socket != INVALID_SOCKET)
-	{
-		::shutdown(m_socket, SD_BOTH);
-		::closesocket(m_socket);
-	}
+	if (m_socket == INVALID_SOCKET)
+		return;
+	::shutdown(m_socket, SD_BOTH);
+	auto res = ::closesocket(m_socket);
+	auto err = GetLastError();
+	assert(res == 0);
+	m_socket = INVALID_SOCKET;
 }
 
 SOCKET SocketWrapper::get()
@@ -134,6 +146,7 @@ bool SocketWrapper::isValid() const
 
 SocketWrapper& SocketWrapper::operator=(SocketWrapper&& other)
 {
+	close();
 	m_socket = other.m_socket;
 	other.m_socket = INVALID_SOCKET;
 	return *this;
@@ -194,24 +207,6 @@ struct WSAFuncs
 // Utility code
 //
 //////////////////////////////////////////////////////////////////////////
-
-// #TODO Delete these when not needed
-static std::vector<std::string> logs;
-void logStr(const char* str)
-{
-	static std::mutex mtx;
-	std::lock_guard<std::mutex> lk(mtx);
-	logs.push_back(str);
-}
-
-// #TODO : Have a log category for ::net
-#ifndef NDEBUG
-	//#define LOG(fmt, ...) printf(fmt, ##__VA_ARGS__)
-	//#define LOG(fmt, ...) logStr(formatString(fmt, ##__VA_ARGS__))
-	#define LOG(...) ((void)0)
-#else
-	#define LOG(...) ((void)0)
-#endif
 
 static const char* getAddr(sockaddr* sa)
 {
@@ -288,7 +283,7 @@ struct AsyncAcceptOperation : public CompletionPortOperation
 			details::WSAFuncs::get().lpfnGetAcceptExSockaddrs(
 				&outputBuffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &localSockAddr,
 				&localSockAddrSize, &remoteSockAddr, &remoteSockAddrSize);
-			LOG("New connection:\n\tlocal = %s\n\tremote = %s\n", getAddr(localSockAddr), getAddr(remoteSockAddr));
+			CZ_LOG(logNet, Log, "New connection:\n\tlocal = %s\n\tremote = %s\n", getAddr(localSockAddr), getAddr(remoteSockAddr));
 			sock->m_localAddr = SocketAddress(*localSockAddr);
 			sock->m_remoteAddr = SocketAddress(*remoteSockAddr);
 			sock->m_state = details::SocketState::Connected;
@@ -370,7 +365,7 @@ Error TCPAcceptor::listen(int listenPort, int backlog)
 	if (bind(m_listenSocket.get(), (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR ||
 		::listen(m_listenSocket.get(), backlog) == SOCKET_ERROR)
 	{
-		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
 	if (CreateIoCompletionPort(
@@ -380,7 +375,7 @@ Error TCPAcceptor::listen(int listenPort, int backlog)
 			0 // NumberOfConcurrentThreads
 		) == NULL)
 	{
-		CZ_LOG(logDefault, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error initializing listen socket: %s", getLastWin32ErrorMsg());
 	}
 
 	m_listening = true;
@@ -391,30 +386,23 @@ Error TCPAcceptor::listen(int listenPort, int backlog)
 TCPAcceptor::TCPAcceptor(CompletionPort& iocp)
 	: m_iocp(iocp)
 {
-	LOG("TCPAcceptor %p: Enter\n", this);
 	m_listenSocket = details::SocketWrapper(
 		WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED));
 	if (!m_listenSocket.isValid())
-		CZ_LOG(logDefault, Fatal, "Error creating listen socket: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error creating listen socket: %s", getLastWin32ErrorMsg());
 
 	// Set this, so no other applications can bind to the same port
 	int iOptval = 1;
 	if (setsockopt(m_listenSocket.get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&iOptval, sizeof(iOptval)) ==
 		SOCKET_ERROR)
 	{
-		CZ_LOG(logDefault, Fatal, "Error setting SO_EXCLUSIVEADDRUSE: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error setting SO_EXCLUSIVEADDRUSE: %s", getLastWin32ErrorMsg());
 	}
-
-	debugData.serverSocketCreated(this);
-	LOG("TCPAcceptor %p: Exit\n", this);
 }
 
 TCPAcceptor::~TCPAcceptor()
 {
-	LOG("~TCPAcceptor %p: Enter\n", this);
 	close();
-	debugData.serverSocketDestroyed(this);
-	LOG("~TCPAcceptor %p: Exit\n", this);
 }
 
 void TCPAcceptor::cancel()
@@ -440,7 +428,7 @@ void TCPAcceptor::cancel()
 		else
 		{
 			// If we get any other errors, probably the user called WSACleanup already
-			CZ_LOG(logDefault, Warning, "CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err));
+			CZ_LOG(logNet, Warning, "CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err));
 		}
 	}
 
@@ -451,7 +439,7 @@ void TCPAcceptor::close()
 		return;
 
 	cancel();
-	m_listenSocket.shutdown();
+	m_listenSocket.close();
 	m_listening = false;
 }
 
@@ -519,7 +507,7 @@ void TCPAcceptor::asyncAccept(TCPSocket& socket, AcceptHandler handler)
 		// WSAEINVAL 10022 : An invalid argument was supplied
 		//		This is normally caused by passing the same socket to multiple asyncAccept calls
 		//	
-		CZ_LOG(logDefault, Fatal, "Error calling AcceptEx: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error calling AcceptEx: %s", getLastWin32ErrorMsg());
 	}
 
 	socket.m_state = details::SocketState::WaitingAccept;
@@ -535,10 +523,7 @@ void TCPAcceptor::asyncAccept(TCPSocket& socket, AcceptHandler handler)
 TCPSocket::TCPSocket(CompletionPort& iocp)
 	: m_iocp(iocp)
 {
-	LOG("TCPSocket %p: Enter\n", this);
-	debugData.socketCreated(this);
 	init(INVALID_SOCKET, iocp);
-	LOG("TCPSocket %p: Exit\n", this);
 }
 
 void TCPSocket::init(SOCKET s, CompletionPort& iocp)
@@ -547,7 +532,7 @@ void TCPSocket::init(SOCKET s, CompletionPort& iocp)
 		(s==INVALID_SOCKET) ? WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED) : s);
 	if (!m_socket.isValid())
 	{
-		CZ_LOG(logDefault, Fatal, "Error creating client socket: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error creating client socket: %s", getLastWin32ErrorMsg());
 	}
 
 	if (CreateIoCompletionPort(
@@ -557,7 +542,7 @@ void TCPSocket::init(SOCKET s, CompletionPort& iocp)
 			0 // NumberOfConcurrentThreads
 		) == NULL) 
 	{
-		CZ_LOG(logDefault, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
 	}
 
 	// Set non-blocking, so sendSome/receiveSome doesn't block forever
@@ -567,28 +552,19 @@ void TCPSocket::init(SOCKET s, CompletionPort& iocp)
 	/*
 	if (SetFileCompletionNotificationModes((HANDLE)m_socket.get(), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)==FALSE)
 	{
-		CZ_LOG(logDefault, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
+		CZ_LOG(logNet, Fatal, "Error initializing accept socket: %s", getLastWin32ErrorMsg());
 	}
 	*/
 }
 
 TCPSocket::~TCPSocket()
 {
-	LOG("~TCPSocket %p: Enter\n", this);
 	close();
-	LOG("~TCPSocket %p: Exit\n", this);
 }
 
 void TCPSocket::setBlocking(bool blocking)
 {
-	 // 0: Blocking. !=0 : Non-blocking
-	u_long mode = blocking ? 0 : 1;
-	int res = ioctlsocket(m_socket.get(), FIONBIO, &mode);
-	if (res != 0)
-	{
-		CZ_LOG(logDefault, Fatal, "Error set non-blocking mode: %s", getLastWin32ErrorMsg());
-	}
-
+	details::setBlocking(m_socket.get(), blocking);
 }
 
 void TCPSocket::cancel()
@@ -614,7 +590,7 @@ void TCPSocket::cancel()
 		else
 		{
 			// If we get any other errors, probably the user called WSACleanup already
-			CZ_LOG(logDefault, Warning, "CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err));
+			CZ_LOG(logNet, Warning, "CancelIoEx failed: %d:%s", err, getLastWin32ErrorMsg(err));
 		}
 	}
 
@@ -626,8 +602,7 @@ void TCPSocket::close()
 		return;
 
 	cancel();
-	debugData.socketDestroyed(this);
-	m_socket.shutdown();
+	m_socket.close();
 	m_state = details::SocketState::Disconnected;
 	m_userData.reset();
 }
@@ -639,7 +614,7 @@ Error TCPSocket::fillLocalAddr()
 	if (getsockname(m_socket.get(), (SOCKADDR*)&addr, &size) == SOCKET_ERROR)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
-		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
+		CZ_LOG(logNet, Fatal, "Could not get address information. Error '%s'", errMsg);
 		return Error(Error::Code::Other, errMsg);
 	}
 
@@ -654,7 +629,7 @@ Error TCPSocket::fillRemoteAddr()
 	if (getpeername(m_socket.get(), (SOCKADDR*)&addr, &size) == SOCKET_ERROR)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
-		CZ_LOG(logDefault, Error, "Could not get address information. Error '%s'", errMsg);
+		CZ_LOG(logNet, Fatal, "Could not get address information. Error '%s'", errMsg);
 		return Error(Error::Code::Other, errMsg);
 	}
 
@@ -665,7 +640,6 @@ Error TCPSocket::fillRemoteAddr()
 Error TCPSocket::connect(const std::string& ip, int port)
 {
 	CZ_ASSERT(m_state == details::SocketState::None);
-	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
 
 	SocketAddress remoteAddr(ip.c_str(), port);
 	m_remoteAddr = remoteAddr;
@@ -682,7 +656,7 @@ Error TCPSocket::connect(const std::string& ip, int port)
 	if (res == SOCKET_ERROR)
 	{
 		auto errMsg = getLastWin32ErrorMsg(WSAGetLastError());
-		CZ_LOG(logDefault, Warning, "Could not connect: %s", errMsg);
+		CZ_LOG(logNet, Warning, "Could not connect: %s", errMsg);
 		return Error(Error::Code::Other, errMsg);
 	}
 
@@ -697,7 +671,6 @@ Error TCPSocket::connect(const std::string& ip, int port)
 void TCPSocket::asyncConnect(const std::string& ip, int port, ConnectHandler handler)
 {
 	CZ_ASSERT(m_state == details::SocketState::None);
-	LOG("%p: state_Connecting: addr=%s:%d\n", this, ip.c_str(), port);
 
 	// ConnectEx required the socket to be bound
 	{
@@ -708,7 +681,7 @@ void TCPSocket::asyncConnect(const std::string& ip, int port, ConnectHandler han
 		addr.sin_port = 0;
 		if (bind(m_socket.get(), (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
 		{
-			CZ_LOG(logDefault, Fatal, "Error binding socket: %s", getLastWin32ErrorMsg());
+			CZ_LOG(logNet, Fatal, "Error binding socket: %s", getLastWin32ErrorMsg());
 			return;
 		}
 	}
@@ -810,7 +783,11 @@ void TCPSocket::asyncReceiveSome(Buffer buf, ReceiveHandler handler)
 				op->err.code = Error::Code::Other;
 				break;
 			case WSAENOBUFS:
-				op->err.code = Error::Code::Other;
+				op->err.code = Error::Code::NoResources;
+				m_state = details::SocketState::Disconnected;
+				break;
+			case WSAECONNRESET:
+				op->err.code = Error::Code::ConnectionClosed;
 				m_state = details::SocketState::Disconnected;
 				break;
 			default: // Any other error we just consider as disconnection
@@ -917,10 +894,7 @@ void TCPSocket::asyncReceiveUntil(RingBuffer& buf, MatchCondition matchCondition
 
 void TCPSocket::asyncSend(Buffer buf, SendHandler handler)
 {
-	//printf("TCPSocket::asyncSend(%d bytes)\n", (int)buf.size);
 	CZ_ASSERT(buf.ptr != nullptr);
-
-	LOG("%p: Sending %d bytes\n", this, buf.capacity);
 
 	auto op = std::make_unique<AsyncSendOperation>();
 	op->handler = std::move(handler);

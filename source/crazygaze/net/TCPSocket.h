@@ -8,13 +8,16 @@ TCP Sockets inspired Boost asio
 #include "crazygaze/CompletionPort.h"
 #include "crazygaze/net/SocketAddress.h"
 #include "crazygaze/ChunkBuffer.h"
-#include "crazygaze/net/details/TCPSocketDebug.h"
 #include "crazygaze/Future.h"
 #include "crazygaze/Buffer.h"
 #include "crazygaze/RingBuffer.h"
+#include "crazygaze/Logging.h"
 
 namespace cz
 {
+
+CZ_DECLARE_LOG_CATEGORY(logNet, Log, Log)
+
 namespace net
 {
 
@@ -42,8 +45,7 @@ namespace details
 		~SocketWrapper();
 		SOCKET get();
 		bool isValid() const;
-		void shutdown();
-
+		void close();
 	private:
 		SOCKET m_socket = INVALID_SOCKET;
 	};

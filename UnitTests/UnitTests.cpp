@@ -27,7 +27,6 @@ int runAllTests()
 	auto res = UnitTest::RunAllTests();
 	if (res != EXIT_SUCCESS)
 		return res;
-	debugData.checkAndReset();
 	return res;
 }
 
@@ -80,8 +79,9 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	int c = 0;
 	WindowsConsole con(120, 40, 300, 1000);
-	logTestsVerbose.setVerbosity(LogVerbosity::Fatal);
+	logTestsVerbose.setVerbosity(LogVerbosity::Warning);
 	//logTests.setVerbosity(LogVerbosity::Warning);
+	logNet.setVerbosity(LogVerbosity::Error);
 
 	// So Sleep calls are as accurate as possible
 	timeBeginPeriod(1);
