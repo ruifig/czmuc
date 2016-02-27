@@ -5,9 +5,31 @@ using namespace cz::net;
 
 #define SERVER_PORT 28000
 
+struct IOThread
+{
+public:
+	IOThread()
+	{
+		th = std::thread([this]
+		{
+			iocp.run();
+		});
+	}
+
+	~IOThread()
+	{
+		iocp.stop();
+		th.join();
+	}
+
+	CompletionPort iocp;
+	std::thread th;
+};
+
 SUITE(TCPSocket)
 {
 
+/*
 void testConnection(int count)
 {
 	CompletionPort iocp;
@@ -340,7 +362,8 @@ TEST(SynchronousAcceptAndConnect)
 		// And try one with success
 		ec = acceptor.accept(s, 0xFFFFFFFF);
 
-		CZ_LOG(logDefault, Log, "Server: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
+		CZ_LOG(logTestsVerbose, Log, "Server: local: %s, remote: %s",
+			s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
 		CHECK(!ec);
 
 		char buf[5];
@@ -362,7 +385,7 @@ TEST(SynchronousAcceptAndConnect)
 	// Try a successful accept
 	checkpoint.wait();
 	CHECK(!s.connect("127.0.0.1", SERVER_PORT));
-	CZ_LOG(logDefault, Log, "Client: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
+	CZ_LOG(logTestsVerbose, Log, "Client: local: %s, remote: %s", s.getLocalAddress().toString(true), s.getRemoteAddress().toString(true));
 
 	Error ec;
 	CHECK_EQUAL(5, s.send("ABCD", 5, 0xFFFFFFFF, ec));
@@ -451,6 +474,8 @@ TEST(CompoundReceive)
 		th.join();
 }
 
+*/
+
 class BigDataServer
 {
 public:
@@ -538,7 +563,7 @@ private:
 			}
 			else
 			{
-				CZ_LOG(logTestsVerbose, Warning, "Receive failed with '%s'", ec.msg());
+				CHECK(ec.code == Error::Code::ConnectionClosed);
 			}
 			m_pendingOps.decrement();
 		});
@@ -661,6 +686,8 @@ TEST(TestThroughput)
 	ths.stop();
 }
 
+/*
+
 class EchoServerConnection
 {
 public:
@@ -673,9 +700,10 @@ public:
 
 	~EchoServerConnection()
 	{
-		CZ_LOG(logTests, Log, "EchoServerConnection: Destructor");
-		m_socket->close();
+		CZ_LOG(logTestsVerbose, Log, "EchoServerConnection: Destructor");
+		m_socket->cancel();
 		m_pending.wait();
+		m_socket->close();
 	}
 
 private:
@@ -688,7 +716,7 @@ private:
 				SCOPE_EXIT{ m_pending.decrement(); };
 				if (bytesTransfered==0)
 				{
-					CZ_LOG(logTests, Log, "EchoServerConnection: Disconnected");
+					CZ_LOG(logTestsVerbose, Log, "EchoServerConnection: Disconnected");
 					m_socket->close();
 					return;
 				}
@@ -698,13 +726,13 @@ private:
 
 				std::string msg(m_buf.begin(), m_buf.begin() + bytesTransfered);
 				m_buf.skip(bytesTransfered);
-				CZ_LOG(logTests, Log, "EchoServerConnection:Received: %d bytes, %s,", bytesTransfered, msg.c_str());
-				CZ_LOG(logTests, Log, "EchoServerConnection: Buf fillcount: %d bytes", m_buf.getUsedSize());
+				CZ_LOG(logTestsVerbose, Log, "EchoServerConnection:Received: %d bytes, %s,", bytesTransfered, msg.c_str());
+				CZ_LOG(logTestsVerbose, Log, "EchoServerConnection: Buf fillcount: %d bytes", m_buf.getUsedSize());
 				setupRecv(); // This needs to be done AFTER reading our data from the buffer
 				m_socket->asyncSend(msg.c_str(), static_cast<int>(msg.size()), [this](auto ec, auto bytesTransfered)
 				{
 					CZ_ASSERT(!ec && bytesTransfered!=0);
-					CZ_LOG(logTests, Log, "EchoServerConnection: Sent %d bytes", bytesTransfered);
+					CZ_LOG(logTestsVerbose, Log, "EchoServerConnection: Sent %d bytes", bytesTransfered);
 				});
 			});
 	}
@@ -714,7 +742,6 @@ private:
 	RingBuffer m_buf;
 	int m_waitMs;
 };
-
 
 class EchoServer
 {
@@ -745,7 +772,7 @@ public:
 			if (ec)
 				return;
 			m_inPrepare++;
-			CZ_LOG(logTests, Log, "Client from %s connected", socket->getRemoteAddress().toString(true));
+			CZ_LOG(logTestsVerbose, Log, "Client from %s connected", socket->getRemoteAddress().toString(true));
 			auto con = std::make_unique<EchoServerConnection>(socket);
 			m_clients.push_back(std::move(con));
 			m_inPrepare--;
@@ -788,7 +815,7 @@ struct ClientConnection
 		pending.increment();
 		pendingEchos.increment();
 		auto str = formatString("Client:%d:%d\n", num, sendCount++);
-		CZ_LOG(logTests, Log, formatString("Sending %s", str));
+		CZ_LOG(logTestsVerbose, Log, formatString("Sending %s", str));
 		socket->asyncSend(
 			str, static_cast<int>(strlen(str)),
 			[this](const Error& ec, unsigned bytesTransfered)
@@ -796,11 +823,11 @@ struct ClientConnection
 		{
 			if (ec || bytesTransfered==0)
 			{
-				CZ_LOG(logTests, Warning, "ClientConnection: Failed to send.");
+				CZ_LOG(logTestsVerbose, Warning, "ClientConnection: Failed to send.");
 			}
 			else
 			{
-				CZ_LOG(logTests, Log, "ClientConnection: sent %d bytes", bytesTransfered)
+				CZ_LOG(logTestsVerbose, Log, "ClientConnection: sent %d bytes", bytesTransfered)
 			}
 			pending.decrement();
 		});
@@ -815,7 +842,7 @@ struct ClientConnection
 			SCOPE_EXIT{ pending.decrement(); };
 			if (bytesTranfered == 0)
 			{
-				CZ_LOG(logTests, Log, "ClientConnection: Disconnected");
+				CZ_LOG(logTestsVerbose, Log, "ClientConnection: Disconnected");
 				return;
 			}
 			std::string msg(recvBuf.begin(), recvBuf.begin() + bytesTranfered-1);
@@ -960,27 +987,6 @@ TEST(MultipleUntil)
 SUITE(TCPSocket_Failures)
 {
 
-struct IOThread
-{
-public:
-	IOThread()
-	{
-		th = std::thread([this]
-		{
-			iocp.run();
-		});
-	}
-
-	~IOThread()
-	{
-		iocp.stop();
-		th.join();
-	}
-
-	CompletionPort iocp;
-	std::thread th;
-};
-
 TEST(AsyncAcceptCancel)
 {
 	IOThread ioth;
@@ -1008,23 +1014,14 @@ TEST(AsyncAcceptCancel)
 
 		add();
 		add();
+		add();
+		add();
+		add();
+		add();
 		// The acceptor going out of scope will cause the handlers to be cancelled
 	}
 
 	pending.wait();
-}
-
-void doSend(ZeroSemaphore& pending, TCPSocket& sock, Buffer buf)
-{
-	pending.increment();
-	sock.asyncSend(buf, [buf, &sock, &pending](const Error& ec, unsigned sent)
-	{
-		if (ec)
-			return;
-		CHECK_EQUAL(buf.size, sent);
-		doSend(pending, sock, buf);
-		pending.decrement();
-	});
 }
 
 TEST(TestAcceptorBacklog)
@@ -1207,6 +1204,6 @@ TEST(AsyncReceiveCancel)
 	pending.wait();
 }
 
-
+*/
 
 }

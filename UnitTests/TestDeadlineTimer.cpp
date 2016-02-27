@@ -152,8 +152,8 @@ TEST(Test1)
 		res.emplace_back([elapsed=timer.GetTimeInMs(), num, expected, aborted, abortedExpected]()
 		{
 			CHECK_EQUAL(aborted, abortedExpected);
-			CHECK_CLOSE(expected, elapsed, 2);
-			CZ_LOG(logTests, Log, "%d: Elapsed: %4.3f. aborted=%d\n", num, elapsed, (int)aborted);
+			CHECK_CLOSE(expected, elapsed, 4);
+			CZ_LOG(logTestsVerbose, Log, "%d: Elapsed: %4.3f. aborted=%d", num, elapsed, (int)aborted);
 		});
 	};
 	auto checkRes = [&]
