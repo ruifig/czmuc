@@ -23,6 +23,7 @@
     <ClInclude Include="..\source\crazygaze\Any.h" />
     <ClInclude Include="..\source\crazygaze\AsyncCommandQueue.h" />
     <ClInclude Include="..\source\crazygaze\Buffer.h" />
+    <ClInclude Include="..\source\crazygaze\Callstack.h" />
     <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
     <ClInclude Include="..\source\crazygaze\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\Concurrent.h" />
@@ -64,6 +65,7 @@
     <ClInclude Include="..\source\crazygaze\SharedFlag.h" />
     <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
     <ClInclude Include="..\source\crazygaze\Singleton.h" />
+    <ClInclude Include="..\source\crazygaze\Strand.h" />
     <ClInclude Include="..\source\crazygaze\StringUtils.h" />
     <ClInclude Include="..\source\crazygaze\targetver.h" />
     <ClInclude Include="..\source\crazygaze\ThreadingUtils.h" />
@@ -130,17 +132,12 @@
     <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
     <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
     <ClCompile Include="..\source\crazygaze\Singleton.cpp" />
+    <ClCompile Include="..\source\crazygaze\Strand.cpp" />
     <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
     <ClCompile Include="..\source\crazygaze\Timer.cpp" />
     <ClCompile Include="..\source\crazygaze\TimerQueue.cpp" />
     <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
     <ClCompile Include="..\source\crazygaze\WindowsConsole.cpp" />
-    <ClCompile Include="BrainStorm.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />

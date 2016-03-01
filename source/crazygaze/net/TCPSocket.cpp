@@ -228,38 +228,6 @@ static const char* getAddr(sockaddr* sa)
 	return formatString("%s:%d", buf, port);
 }
 
-struct AsyncConnectOperation : public CompletionPortOperation
-{
-	AsyncConnectOperation() {}
-	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
-	{
-		if (aborted)
-		{
-			err = Error(Error::Code::Cancelled);
-		}
-		else if (err)
-		{
-			// Do nothing
-		}
-		else
-		{
-			int seconds;
-			int bytes = sizeof(seconds);
-			int res = getsockopt(sock, SOL_SOCKET, SO_CONNECT_TIME, (char*)&seconds, (PINT)&bytes);
-			if (res != NO_ERROR || seconds == -1)
-				err = Error(Error::Code::Other, "Connect failed");
-		}
-
-		handler(err);
-	}
-
-	// holding the SOCKET directly, instead of TCPSocket, so TCPSocket can be deleted while there are still handlers
-	// in flight
-	SOCKET sock; 
-	ConnectHandler handler;
-	Error err;
-};
-
 struct AsyncAcceptOperation : public CompletionPortOperation
 {
 	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
@@ -298,6 +266,38 @@ struct AsyncAcceptOperation : public CompletionPortOperation
 	Error err;
 	char outputBuffer[2 * AddrLen];
 	TCPSocket* sock = nullptr;
+};
+
+struct AsyncConnectOperation : public CompletionPortOperation
+{
+	AsyncConnectOperation() {}
+	virtual void execute(bool aborted, unsigned bytesTransfered, uint64_t completionKey) override
+	{
+		if (aborted)
+		{
+			err = Error(Error::Code::Cancelled);
+		}
+		else if (err)
+		{
+			// Do nothing
+		}
+		else
+		{
+			int seconds;
+			int bytes = sizeof(seconds);
+			int res = getsockopt(sock, SOL_SOCKET, SO_CONNECT_TIME, (char*)&seconds, (PINT)&bytes);
+			if (res != NO_ERROR || seconds == -1)
+				err = Error(Error::Code::Other, "Connect failed");
+		}
+
+		handler(err);
+	}
+
+	// holding the SOCKET directly, instead of TCPSocket, so TCPSocket can be deleted while there are still handlers
+	// in flight
+	SOCKET sock; 
+	ConnectHandler handler;
+	Error err;
 };
 
 struct AsyncReceiveOperation : public CompletionPortOperation

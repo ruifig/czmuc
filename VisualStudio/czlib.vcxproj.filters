@@ -188,6 +188,8 @@
     <ClInclude Include="..\source\crazygaze\TimerQueue.h">
       <Filter>crazygaze</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\Strand.h" />
+    <ClInclude Include="..\source\crazygaze\Callstack.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\Any.cpp">
@@ -292,7 +294,7 @@
     <ClCompile Include="..\source\crazygaze\TimerQueue.cpp">
       <Filter>crazygaze</Filter>
     </ClCompile>
-    <ClCompile Include="BrainStorm.cpp" />
+    <ClCompile Include="..\source\crazygaze\Strand.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />
