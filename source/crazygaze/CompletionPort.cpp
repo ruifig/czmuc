@@ -10,6 +10,7 @@
 #include "czlibPCH.h"
 #include "crazygaze/CompletionPort.h"
 #include "crazygaze/Logging.h"
+#include "crazygaze/ScopeGuard.h"
 
 namespace cz
 {
@@ -30,6 +31,7 @@ CompletionPortOperation::CompletionPortOperation()
 // CompletionPort
 //
 //////////////////////////////////////////////////////////////////////////
+
 CompletionPort::CompletionPort()
 {
 	m_port = ::CreateIoCompletionPort(
@@ -55,9 +57,19 @@ HANDLE CompletionPort::getHandle()
 
 void CompletionPort::stop()
 {
-	if (m_port != INVALID_HANDLE_VALUE)
+	auto doStop = m_data([&](Data& data)
+	{
+		if (data.stoped)
+			return false;
+		else
+		{
+			data.stoped = true;
+			return true;
+		}
+	});
+
+	if (doStop)
 		::CloseHandle(m_port);
-	m_port = INVALID_HANDLE_VALUE;
 }
 
 void CompletionPort::add(std::unique_ptr<CompletionPortOperation> operation)
@@ -87,6 +99,8 @@ void CompletionPort::post(std::unique_ptr<CompletionPortOperation> op, unsigned 
 
 size_t CompletionPort::runImpl(DWORD timeoutMs)
 {
+	Callstack<CompletionPort>::Context ctx(this);
+
 	size_t counter = 0;
 	while (true)
 	{

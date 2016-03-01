@@ -46,6 +46,7 @@
 #include "crazygaze/RingBuffer.h"
 #include "crazygaze/DeadlineTimer.h"
 #include "crazygaze/TimerQueue.h"
+#include "crazygaze/Callstack.h"
 
 CZ_DECLARE_LOG_CATEGORY(logTests, Log, Log)
 

@@ -13,6 +13,7 @@
 #include "crazygaze/czlib.h"
 #include "crazygaze/ThreadingUtils.h"
 #include "crazygaze/Semaphore.h"
+#include "crazygaze/Callstack.h"
 
 namespace cz
 {
@@ -54,13 +55,24 @@ class CompletionPort
 	// This will cause any threads currently calling #run to exit
 	void stop();
 
+	//! Tells if the current thread is executing a handler posted to this CompletionPort
+	bool runningInThisThread() const
+	{
+		return Callstack<CompletionPort>::contains(this);
+	}
+
 	void add(std::unique_ptr<CompletionPortOperation> operation);
 
 	void post(std::unique_ptr<CompletionPortOperation> op, unsigned bytesTransfered, uint64_t completionKey);
   protected:
+
+	// Not inside Data, since we need to access frequently, and it's better not to lock.
 	HANDLE m_port;
+
 	struct Data
 	{
+		// This is used to provide thread safety to #stop
+		bool stoped = false;
 		std::unordered_map<CompletionPortOperation*, std::unique_ptr<CompletionPortOperation>> items;
 	};
 	Monitor<Data> m_data;
