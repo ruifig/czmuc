@@ -58,7 +58,7 @@ class CompletionPort
 	//! Tells if the current thread is executing a handler posted to this CompletionPort
 	bool runningInThisThread() const
 	{
-		return Callstack<CompletionPort>::contains(this);
+		return Callstack<CompletionPort>::contains(this)!=nullptr;
 	}
 
 	void add(std::unique_ptr<CompletionPortOperation> operation);

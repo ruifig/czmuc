@@ -10,7 +10,7 @@ Strand::Strand(CompletionPort iocp) : m_iocp(iocp)
 
 bool Strand::runningInThisThread() const
 {
-	return Callstack<Strand>::contains(this);
+	return Callstack<Strand>::contains(this) != nullptr;
 }
 
 void Strand::schedule()
