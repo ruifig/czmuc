@@ -4,7 +4,7 @@
 namespace cz
 {
 
-Strand::Strand(CompletionPort iocp) : m_iocp(iocp)
+Strand::Strand(CompletionPort& iocp) : m_iocp(iocp)
 {
 }
 

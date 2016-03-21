@@ -5,10 +5,6 @@
 	
 	purpose:
 	
-
-	NOTES:
-	The writer only has read access. This is enforced by the API, which only
-	returns a const T&
 *********************************************************************/
 
 #pragma once
