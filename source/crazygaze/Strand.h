@@ -25,7 +25,7 @@ class Strand
 {
 	
 public:
-	Strand(CompletionPort iocp);
+	Strand(CompletionPort& iocp);
 
 	//! Executes the handler immediately if all the strand guarantees are met, or posts the handler for execution
 	// if the guarantees are not met from inside this call
