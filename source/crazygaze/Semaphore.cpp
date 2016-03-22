@@ -24,9 +24,6 @@ void cz::Semaphore::wait()
 {
 	std::unique_lock<std::mutex> lock(m_mtx);
 	m_cv.wait(lock, [this]() {return m_count > 0; });
-	while (m_count == 0) {
-		m_cv.wait(lock);
-	}
 	m_count--;
 }
 
