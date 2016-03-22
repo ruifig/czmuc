@@ -6,7 +6,6 @@
 namespace cz
 {
 
-
 //////////////////////////////////////////////////////////////////////////
 //	TimerQueue
 //////////////////////////////////////////////////////////////////////////
@@ -16,36 +15,13 @@ TimerQueue::TimerQueue()
 	m_th = std::thread([this] { run(); });
 }
 
-void TimerQueue::makeHeap()
+TimerQueue::~TimerQueue()
 {
-	std::make_heap(m_items.begin(), m_items.end(),
-		[](const ItemInfo& a, const ItemInfo& b)
-	{
-		return a.endTime > b.endTime;
-	});
-}
-
-void TimerQueue::pushHeap(ItemInfo info)
-{
-	m_items.push_back(std::move(info));
-	std::push_heap(m_items.begin(), m_items.end(),
-		[](const ItemInfo& a, const ItemInfo& b)
-	{
-		return a.endTime > b.endTime;
-	});
-}
-
-TimerQueue::ItemInfo TimerQueue::popHeap()
-{
-	std::pop_heap(m_items.begin(), m_items.end(),
-		[](const ItemInfo& a, const ItemInfo& b)
-	{
-		return a.endTime > b.endTime;
-	});
-
-	ItemInfo ret = std::move(m_items.back());
-	m_items.pop_back();
-	return ret;
+	cancelAll();
+	m_q.push([this] { m_finish = true;});
+	m_th.join();
+	CZ_ASSERT(m_items.size() == 0);
+	CZ_ASSERT(m_q.size() == 0);
 }
 
 uint64_t TimerQueue::add(unsigned milliseconds, std::function<void(bool)> handler)
@@ -65,15 +41,6 @@ uint64_t TimerQueue::add(unsigned milliseconds, std::function<void(bool)> handle
 	}
 
 	return id;
-}
-
-TimerQueue::~TimerQueue()
-{
-	cancelAll();
-	m_q.push([this] { m_finish = true;});
-	m_th.join();
-	CZ_ASSERT(m_items.size() == 0);
-	CZ_ASSERT(m_q.size() == 0);
 }
 
 size_t TimerQueue::cancel(uint64_t id)
@@ -135,7 +102,7 @@ void TimerQueue::run()
 		std::function<void()> cmd;
 		if (ms>0 && m_q.wait_and_pop(cmd, ms))
 		{
-			// Command available
+			// Command was available, so execute it
 			cmd();
 		}
 		else
@@ -154,6 +121,39 @@ void TimerQueue::run()
 		}
 	}
 }
+
+void TimerQueue::makeHeap()
+{
+	std::make_heap(m_items.begin(), m_items.end(),
+		[](const ItemInfo& a, const ItemInfo& b)
+	{
+		return a.endTime > b.endTime;
+	});
+}
+
+void TimerQueue::pushHeap(ItemInfo info)
+{
+	m_items.push_back(std::move(info));
+	std::push_heap(m_items.begin(), m_items.end(),
+		[](const ItemInfo& a, const ItemInfo& b)
+	{
+		return a.endTime > b.endTime;
+	});
+}
+
+TimerQueue::ItemInfo TimerQueue::popHeap()
+{
+	std::pop_heap(m_items.begin(), m_items.end(),
+		[](const ItemInfo& a, const ItemInfo& b)
+	{
+		return a.endTime > b.endTime;
+	});
+
+	ItemInfo ret = std::move(m_items.back());
+	m_items.pop_back();
+	return ret;
+}
+
 
 }
 

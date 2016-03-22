@@ -49,12 +49,12 @@ public:
 
 	//! Synchronously waits for the timer to expire
 	// Note that this returns when the timer expires and the handlers are queued for execution.
-	// It does not MEAN the handlers were executed yet.
+	// It does not MEAN the handlers were executed already.
 	void wait();
 
 	/*! Aborts any pending handlers, and sets a new expiry time
 	* \return 
-	*	The number of handlers aborted. Note that if an handler wasn't executed yet, doesn't mean it will abort, since
+	*	The number of handlers aborted. Note that if an handler wasn't executed yet, does NOT mean it will abort, since
 	*	it might be already queued up for successful execution.
 	*/
 	size_t expiresFromNow(unsigned milliseconds);

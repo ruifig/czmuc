@@ -75,7 +75,6 @@ private:
 	void pushHeap(ItemInfo info);
 	ItemInfo popHeap();
 
-
 	mutable std::mutex m_mtx;
 	decltype(std::chrono::steady_clock::now()) m_start;
 	std::vector<ItemInfo> m_items;
