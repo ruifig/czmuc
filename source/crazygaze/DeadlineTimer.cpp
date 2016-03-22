@@ -141,7 +141,7 @@ CompletionPort& DeadlineTimer::getIOCP()
 
 /*!
 * This has the same behaviour as boost::deadline_timer.
-* - Forces any pending handles to queued for execution as aborted right away.
+* - Forces any pending handles to be queued for execution as aborted right away.
 * - It does not change the expiry time
 */
 size_t DeadlineTimer::cancelImpl()
