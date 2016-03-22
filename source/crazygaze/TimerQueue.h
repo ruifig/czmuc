@@ -48,7 +48,7 @@ public:
 	* Canceling an handler causes it to be queued immediately for execution, as aborted.
 	*
 	* \return
-	* 0 - The handler was not canceled. You were to late to cancel, and the handler was either executed, or is queued
+	* 0 - The handler was not canceled. You were too late to cancel, and the handler was either executed, or is queued
 	* for execution as successful.
 	* 1 - The handler was canceled, and it was queued immediately for execution as aborted.
 	*/

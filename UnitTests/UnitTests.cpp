@@ -14,7 +14,7 @@ using namespace cz;
 using namespace cz::net;
 using namespace cz::rpc;
 
-#define CONTINUOUS_TESTING 1
+#define CONTINUOUS_TESTING 0
 
 std::string getCurrentTestName()
 {
