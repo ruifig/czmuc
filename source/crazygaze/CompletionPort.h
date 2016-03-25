@@ -72,7 +72,7 @@ class CompletionPort
 	struct Data
 	{
 		// This is used to provide thread safety to #stop
-		bool stoped = false;
+		bool stopped = false;
 		std::unordered_map<CompletionPortOperation*, std::unique_ptr<CompletionPortOperation>> items;
 	};
 	Monitor<Data> m_data;

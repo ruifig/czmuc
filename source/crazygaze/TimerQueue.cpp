@@ -2,158 +2,152 @@
 #include "crazygaze/TimerQueue.h"
 #include "crazygaze/Logging.h"
 
-
 namespace cz
 {
 
-//////////////////////////////////////////////////////////////////////////
-//	TimerQueue
-//////////////////////////////////////////////////////////////////////////
 TimerQueue::TimerQueue()
 {
-	m_start = std::chrono::steady_clock::now();
 	m_th = std::thread([this] { run(); });
 }
+
 
 TimerQueue::~TimerQueue()
 {
 	cancelAll();
-	m_q.push([this] { m_finish = true;});
+	// Abusing the timer queue to trigger the shutdown.
+	add(0, [this](bool) { m_finish = true; });
 	m_th.join();
-	CZ_ASSERT(m_items.size() == 0);
-	CZ_ASSERT(m_q.size() == 0);
 }
 
-uint64_t TimerQueue::add(unsigned milliseconds, std::function<void(bool)> handler)
+uint64_t TimerQueue::add(int64_t milliseconds, std::function<void(bool)> handler)
 {
-	ItemInfo info;
-	auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
-	info.endTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - m_start).count();
-	info.handler = std::move(handler);
+	WorkItem item;
+	item.end = Clock::now() + std::chrono::milliseconds(milliseconds);
+	item.handler = std::move(handler);
 
-	uint64_t id;
-	{
-		std::lock_guard<std::mutex> lk(m_mtx);
-		id = ++m_idcounter;
-		info.id = id;
-		pushHeap(std::move(info));
-		m_q.push([] {}); // Empty command, just to wake up the thread and do any recalculations if necessary
-	}
+	std::unique_lock<std::mutex> lk(m_mtx);
+	uint64_t id = ++m_idcounter;
+	item.id = id;
+	m_items.push(std::move(item));
+	lk.unlock();
 
+	// Something changed, so wake up timer thread
+	m_checkWork.notify();
 	return id;
 }
 
 size_t TimerQueue::cancel(uint64_t id)
 {
-	std::function<void(bool)> handler;
-
+	// Instead of removing the item from the container (thus breaking the
+	// heap integrity), we set the item as having no handler, and put
+	// that handler on a new item at the top for immediate execution
+	// The timer thread will then ignore the original item, since it has no
+	// handler.
+	std::unique_lock<std::mutex> lk(m_mtx);
+	for (auto&& item : m_items.getContainer())
 	{
-		std::lock_guard<std::mutex> lk(m_mtx);
-		for (auto it = m_items.begin(); it != m_items.end(); ++it)
+		if (item.id == id && item.handler)
 		{
-			if (it->id == id)
-			{
-				// Instead of removing from the heap, we clear the item pointer, since it's faster,
-				// and let the worker thread just ignore the item if it tries to execute it.
-				// This way, we don't waste time removing items, and making calls to make_heap
-				handler = std::move(it->handler);
-				break;
-			}
+			WorkItem newItem;
+			// Zero time, so it stays at the top for immediate execution
+			newItem.end = Clock::time_point();
+			newItem.id = 0;  // Means it is a canceled item
+			// Move the handler from item to newitem (thus clearing item)
+			newItem.handler = std::move(item.handler);
+			m_items.push(std::move(newItem));
+
+			lk.unlock();
+			// Something changed, so wake up timer thread
+			m_checkWork.notify();
+			return 1;
 		}
 	}
-	
-	if (!handler)
-		return 0;
-
-	m_q.push([this, handler=std::move(handler)]
-	{
-		handler(true);
-	});
-	return 1;
+	return 0;
 }
 
 size_t TimerQueue::cancelAll()
 {
-	std::lock_guard<std::mutex> lk(m_mtx);
-	auto ret = m_items.size();
-	m_q.push([this, items = std::move(m_items)]
+	// Setting all "end" to 0 (for immediate execution) is ok,
+	// since it maintains the heap integrity
+	std::unique_lock<std::mutex> lk(m_mtx);
+	for (auto&& item : m_items.getContainer())
 	{
-		for (auto&& i : items)
-			i.handler(true);
-	});
+		if (item.id && item.handler)
+		{
+			item.end = Clock::time_point();
+			item.id = 0;
+		}
+	}
+	auto ret = m_items.size();
 
+	lk.unlock();
+	m_checkWork.notify();
 	return ret;
 }
 
 void TimerQueue::run()
 {
-	while(!m_finish)
+	while (!m_finish)
 	{
-		int64_t ms = 0xFFFFFFFF;
-		int64_t now;
-
+		auto end = calcWaitTime();
+		if (end.first)
 		{
-			std::lock_guard<std::mutex> lk(m_mtx);
-			now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_start).count();
-			if (m_items.size())
-				ms = m_items.front().endTime - now;
-		}
-
-		std::function<void()> cmd;
-		if (ms>0 && m_q.wait_and_pop(cmd, ms))
-		{
-			// Command was available, so execute it
-			cmd();
+			// Timers found, so wait until it expires (or something else
+			// changes)
+			m_checkWork.waitUntil(end.second);
 		}
 		else
 		{
-			// No command available, so it means a timer expired, and we need to execute it
-			ItemInfo item;
-			{
-				std::lock_guard<std::mutex> lk(m_mtx);
-				if (m_items.size())
-					item = popHeap();
-			}
-			if (item.handler)
-			{
-				item.handler(false);
-			}
+			// No timers exist, so wait forever until something changes
+			m_checkWork.wait();
+		}
+
+		// Check and execute as much work as possible, such as, all expired
+		// timers
+		checkWork();
+	}
+
+	// If we are shutting down, we should not have any items left,
+	// since the shutdown cancels all items
+	assert(m_items.size() == 0);
+}
+
+std::pair<bool, cz::TimerQueue::Clock::time_point> TimerQueue::calcWaitTime()
+{
+	std::lock_guard<std::mutex> lk(m_mtx);
+	while (m_items.size())
+	{
+		if (m_items.top().handler)
+		{
+			// Item present, so return the new wait time
+			return std::make_pair(true, m_items.top().end);
+		}
+		else
+		{
+			// Discard empty handlers (they were cancelled)
+			m_items.pop();
 		}
 	}
+
+	// No items found, so return no wait time (causes the thread to wait
+	// indefinitely)
+	return std::make_pair(false, Clock::time_point());
 }
 
-void TimerQueue::makeHeap()
+void TimerQueue::checkWork()
 {
-	std::make_heap(m_items.begin(), m_items.end(),
-		[](const ItemInfo& a, const ItemInfo& b)
+	std::unique_lock<std::mutex> lk(m_mtx);
+	while (m_items.size() && m_items.top().end <= Clock::now())
 	{
-		return a.endTime > b.endTime;
-	});
+		WorkItem item(std::move(m_items.top()));
+		m_items.pop();
+
+		lk.unlock();
+		if (item.handler)
+			item.handler(item.id == 0);
+		lk.lock();
+	}
 }
-
-void TimerQueue::pushHeap(ItemInfo info)
-{
-	m_items.push_back(std::move(info));
-	std::push_heap(m_items.begin(), m_items.end(),
-		[](const ItemInfo& a, const ItemInfo& b)
-	{
-		return a.endTime > b.endTime;
-	});
-}
-
-TimerQueue::ItemInfo TimerQueue::popHeap()
-{
-	std::pop_heap(m_items.begin(), m_items.end(),
-		[](const ItemInfo& a, const ItemInfo& b)
-	{
-		return a.endTime > b.endTime;
-	});
-
-	ItemInfo ret = std::move(m_items.back());
-	m_items.pop_back();
-	return ret;
-}
-
 
 }
 

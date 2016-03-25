@@ -59,11 +59,11 @@ void CompletionPort::stop()
 {
 	auto doStop = m_data([&](Data& data)
 	{
-		if (data.stoped)
+		if (data.stopped)
 			return false;
 		else
 		{
-			data.stoped = true;
+			data.stopped = true;
 			return true;
 		}
 	});
