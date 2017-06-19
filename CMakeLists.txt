@@ -32,5 +32,5 @@ SET(CMAKE_VERBOSE_MAKEFILE_ON)
 
 add_subdirectory(source)
 add_subdirectory(UnitTest++)
-add_subdirectory(UnitTests)
+add_subdirectory(tests)
 
