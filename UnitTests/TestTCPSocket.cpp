@@ -552,6 +552,7 @@ private:
 				CZ_ASSERT(bytesTransfered);
 				m_received += bytesTransfered;
 				prepareReceive(size);
+				/*
 				m_checkThreadQ.push([this, bytesTransfered, buf=std::move(buf)]
 				{
 					for (unsigned i = 0; i < bytesTransfered; i++)
@@ -560,6 +561,7 @@ private:
 						m_expected++;
 					}
 				});
+				*/
 			}
 			else
 			{
@@ -657,7 +659,7 @@ TEST(TestThroughput)
 #if CZ_DEBUG
 		int const MBCOUNT = 5;
 #else
-		int const MBCOUNT = 1000;
+		int const MBCOUNT = 10000;
 #endif
 
 		sendDone.wait();
