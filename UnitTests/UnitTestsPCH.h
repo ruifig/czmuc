@@ -26,7 +26,7 @@
 //
 // czlib
 //
-#include "crazygaze/muc/czlibPCH.h"
+#include "crazygaze/muc/czmucPCH.h"
 #include "crazygaze/muc/TypeTraits.h"
 #include "crazygaze/muc/WindowsConsole.h"
 #include "crazygaze/muc/Any.h"

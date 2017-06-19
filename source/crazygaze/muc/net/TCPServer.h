@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/net/TCPSocket.h"
 #include "crazygaze/muc/Semaphore.h"
 

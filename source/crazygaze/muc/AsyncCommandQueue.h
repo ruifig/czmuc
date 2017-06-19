@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/SharedQueue.h"
 #include <functional>
 #include <thread>

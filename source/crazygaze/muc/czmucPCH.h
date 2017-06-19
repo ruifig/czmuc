@@ -27,7 +27,7 @@
 #include <condition_variable>
 #include <algorithm>
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 
 namespace cz
 {

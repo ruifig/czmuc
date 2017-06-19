@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 
 /*
 This is required. This means Mersenne exponent and the period of generated code will be 2MEXP-1.

@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/Any.h"
 #include <memory>
 #include <queue>

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/rpc/RPCTransport.h"
 #include "crazygaze/muc/rpc/RPCConnection.h"
 #include "crazygaze/muc/rpc/RPCServer.h"

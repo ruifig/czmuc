@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/UTF8String.h"
 
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32

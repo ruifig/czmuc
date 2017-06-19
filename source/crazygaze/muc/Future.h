@@ -8,7 +8,7 @@
 *********************************************************************/
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 
 #pragma warning(push)
 // destructor was implicitly defined as deleted because a base class destructor is inaccessible or deleted

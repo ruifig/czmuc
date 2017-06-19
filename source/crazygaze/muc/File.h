@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/Filename.h"
 #include "crazygaze/muc/UTF8String.h"
 

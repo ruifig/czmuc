@@ -28,8 +28,8 @@
     <ClInclude Include="..\source\crazygaze\muc\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\muc\Concurrent.h" />
     <ClInclude Include="..\source\crazygaze\muc\config.h" />
-    <ClInclude Include="..\source\crazygaze\muc\czlib.h" />
-    <ClInclude Include="..\source\crazygaze\muc\czlibPCH.h" />
+    <ClInclude Include="..\source\crazygaze\muc\czmuc.h" />
+    <ClInclude Include="..\source\crazygaze\muc\czmucPCH.h" />
     <ClInclude Include="..\source\crazygaze\muc\DeadlineTimer.h" />
     <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8.h" />
     <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8\checked.h" />
@@ -76,7 +76,7 @@
     <ClInclude Include="..\source\crazygaze\muc\TypeTraits.h" />
     <ClInclude Include="..\source\crazygaze\muc\UTF8String.h" />
     <ClInclude Include="..\source\crazygaze\muc\WindowsConsole.h" />
-    <ClInclude Include="..\source\czlibPCH.h" />
+    <ClInclude Include="..\source\czmucPCH.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\muc\Any.cpp" />
@@ -84,8 +84,8 @@
     <ClCompile Include="..\source\crazygaze\muc\Buffer.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\ChunkBuffer.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\CompletionPort.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\czlib.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\czlibPCH.cpp">
+    <ClCompile Include="..\source\crazygaze\muc\czmuc.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\czmucPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -181,7 +181,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>czmucPCH.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -198,7 +198,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>czmucPCH.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -217,7 +217,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>czmucPCH.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -238,7 +238,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>czlibPCH.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>czmucPCH.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(ProjectDir)../source</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>

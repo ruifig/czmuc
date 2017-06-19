@@ -11,7 +11,7 @@
 	
 *********************************************************************/
 
-#include "czlibPCH.h"
+#include "czmucPCH.h"
 #include "crazygaze/muc/UTF8String.h"
 #include "crazygaze/muc/detail/utfcpp/source/utf8.h"
 

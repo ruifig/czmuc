@@ -7,7 +7,7 @@
 	
 *********************************************************************/
 
-#include "czlibPCH.h"
+#include "czmucPCH.h"
 #include "crazygaze/muc/IniFile.h"
 #include <sstream>
 #include "crazygaze/muc/File.h"

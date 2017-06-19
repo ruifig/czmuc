@@ -4,7 +4,7 @@ TCP Sockets inspired Boost asio
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/CompletionPort.h"
 #include "crazygaze/muc/net/SocketAddress.h"
 #include "crazygaze/muc/ChunkBuffer.h"

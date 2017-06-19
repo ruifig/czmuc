@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include <queue>
 #include <mutex>
 #include <condition_variable>

@@ -28,7 +28,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\source\czlibPCH.h" />
     <ClInclude Include="..\source\crazygaze\muc\Logging.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
@@ -113,12 +112,6 @@
     <ClInclude Include="..\source\crazygaze\muc\config.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\muc\czlib.h">
-      <Filter>crazygaze\muc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\source\crazygaze\muc\czlibPCH.h">
-      <Filter>crazygaze\muc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\muc\DeadlineTimer.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
@@ -200,6 +193,13 @@
     <ClInclude Include="..\source\crazygaze\muc\net\TCPServer.h">
       <Filter>crazygaze\muc\net</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\crazygaze\muc\czmuc.h">
+      <Filter>crazygaze\muc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\crazygaze\muc\czmucPCH.h">
+      <Filter>crazygaze\muc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\czmucPCH.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\crazygaze\muc\Parameters.cpp">
@@ -253,12 +253,6 @@
     <ClCompile Include="..\source\crazygaze\muc\CompletionPort.cpp">
       <Filter>crazygaze\muc</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\crazygaze\muc\czlib.cpp">
-      <Filter>crazygaze\muc</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\muc\czlibPCH.cpp">
-      <Filter>crazygaze\muc</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\crazygaze\muc\DeadlineTimer.cpp">
       <Filter>crazygaze\muc</Filter>
     </ClCompile>
@@ -294,6 +288,12 @@
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\muc\rpc\RPCBase.cpp">
       <Filter>crazygaze\muc\rpc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\muc\czmuc.cpp">
+      <Filter>crazygaze\muc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crazygaze\muc\czmucPCH.cpp">
+      <Filter>crazygaze\muc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 #include <string>
 #include "crazygaze/muc/ChunkBuffer.h"
 

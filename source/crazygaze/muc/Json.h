@@ -7,7 +7,7 @@
 *********************************************************************/
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 
 namespace cz
 {

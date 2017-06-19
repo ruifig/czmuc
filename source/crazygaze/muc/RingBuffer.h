@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/czmuc.h"
 
 #if CZ_DEBUG
 	#define CZ_RINGBUFFER_DEBUG 1
