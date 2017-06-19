@@ -1,8 +1,6 @@
 #include "UnitTestsPCH.h"
 
 using namespace cz;
-using namespace cz::rpc;
-
 
 SUITE(Buffer)
 {

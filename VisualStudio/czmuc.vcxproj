@@ -25,12 +25,10 @@
     <ClInclude Include="..\source\crazygaze\muc\Buffer.h" />
     <ClInclude Include="..\source\crazygaze\muc\Callstack.h" />
     <ClInclude Include="..\source\crazygaze\muc\ChunkBuffer.h" />
-    <ClInclude Include="..\source\crazygaze\muc\CompletionPort.h" />
     <ClInclude Include="..\source\crazygaze\muc\Concurrent.h" />
     <ClInclude Include="..\source\crazygaze\muc\config.h" />
     <ClInclude Include="..\source\crazygaze\muc\czmuc.h" />
     <ClInclude Include="..\source\crazygaze\muc\czmucPCH.h" />
-    <ClInclude Include="..\source\crazygaze\muc\DeadlineTimer.h" />
     <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8.h" />
     <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8\checked.h" />
     <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8\core.h" />
@@ -46,27 +44,14 @@
     <ClInclude Include="..\source\crazygaze\muc\IniFile.h" />
     <ClInclude Include="..\source\crazygaze\muc\Json.h" />
     <ClInclude Include="..\source\crazygaze\muc\Logging.h" />
-    <ClInclude Include="..\source\crazygaze\muc\net\SocketAddress.h" />
-    <ClInclude Include="..\source\crazygaze\muc\net\TCPServer.h" />
-    <ClInclude Include="..\source\crazygaze\muc\net\TCPSocket.h" />
     <ClInclude Include="..\source\crazygaze\muc\Parameters.h" />
     <ClInclude Include="..\source\crazygaze\muc\Random.h" />
     <ClInclude Include="..\source\crazygaze\muc\RingBuffer.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\GenericRPC.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCBase.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCConnection.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCGenerate.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCProcessor.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCServer.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCTransport.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCUtils.h" />
-    <ClInclude Include="..\source\crazygaze\muc\rpc\TCPTransport.h" />
     <ClInclude Include="..\source\crazygaze\muc\ScopeGuard.h" />
     <ClInclude Include="..\source\crazygaze\muc\Semaphore.h" />
     <ClInclude Include="..\source\crazygaze\muc\SharedFlag.h" />
     <ClInclude Include="..\source\crazygaze\muc\SharedQueue.h" />
     <ClInclude Include="..\source\crazygaze\muc\Singleton.h" />
-    <ClInclude Include="..\source\crazygaze\muc\Strand.h" />
     <ClInclude Include="..\source\crazygaze\muc\StringUtils.h" />
     <ClInclude Include="..\source\crazygaze\muc\targetver.h" />
     <ClInclude Include="..\source\crazygaze\muc\ThreadingUtils.h" />
@@ -83,7 +68,6 @@
     <ClCompile Include="..\source\crazygaze\muc\AsyncCommandQueue.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Buffer.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\ChunkBuffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\CompletionPort.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\czmuc.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\czmucPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -91,7 +75,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\source\crazygaze\muc\DeadlineTimer.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\File.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Filename.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Filesystem.cpp" />
@@ -100,16 +83,12 @@
     <ClCompile Include="..\source\crazygaze\muc\IniFile.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Json.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Logging.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\net\SocketAddress.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\net\TCPSocket.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Parameters.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Random.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\RingBuffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\rpc\RPCBase.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Semaphore.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\SharedFlag.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Singleton.cpp" />
-    <ClCompile Include="..\source\crazygaze\muc\Strand.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\StringUtils.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Timer.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\TimerQueue.cpp" />
