@@ -37,7 +37,6 @@
     <ClInclude Include="..\source\crazygaze\muc\Filesystem.h" />
     <ClInclude Include="..\source\crazygaze\muc\Filetime.h" />
     <ClInclude Include="..\source\crazygaze\muc\FNVHash.h" />
-    <ClInclude Include="..\source\crazygaze\muc\Future.h" />
     <ClInclude Include="..\source\crazygaze\muc\Guid.h" />
     <ClInclude Include="..\source\crazygaze\muc\IniFile.h" />
     <ClInclude Include="..\source\crazygaze\muc\Json.h" />

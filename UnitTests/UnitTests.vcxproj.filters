@@ -24,9 +24,6 @@
     <ClCompile Include="TestChunkBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TestFuture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TestThreadingUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

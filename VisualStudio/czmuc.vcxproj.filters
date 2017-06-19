@@ -112,9 +112,6 @@
     <ClInclude Include="..\source\crazygaze\muc\FNVHash.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\muc\Future.h">
-      <Filter>crazygaze\muc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\muc\Guid.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>

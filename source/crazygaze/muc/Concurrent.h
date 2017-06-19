@@ -14,7 +14,6 @@
 #pragma once
 
 #include "SharedQueue.h"
-#include "Future.h"
 #include "Timer.h"
 
 #ifdef max
@@ -55,16 +54,30 @@ public:
 	}
 
 	template<typename F>
-	auto operator()(F f) const -> Future<decltype(f(m_t))>
+	auto operator()(F f) const -> std::future<decltype(f(m_t))>
 	{
-		Promise<decltype(f(m_t))> pr;
+		std::promise<decltype(f(m_t))> pr;
 		auto ft = pr.get_future();
 		m_q.push([pr = std::move(pr), f=std::move(f), this]() mutable
 		{
-			fulfillPromiseFromWork(pr, f, m_t);
+			fulfillPromise(pr, f, m_t);
 		});
 
 		return ft;
+	}
+private:
+
+	// Allows using the same code to set a promise with a value or void
+	template<typename R, typename F, typename... Params>
+	static void fulfillPromise(std::promise<R>& pr, F& f, Params&&... params)
+	{
+		pr.set_value(f(std::forward<Params>(params)..));
+	}
+	template<typename F, typename... Params>
+	static void fulfillPromise(std::promise<void>& pr, F& f, Params&&... params)
+	{
+		f(std::forward<Params>(params)..);
+		pr.set_value();
 	}
 };
 
