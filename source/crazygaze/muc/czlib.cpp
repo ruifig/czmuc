@@ -8,8 +8,8 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/StringUtils.h"
-#include "crazygaze/Logging.h"
+#include "crazygaze/muc/StringUtils.h"
+#include "crazygaze/muc/Logging.h"
 
 #if defined(_MSC_VER)
 extern "C" {

@@ -9,11 +9,11 @@
 
 #include "czlibPCH.h"
 
-#include "crazygaze/Random.h"
+#include "crazygaze/muc/Random.h"
 
 // Define SFMT's MEXP to our desired MEXP value
 #define MEXP CZ_SFMT_MEXP
-#include "crazygaze/detail/SFMT/SFMT-params.h"
+#include "crazygaze/muc/detail/SFMT/SFMT-params.h"
 
 namespace cz
 {

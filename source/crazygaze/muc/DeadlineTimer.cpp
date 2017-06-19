@@ -1,8 +1,8 @@
 #include "czlibPCH.h"
-#include "crazygaze/DeadlineTimer.h"
-#include "crazygaze/Logging.h"
-#include "crazygaze/ScopeGuard.h"
-#include "crazygaze/TimerQueue.h"
+#include "crazygaze/muc/DeadlineTimer.h"
+#include "crazygaze/muc/Logging.h"
+#include "crazygaze/muc/ScopeGuard.h"
+#include "crazygaze/muc/TimerQueue.h"
 
 /*
 Implementation notes:

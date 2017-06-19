@@ -12,8 +12,8 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/UTF8String.h"
-#include "crazygaze/detail/utfcpp/source/utf8.h"
+#include "crazygaze/muc/UTF8String.h"
+#include "crazygaze/muc/detail/utfcpp/source/utf8.h"
 
 namespace cz
 {

@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/Filename.h"
-#include "crazygaze/Singleton.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/Filename.h"
+#include "crazygaze/muc/Singleton.h"
 
 namespace cz
 {

@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/net/TCPSocket.h"
-#include "crazygaze/Semaphore.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/net/TCPSocket.h"
+#include "crazygaze/muc/Semaphore.h"
 
 namespace cz
 {

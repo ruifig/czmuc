@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/CompletionPort.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/CompletionPort.h"
 
 namespace cz
 {

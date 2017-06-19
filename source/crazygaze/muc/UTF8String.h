@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
+#include "crazygaze/muc/czlib.h"
 #include <iterator>
 #include <utility>
 #include <ostream>

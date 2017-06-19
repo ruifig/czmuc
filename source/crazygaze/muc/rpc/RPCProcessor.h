@@ -9,14 +9,14 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/rpc/RPCTransport.h"
-#include "crazygaze/ChunkBuffer.h"
-#include "crazygaze/Semaphore.h"
-#include "crazygaze/Any.h"
-#include "crazygaze/Future.h"
-#include "crazygaze/Logging.h"
-#include "crazygaze/Json.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/rpc/RPCTransport.h"
+#include "crazygaze/muc/ChunkBuffer.h"
+#include "crazygaze/muc/Semaphore.h"
+#include "crazygaze/muc/Any.h"
+#include "crazygaze/muc/Future.h"
+#include "crazygaze/muc/Logging.h"
+#include "crazygaze/muc/Json.h"
 
 namespace cz
 {

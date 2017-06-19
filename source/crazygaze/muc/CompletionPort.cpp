@@ -8,9 +8,9 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/CompletionPort.h"
-#include "crazygaze/Logging.h"
-#include "crazygaze/ScopeGuard.h"
+#include "crazygaze/muc/CompletionPort.h"
+#include "crazygaze/muc/Logging.h"
+#include "crazygaze/muc/ScopeGuard.h"
 
 namespace cz
 {

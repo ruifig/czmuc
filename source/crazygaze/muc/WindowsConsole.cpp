@@ -9,12 +9,12 @@
 
 #include "czlibPCH.h"
 
-#include "crazygaze/WindowsConsole.h"
+#include "crazygaze/muc/WindowsConsole.h"
 #include <fcntl.h>
 #include <io.h>
 #include <iostream>
 #include <fstream>
-#include "crazygaze/StringUtils.h"
+#include "crazygaze/muc/StringUtils.h"
 
 namespace cz
 {

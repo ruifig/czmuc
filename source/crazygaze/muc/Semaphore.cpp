@@ -8,7 +8,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "Semaphore.h"
+#include "crazygaze/muc/Semaphore.h"
 
 namespace cz
 {

@@ -4,14 +4,14 @@ TCP Sockets inspired Boost asio
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/CompletionPort.h"
-#include "crazygaze/net/SocketAddress.h"
-#include "crazygaze/ChunkBuffer.h"
-#include "crazygaze/Future.h"
-#include "crazygaze/Buffer.h"
-#include "crazygaze/RingBuffer.h"
-#include "crazygaze/Logging.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/CompletionPort.h"
+#include "crazygaze/muc/net/SocketAddress.h"
+#include "crazygaze/muc/ChunkBuffer.h"
+#include "crazygaze/muc/Future.h"
+#include "crazygaze/muc/Buffer.h"
+#include "crazygaze/muc/RingBuffer.h"
+#include "crazygaze/muc/Logging.h"
 
 namespace cz
 {

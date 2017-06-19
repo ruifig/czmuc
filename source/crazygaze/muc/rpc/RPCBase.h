@@ -9,12 +9,12 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/ChunkBuffer.h"
-#include "crazygaze/Any.h"
-#include "crazygaze/rpc/RPCUtils.h"
-#include "crazygaze/StringUtils.h"
-#include "crazygaze/TypeTraits.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/ChunkBuffer.h"
+#include "crazygaze/muc/Any.h"
+#include "crazygaze/muc/rpc/RPCUtils.h"
+#include "crazygaze/muc/StringUtils.h"
+#include "crazygaze/muc/TypeTraits.h"
 
 namespace cz
 {

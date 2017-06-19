@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
+#include "crazygaze/muc/czlib.h"
 #include <string>
-#include "crazygaze/ChunkBuffer.h"
+#include "crazygaze/muc/ChunkBuffer.h"
 
 namespace cz
 {

@@ -14,7 +14,7 @@
 
 #include "czlibPCH.h"
 
-#include "crazygaze/Filename.h"
+#include "crazygaze/muc/Filename.h"
 
 namespace cz
 {

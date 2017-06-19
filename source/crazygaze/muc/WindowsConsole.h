@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/Logging.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/Logging.h"
 
 namespace cz
 {

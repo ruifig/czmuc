@@ -8,7 +8,7 @@
 *********************************************************************/
 
 #include "czLibPCH.h"
-#include "crazygaze/Parameters.h"
+#include "crazygaze/muc/Parameters.h"
 
 namespace cz
 {

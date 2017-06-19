@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/Ticker.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/Ticker.h"
 #include <memory>
 #include <vector>
 #include <mutex>

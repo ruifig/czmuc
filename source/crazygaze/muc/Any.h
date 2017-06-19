@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
+#include "crazygaze/muc/czlib.h"
 #include <vector>
-#include "crazygaze/Json.h"
+#include "crazygaze/muc/Json.h"
 
 namespace cz
 {

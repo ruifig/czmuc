@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
+#include "crazygaze/muc/czlib.h"
 
 namespace cz
 {

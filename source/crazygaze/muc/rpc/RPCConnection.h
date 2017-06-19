@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/ScopeGuard.h"
-#include "crazygaze/rpc/RPCBase.h"
-#include "crazygaze/rpc/RPCTransport.h"
-#include "crazygaze/rpc/RPCProcessor.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/ScopeGuard.h"
+#include "crazygaze/muc/rpc/RPCBase.h"
+#include "crazygaze/muc/rpc/RPCTransport.h"
+#include "crazygaze/muc/rpc/RPCProcessor.h"
 
 namespace cz
 {

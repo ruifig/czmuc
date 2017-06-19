@@ -8,7 +8,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/Timer.h"
+#include "crazygaze/muc/Timer.h"
 
 namespace cz
 {

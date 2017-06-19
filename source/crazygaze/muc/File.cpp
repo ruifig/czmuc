@@ -8,9 +8,9 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/File.h"
-#include "crazygaze/Filesystem.h"
-#include "crazygaze/Logging.h"
+#include "crazygaze/muc/File.h"
+#include "crazygaze/muc/Filesystem.h"
+#include "crazygaze/muc/Logging.h"
 
 namespace cz
 {

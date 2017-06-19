@@ -1,6 +1,6 @@
 #include "czlibPCH.h"
-#include "crazygaze/StringUtils.h"
-#include "crazygaze/net/SocketAddress.h"
+#include "crazygaze/muc/StringUtils.h"
+#include "crazygaze/muc/net/SocketAddress.h"
 
 namespace cz
 {

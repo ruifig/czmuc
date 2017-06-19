@@ -1,5 +1,5 @@
 #include "czlibPCH.h"
-#include "crazygaze/Strand.h"
+#include "crazygaze/muc/Strand.h"
 
 namespace cz
 {

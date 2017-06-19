@@ -1,7 +1,7 @@
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/Semaphore.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/Semaphore.h"
  
 namespace cz
 {

@@ -9,10 +9,10 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/rpc/RPCBase.h"
-#include "crazygaze/SharedQueue.h"
-#include "crazygaze/ChunkBuffer.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/rpc/RPCBase.h"
+#include "crazygaze/muc/SharedQueue.h"
+#include "crazygaze/muc/ChunkBuffer.h"
 
 namespace cz
 {

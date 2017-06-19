@@ -8,11 +8,11 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "IniFile.h"
+#include "crazygaze/muc/IniFile.h"
 #include <sstream>
-#include "crazygaze/File.h"
-#include "crazygaze/Logging.h"
-#include "crazygaze/StringUtils.h"
+#include "crazygaze/muc/File.h"
+#include "crazygaze/muc/Logging.h"
+#include "crazygaze/muc/StringUtils.h"
 
 namespace cz
 {

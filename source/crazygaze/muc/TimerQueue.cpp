@@ -1,6 +1,6 @@
 #include "czlibPCH.h"
-#include "crazygaze/TimerQueue.h"
-#include "crazygaze/Logging.h"
+#include "crazygaze/muc/TimerQueue.h"
+#include "crazygaze/muc/Logging.h"
 
 namespace cz
 {

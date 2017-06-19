@@ -10,7 +10,7 @@
 #pragma once
 
 #ifndef __clcpp_parse__
-#include "crazygaze/targetver.h"
+#include "crazygaze/muc/targetver.h"
 #endif
 
 #include <vector>
@@ -27,7 +27,7 @@
 #include <condition_variable>
 #include <algorithm>
 
-#include "crazygaze/czlib.h"
+#include "crazygaze/muc/czlib.h"
 
 namespace cz
 {

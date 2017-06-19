@@ -8,8 +8,8 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/Any.h"
-#include "crazygaze/StringUtils.h"
+#include "crazygaze/muc/Any.h"
+#include "crazygaze/muc/StringUtils.h"
 
 namespace cz
 {

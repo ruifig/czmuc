@@ -8,7 +8,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/RingBuffer.h"
+#include "crazygaze/muc/RingBuffer.h"
 
 namespace cz
 {

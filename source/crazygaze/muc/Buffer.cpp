@@ -11,7 +11,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/Buffer.h"
+#include "crazygaze/muc/Buffer.h"
 
 namespace cz
 {

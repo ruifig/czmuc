@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
+#include "crazygaze/muc/czlib.h"
 #include <memory>
 
 namespace cz

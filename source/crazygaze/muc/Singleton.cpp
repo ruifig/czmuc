@@ -1,6 +1,6 @@
 
 #include "czlibPCH.h"
-#include "crazygaze/Singleton.h"
+#include "crazygaze/muc/Singleton.h"
 
 namespace cz
 {

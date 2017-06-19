@@ -10,10 +10,10 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/ThreadingUtils.h"
-#include "crazygaze/Semaphore.h"
-#include "crazygaze/Callstack.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/ThreadingUtils.h"
+#include "crazygaze/muc/Semaphore.h"
+#include "crazygaze/muc/Callstack.h"
 
 namespace cz
 {

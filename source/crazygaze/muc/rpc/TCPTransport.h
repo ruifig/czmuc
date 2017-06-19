@@ -9,12 +9,12 @@
 
 #pragma once
 
-#include "crazygaze/czlib.h"
-#include "crazygaze/rpc/RPCTransport.h"
-#include "crazygaze/rpc/RPCConnection.h"
-#include "crazygaze/rpc/RPCServer.h"
-#include "crazygaze/net/TCPSocket.h"
-#include "crazygaze/net/TCPServer.h"
+#include "crazygaze/muc/czlib.h"
+#include "crazygaze/muc/rpc/RPCTransport.h"
+#include "crazygaze/muc/rpc/RPCConnection.h"
+#include "crazygaze/muc/rpc/RPCServer.h"
+#include "crazygaze/muc/net/TCPSocket.h"
+#include "crazygaze/muc/net/TCPServer.h"
 
 namespace cz
 {

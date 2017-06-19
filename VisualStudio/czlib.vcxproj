@@ -19,125 +19,102 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\source\crazygaze\Algorithm.h" />
-    <ClInclude Include="..\source\crazygaze\Any.h" />
-    <ClInclude Include="..\source\crazygaze\AsyncCommandQueue.h" />
-    <ClInclude Include="..\source\crazygaze\Buffer.h" />
-    <ClInclude Include="..\source\crazygaze\Callstack.h" />
-    <ClInclude Include="..\source\crazygaze\ChunkBuffer.h" />
-    <ClInclude Include="..\source\crazygaze\CompletionPort.h" />
-    <ClInclude Include="..\source\crazygaze\Concurrent.h" />
-    <ClInclude Include="..\source\crazygaze\config.h" />
-    <ClInclude Include="..\source\crazygaze\czlib.h" />
-    <ClInclude Include="..\source\crazygaze\czlibPCH.h" />
-    <ClInclude Include="..\source\crazygaze\DeadlineTimer.h" />
-    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8.h" />
-    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\checked.h" />
-    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\core.h" />
-    <ClInclude Include="..\source\crazygaze\detail\utfcpp\source\utf8\unchecked.h" />
-    <ClInclude Include="..\source\crazygaze\Expected.h" />
-    <ClInclude Include="..\source\crazygaze\File.h" />
-    <ClInclude Include="..\source\crazygaze\Filename.h" />
-    <ClInclude Include="..\source\crazygaze\Filesystem.h" />
-    <ClInclude Include="..\source\crazygaze\Filetime.h" />
-    <ClInclude Include="..\source\crazygaze\FNVHash.h" />
-    <ClInclude Include="..\source\crazygaze\Future.h" />
-    <ClInclude Include="..\source\crazygaze\Guid.h" />
-    <ClInclude Include="..\source\crazygaze\IniFile.h" />
-    <ClInclude Include="..\source\crazygaze\Json.h" />
-    <ClInclude Include="..\source\crazygaze\Logging.h" />
-    <ClInclude Include="..\source\crazygaze\net\SocketAddress.h" />
-    <ClInclude Include="..\source\crazygaze\net\TCPServer.h" />
-    <ClInclude Include="..\source\crazygaze\net\TCPSocket.h" />
-    <ClInclude Include="..\source\crazygaze\Parameters.h" />
-    <ClInclude Include="..\source\crazygaze\Random.h" />
-    <ClInclude Include="..\source\crazygaze\RingBuffer.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\GenericRPC.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCBase.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCTransport.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCConnection.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCProcessor.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCServer.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\RPCUtils.h" />
-    <ClInclude Include="..\source\crazygaze\rpc\TCPTransport.h" />
-    <ClInclude Include="..\source\crazygaze\ScopeGuard.h" />
-    <ClInclude Include="..\source\crazygaze\Semaphore.h" />
-    <ClInclude Include="..\source\crazygaze\SharedFlag.h" />
-    <ClInclude Include="..\source\crazygaze\SharedQueue.h" />
-    <ClInclude Include="..\source\crazygaze\Singleton.h" />
-    <ClInclude Include="..\source\crazygaze\Strand.h" />
-    <ClInclude Include="..\source\crazygaze\StringUtils.h" />
-    <ClInclude Include="..\source\crazygaze\targetver.h" />
-    <ClInclude Include="..\source\crazygaze\ThreadingUtils.h" />
-    <ClInclude Include="..\source\crazygaze\Ticker.h" />
-    <ClInclude Include="..\source\crazygaze\Timer.h" />
-    <ClInclude Include="..\source\crazygaze\TimerQueue.h" />
-    <ClInclude Include="..\source\crazygaze\TypeTraits.h" />
-    <ClInclude Include="..\source\crazygaze\UTF8String.h" />
-    <ClInclude Include="..\source\crazygaze\WindowsConsole.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Algorithm.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Any.h" />
+    <ClInclude Include="..\source\crazygaze\muc\AsyncCommandQueue.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Buffer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Callstack.h" />
+    <ClInclude Include="..\source\crazygaze\muc\ChunkBuffer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\CompletionPort.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Concurrent.h" />
+    <ClInclude Include="..\source\crazygaze\muc\config.h" />
+    <ClInclude Include="..\source\crazygaze\muc\czlib.h" />
+    <ClInclude Include="..\source\crazygaze\muc\czlibPCH.h" />
+    <ClInclude Include="..\source\crazygaze\muc\DeadlineTimer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8.h" />
+    <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8\checked.h" />
+    <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8\core.h" />
+    <ClInclude Include="..\source\crazygaze\muc\detail\utfcpp\source\utf8\unchecked.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Expected.h" />
+    <ClInclude Include="..\source\crazygaze\muc\File.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Filename.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Filesystem.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Filetime.h" />
+    <ClInclude Include="..\source\crazygaze\muc\FNVHash.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Future.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Guid.h" />
+    <ClInclude Include="..\source\crazygaze\muc\IniFile.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Json.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Logging.h" />
+    <ClInclude Include="..\source\crazygaze\muc\net\SocketAddress.h" />
+    <ClInclude Include="..\source\crazygaze\muc\net\TCPServer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\net\TCPSocket.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Parameters.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Random.h" />
+    <ClInclude Include="..\source\crazygaze\muc\RingBuffer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\GenericRPC.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCBase.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCConnection.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCGenerate.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCProcessor.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCServer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCTransport.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\RPCUtils.h" />
+    <ClInclude Include="..\source\crazygaze\muc\rpc\TCPTransport.h" />
+    <ClInclude Include="..\source\crazygaze\muc\ScopeGuard.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Semaphore.h" />
+    <ClInclude Include="..\source\crazygaze\muc\SharedFlag.h" />
+    <ClInclude Include="..\source\crazygaze\muc\SharedQueue.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Singleton.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Strand.h" />
+    <ClInclude Include="..\source\crazygaze\muc\StringUtils.h" />
+    <ClInclude Include="..\source\crazygaze\muc\targetver.h" />
+    <ClInclude Include="..\source\crazygaze\muc\ThreadingUtils.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Ticker.h" />
+    <ClInclude Include="..\source\crazygaze\muc\Timer.h" />
+    <ClInclude Include="..\source\crazygaze\muc\TimerQueue.h" />
+    <ClInclude Include="..\source\crazygaze\muc\TypeTraits.h" />
+    <ClInclude Include="..\source\crazygaze\muc\UTF8String.h" />
+    <ClInclude Include="..\source\crazygaze\muc\WindowsConsole.h" />
     <ClInclude Include="..\source\czlibPCH.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\source\crazygaze\Any.cpp" />
-    <ClCompile Include="..\source\crazygaze\AsyncCommandQueue.cpp" />
-    <ClCompile Include="..\source\crazygaze\Buffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\ChunkBuffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\CompletionPort.cpp" />
-    <ClCompile Include="..\source\crazygaze\czlib.cpp" />
-    <ClCompile Include="..\source\crazygaze\czlibPCH.cpp">
+    <ClCompile Include="..\source\crazygaze\muc\Any.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\AsyncCommandQueue.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Buffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\ChunkBuffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\CompletionPort.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\czlib.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\czlibPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\source\crazygaze\DeadlineTimer.cpp" />
-    <ClCompile Include="..\source\crazygaze\File.cpp" />
-    <ClCompile Include="..\source\crazygaze\Filename.cpp" />
-    <ClCompile Include="..\source\crazygaze\Filesystem.cpp" />
-    <ClCompile Include="..\source\crazygaze\Filetime.cpp" />
-    <ClCompile Include="..\source\crazygaze\Guid.cpp" />
-    <ClCompile Include="..\source\crazygaze\IniFile.cpp" />
-    <ClCompile Include="..\source\crazygaze\Json.cpp" />
-    <ClCompile Include="..\source\crazygaze\Logging.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\SocketAddress.cpp" />
-    <ClCompile Include="..\source\crazygaze\net\TCPServer.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\net\TCPSocket.cpp" />
-    <ClCompile Include="..\source\crazygaze\Parameters.cpp" />
-    <ClCompile Include="..\source\crazygaze\Random.cpp" />
-    <ClCompile Include="..\source\crazygaze\RingBuffer.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCBase.cpp" />
-    <ClCompile Include="..\source\crazygaze\rpc\RPCTransport.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\rpc\RPCProcessor.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\rpc\TCPTransport.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\Semaphore.cpp" />
-    <ClCompile Include="..\source\crazygaze\SharedFlag.cpp" />
-    <ClCompile Include="..\source\crazygaze\Singleton.cpp" />
-    <ClCompile Include="..\source\crazygaze\Strand.cpp" />
-    <ClCompile Include="..\source\crazygaze\StringUtils.cpp" />
-    <ClCompile Include="..\source\crazygaze\Timer.cpp" />
-    <ClCompile Include="..\source\crazygaze\TimerQueue.cpp" />
-    <ClCompile Include="..\source\crazygaze\UTF8String.cpp" />
-    <ClCompile Include="..\source\crazygaze\WindowsConsole.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\DeadlineTimer.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\File.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Filename.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Filesystem.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Filetime.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Guid.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\IniFile.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Json.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Logging.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\net\SocketAddress.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\net\TCPSocket.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Parameters.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Random.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\RingBuffer.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\rpc\RPCBase.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Semaphore.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\SharedFlag.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Singleton.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Strand.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\StringUtils.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\Timer.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\TimerQueue.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\UTF8String.cpp" />
+    <ClCompile Include="..\source\crazygaze\muc\WindowsConsole.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />

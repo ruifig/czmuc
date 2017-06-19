@@ -57,7 +57,7 @@
 	#define CZ_USER_BUILD 0
 #endif
 
-#include "crazygaze/config.h"
+#include "crazygaze/muc/config.h"
 
 
 //

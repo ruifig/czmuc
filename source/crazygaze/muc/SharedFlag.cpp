@@ -7,7 +7,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/SharedFlag.h"
+#include "crazygaze/muc/SharedFlag.h"
 
 namespace cz
 {

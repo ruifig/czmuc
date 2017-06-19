@@ -7,7 +7,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/AsyncCommandQueue.h"
+#include "crazygaze/muc/AsyncCommandQueue.h"
 
 namespace cz
 {

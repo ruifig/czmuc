@@ -1,8 +1,8 @@
 #include "czlibPCH.h"
-#include "crazygaze/net/TCPSocket.h"
-#include "crazygaze/Json.h"
-#include "crazygaze/StringUtils.h"
-#include "crazygaze/ScopeGuard.h"
+#include "crazygaze/muc/net/TCPSocket.h"
+#include "crazygaze/muc/Json.h"
+#include "crazygaze/muc/StringUtils.h"
+#include "crazygaze/muc/ScopeGuard.h"
 
 #pragma comment(lib, "ws2_32.lib")
 // Disable deprecation warnings

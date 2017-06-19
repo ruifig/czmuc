@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "crazygaze/czlibPCH.h"
-#include "crazygaze/rpc/RPCBase.h"
-#include "crazygaze/rpc/RPCConnection.h"
-#include "crazygaze/rpc/RPCServer.h"
+#include "crazygaze/muc/czlibPCH.h"
+#include "crazygaze/muc/rpc/RPCBase.h"
+#include "crazygaze/muc/rpc/RPCConnection.h"
+#include "crazygaze/muc/rpc/RPCServer.h"
 #include "RPCChatInterface.h"
 

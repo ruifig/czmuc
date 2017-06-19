@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <tchar.h>
 
-#include "crazygaze/czlibPCH.h"
-#include "crazygaze/rpc/RPCConnection.h"
-#include "crazygaze/rpc/RPCServer.h"
-#include "crazygaze/rpc/TCPTransport.h"
+#include "crazygaze/muc/czlibPCH.h"
+#include "crazygaze/muc/rpc/RPCConnection.h"
+#include "crazygaze/muc/rpc/RPCServer.h"
+#include "crazygaze/muc/rpc/TCPTransport.h"
 

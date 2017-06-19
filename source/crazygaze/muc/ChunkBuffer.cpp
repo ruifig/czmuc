@@ -8,7 +8,7 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/ChunkBuffer.h"
+#include "crazygaze/muc/ChunkBuffer.h"
 
 namespace cz
 {

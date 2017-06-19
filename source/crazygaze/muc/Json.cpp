@@ -1,6 +1,6 @@
 #include "czlibPCH.h"
-#include "crazygaze/Json.h"
-#include "crazygaze/StringUtils.h"
+#include "crazygaze/muc/Json.h"
+#include "crazygaze/muc/StringUtils.h"
 
 namespace cz
 {

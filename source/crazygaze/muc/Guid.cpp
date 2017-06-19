@@ -8,8 +8,8 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/Guid.h"
-#include "crazygaze/Json.h"
+#include "crazygaze/muc/Guid.h"
+#include "crazygaze/muc/Json.h"
 
 namespace cz
 {

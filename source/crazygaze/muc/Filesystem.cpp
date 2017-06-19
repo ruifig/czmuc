@@ -8,8 +8,8 @@
 *********************************************************************/
 
 #include "czlibPCH.h"
-#include "crazygaze/Filesystem.h"
-#include "crazygaze/Logging.h"
+#include "crazygaze/muc/Filesystem.h"
+#include "crazygaze/muc/Logging.h"
 #include "Shlwapi.h"
 #include "Shlobj.h"
 #include "Psapi.h"
