@@ -30,6 +30,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	// So Sleep calls are as accurate as possible
 	timeBeginPeriod(1);
 
+	CZ_LOG(logDefault, Log, "Test %d", 1);
+
 #if CONTINUOUS_TESTING
 	while (true)
 	{

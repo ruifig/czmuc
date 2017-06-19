@@ -10,9 +10,7 @@
 
 #pragma once
 
-#include "crazygaze/muc/czmuc.h"
 #include <mutex>
-#include <vector>
 
 namespace cz
 {
@@ -25,6 +23,19 @@ enum class LogVerbosity : uint8_t
 	Warning,
 	Log
 };
+
+static inline const char* logVerbosityToString(LogVerbosity v)
+{
+	switch (v)
+	{
+	case LogVerbosity::None   : return "NNN";
+	case LogVerbosity::Fatal  : return "FTL";
+	case LogVerbosity::Error  : return "ERR";
+	case LogVerbosity::Warning: return "WRN";
+	case LogVerbosity::Log    : return "LOG";
+	};
+	return "Unknown";
+}
 
 #define CZ_LOG_MINIMUM_VERBOSITY Log
 
@@ -70,9 +81,9 @@ class LogOutput
 public:
 	LogOutput();
 	virtual ~LogOutput();
-	static void logToAll(const char* file, int line, const LogCategoryBase* category, LogVerbosity verbosity, const char* fmt, ...);
+	static void logToAll(const char* file, int line, const LogCategoryBase* category, LogVerbosity verbosity, _Printf_format_string_ const char* fmt, ...);
 private:
-	virtual void log(const char* file, int line, const LogCategoryBase* category, LogVerbosity LogVerbosity, const char* msg) = 0;
+	virtual void log(const char* file, int line, const LogCategoryBase* category, LogVerbosity verbosity, const char* msg) = 0;
 
 	struct SharedData
 	{
