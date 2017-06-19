@@ -19,7 +19,6 @@ namespace cz
 		@{
 	*/
 
-
 	/*! Manipulates filenames.
 	You can use this class to manipulate filenames, and extract path, filename, extension, etc
 	*/

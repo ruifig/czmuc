@@ -19,7 +19,6 @@
 namespace cz
 {
 
-
 void Filename::set(const UTF8String& path)
 {
 	UTF8String::operator=(path);
