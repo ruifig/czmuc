@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\source\crazygaze\muc\Algorithm.h" />
-    <ClInclude Include="..\source\crazygaze\muc\Any.h" />
     <ClInclude Include="..\source\crazygaze\muc\AsyncCommandQueue.h" />
     <ClInclude Include="..\source\crazygaze\muc\Buffer.h" />
     <ClInclude Include="..\source\crazygaze\muc\Callstack.h" />
@@ -63,7 +62,6 @@
     <ClInclude Include="..\source\czmucPCH.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\source\crazygaze\muc\Any.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\AsyncCommandQueue.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\Buffer.cpp" />
     <ClCompile Include="..\source\crazygaze\muc\ChunkBuffer.cpp" />

@@ -282,19 +282,6 @@ ChunkBuffer& operator << (ChunkBuffer& stream, const char* v)
 	return stream;
 }
 
-ChunkBuffer& operator << (ChunkBuffer& stream, const cz::Any &v)
-{
-	return v.saveToStream(stream);
-}
-
-ChunkBuffer& operator << (ChunkBuffer& stream, const cz::AnyTree &v)
-{
-	stream << v.name;
-	stream << v.data;
-	stream << v.children;
-	return stream;
-}
-
 //////////////////////////////////////////////////////////////////////////
 //
 // Read operators
@@ -309,19 +296,6 @@ const ChunkBuffer& operator >> (const ChunkBuffer& stream, std::string& v)
 	v.reserve(size);
 	v.append(size, 0);
 	stream.read(&v[0], size);
-	return stream;
-}
-
-const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Any &v)
-{
-	return v.readFromStream(stream);
-}
-
-const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::AnyTree &v)
-{
-	stream >> v.name;
-	stream >> v.data;
-	stream >> v.children;
 	return stream;
 }
 

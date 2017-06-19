@@ -79,9 +79,6 @@
     <ClInclude Include="..\source\crazygaze\muc\Algorithm.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\muc\Any.h">
-      <Filter>crazygaze\muc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\muc\AsyncCommandQueue.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
@@ -182,9 +179,6 @@
       <Filter>crazygaze\muc</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\muc\WindowsConsole.cpp">
-      <Filter>crazygaze\muc</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\crazygaze\muc\Any.cpp">
       <Filter>crazygaze\muc</Filter>
     </ClCompile>
     <ClCompile Include="..\source\crazygaze\muc\AsyncCommandQueue.cpp">
