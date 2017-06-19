@@ -169,7 +169,7 @@ UTF8String Filesystem::pathStrip(const UTF8String& path)
 	wchar_t srcfullpath[MAX_PATH+1];
 	wcscpy(srcfullpath, path.widen().c_str());
 	wchar_t* p = srcfullpath;
-	PathStripPath(p);
+	PathStripPathW(p);
 	return UTF8String(p);
 }
 
@@ -188,8 +188,8 @@ std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8Stri
 	// Three characters are for the "\*" plus NULL appended below.
 
 	size_t length_of_arg;
-	TCHAR szDir[MAX_PATH];
-	WIN32_FIND_DATA ffd;
+	wchar_t szDir[MAX_PATH];
+	WIN32_FIND_DATAW ffd;
 
 	StringCchLengthW(path.widen().c_str(), MAX_PATH, &length_of_arg);
 
@@ -201,11 +201,11 @@ std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8Stri
 
 	// Prepare string for use with FindFile functions.  First, copy the
 	// string to a buffer, then append '\*' to the directory name.
-	StringCchCopy(szDir, MAX_PATH, path.widen().c_str());
-	StringCchCat(szDir, MAX_PATH, (UTF8String("\\")+wildcard).widen().c_str());
+	StringCchCopyW(szDir, MAX_PATH, path.widen().c_str());
+	StringCchCatW(szDir, MAX_PATH, (UTF8String("\\")+wildcard).widen().c_str());
 
 	// Find the first file in the directory.
-	auto hFind = FindFirstFile(szDir, &ffd);
+	auto hFind = FindFirstFileW(szDir, &ffd);
 
 	if (INVALID_HANDLE_VALUE == hFind)
 	{ 
@@ -220,8 +220,8 @@ std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8Stri
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		{
 			if (includeDirectories &&
-				(StrCmp(ffd.cFileName, TEXT("."))!=0) &&
-				(StrCmp(ffd.cFileName, TEXT(".."))!=0))
+				(StrCmpW(ffd.cFileName, L".")!=0) &&
+				(StrCmpW(ffd.cFileName, L"..")!=0))
 			{
 				res.push_back({ Type::Directory, Filename(ffd.cFileName), 0 });
 			}
@@ -233,7 +233,7 @@ std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8Stri
 			filesize.HighPart = ffd.nFileSizeHigh;
 			res.push_back({ Type::File, Filename(ffd.cFileName), filesize.QuadPart });
 		}
-	} while (FindNextFile(hFind, &ffd) != 0);
+	} while (FindNextFileW(hFind, &ffd) != 0);
 
 
 	return res;
