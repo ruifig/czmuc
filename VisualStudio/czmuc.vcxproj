@@ -22,7 +22,6 @@
     <ClInclude Include="..\source\crazygaze\muc\Algorithm.h" />
     <ClInclude Include="..\source\crazygaze\muc\AsyncCommandQueue.h" />
     <ClInclude Include="..\source\crazygaze\muc\Buffer.h" />
-    <ClInclude Include="..\source\crazygaze\muc\Callstack.h" />
     <ClInclude Include="..\source\crazygaze\muc\ChunkBuffer.h" />
     <ClInclude Include="..\source\crazygaze\muc\Concurrent.h" />
     <ClInclude Include="..\source\crazygaze\muc\config.h" />

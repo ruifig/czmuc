@@ -85,9 +85,6 @@
     <ClInclude Include="..\source\crazygaze\muc\Buffer.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\muc\Callstack.h">
-      <Filter>crazygaze\muc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\muc\ChunkBuffer.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>

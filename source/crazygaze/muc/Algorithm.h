@@ -83,7 +83,7 @@ namespace cz
 	}
 
 	/*
-	Returns a new container with items that fulfill the predicate
+	Returns a new container with items that fulfil the predicate
 	*/
 	template<typename C, typename F>
 	C copyfrom_if(const C& c, const F& f)
