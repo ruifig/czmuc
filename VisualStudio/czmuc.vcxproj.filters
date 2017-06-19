@@ -70,9 +70,6 @@
     <ClInclude Include="..\source\crazygaze\muc\TimerQueue.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\crazygaze\muc\TypeTraits.h">
-      <Filter>crazygaze\muc</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\crazygaze\muc\UTF8String.h">
       <Filter>crazygaze\muc</Filter>
     </ClInclude>

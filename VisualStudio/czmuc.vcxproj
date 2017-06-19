@@ -58,7 +58,6 @@
     <ClInclude Include="..\source\crazygaze\muc\Ticker.h" />
     <ClInclude Include="..\source\crazygaze\muc\Timer.h" />
     <ClInclude Include="..\source\crazygaze\muc\TimerQueue.h" />
-    <ClInclude Include="..\source\crazygaze\muc\TypeTraits.h" />
     <ClInclude Include="..\source\crazygaze\muc\UTF8String.h" />
     <ClInclude Include="..\source\crazygaze\muc\WindowsConsole.h" />
     <ClInclude Include="..\source\czmucPCH.h" />

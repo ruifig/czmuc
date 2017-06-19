@@ -27,7 +27,6 @@
 // czmuc
 //
 #include "crazygaze/muc/czmucPCH.h"
-#include "crazygaze/muc/TypeTraits.h"
 #include "crazygaze/muc/WindowsConsole.h"
 #include "crazygaze/muc/Any.h"
 #include "crazygaze/muc/Future.h"
