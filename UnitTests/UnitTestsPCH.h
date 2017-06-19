@@ -24,7 +24,7 @@
 #include "UnitTest++\CurrentTest.h"
 
 //
-// czlib
+// czmuc
 //
 #include "crazygaze/muc/czmucPCH.h"
 #include "crazygaze/muc/TypeTraits.h"
