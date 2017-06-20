@@ -17,7 +17,6 @@ ucm_add_files(
 	"crazygaze/muc/czmuc.h"
 	"crazygaze/muc/czmucPCH.cpp"
 	"crazygaze/muc/czmucPCH.h"
-	"crazygaze/muc/detail"
 	"crazygaze/muc/Expected.h"
 	"crazygaze/muc/File.cpp"
 	"crazygaze/muc/File.h"
@@ -64,6 +63,12 @@ ucm_add_files(
 	"crazygaze/muc/WindowsConsole.cpp"
 	TO SOURCE_FILES
 	)
+
+ucm_add_dirs("crazygaze/muc/detail" TO SOURCE_FILES RECURSIVE)
+ucm_remove_files(
+	"crazygaze/muc/detail/SFMT/SFMT.c"
+	"crazygaze/muc/detail/SFMT/test.c"
+	FROM SOURCE_FILES)
 
 add_library(czmuc STATIC ${SOURCE_FILES})
 cz_set_precompiled_header(czmuc "czmucPCH.h" "crazygaze/muc/czmucPCH.cpp")
