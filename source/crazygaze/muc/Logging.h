@@ -151,7 +151,7 @@ extern LogCategoryLogNone logNone;
 
 #endif
 
-CZ_DECLARE_LOG_CATEGORY(logDefault, Log, Log)
-
 } // namespace cz
+
+CZ_DECLARE_LOG_CATEGORY(logDefault, Log, Log)
 

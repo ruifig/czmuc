@@ -14,10 +14,10 @@
 #define LOG_TIME 1
 #define LOG_VERBOSITY 1
 
+CZ_DEFINE_LOG_CATEGORY(logDefault)
+
 namespace cz
 {
-
-CZ_DEFINE_LOG_CATEGORY(logDefault)
 
 #if CZ_NO_LOGGING
 LogCategoryLogNone logNone;
