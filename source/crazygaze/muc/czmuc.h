@@ -72,6 +72,7 @@
 	#include <MSWSock.h>
 	#include <winsock2.h>
 	#include <windows.h>
+	#include <strsafe.h>
 #endif
 
 #ifdef max
@@ -89,7 +90,7 @@ namespace cz
 	// Assert types
 	void _doAssert(const char* file, int line, const char* fmt, ...);
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32
-	const char* getLastWin32ErrorMsg(int err=0);
+	std::string getWin32Error(const char* funcname = nullptr);
 #endif
 } // namespace cz
 

@@ -209,7 +209,7 @@ std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8Stri
 
 	if (INVALID_HANDLE_VALUE == hFind)
 	{ 
-		CZ_LOG(logDefault, Warning, "%s failed: %s", __FUNCTION__, getLastWin32ErrorMsg());
+		CZ_LOG(logDefault, Warning, "%s failed: %s", __FUNCTION__, getWin32Error().c_str());
 		return res;
 	}
 

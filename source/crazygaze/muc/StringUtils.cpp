@@ -113,6 +113,84 @@ bool hasEnding(const std::string& str, const char* ending)
     }
 }
 
+#if CZ_PLATFORM_WIN32
+std::wstring widen(const std::string& utf8)
+{
+	if (utf8.empty())
+		return std::wstring();
+
+	// Get length (in wchar_t's), so we can reserve the size we need before the
+	// actual conversion
+	const int length = ::MultiByteToWideChar(CP_UTF8,             // convert from UTF-8
+		0,                   // default flags
+		utf8.data(),         // source UTF-8 string
+		(int)utf8.length(),  // length (in chars) of source UTF-8 string
+		NULL,                // unused - no conversion done in this step
+		0                    // request size of destination buffer, in wchar_t's
+	);
+	if (length == 0)
+		throw std::exception("Can't get length of UTF-16 string");
+
+	std::wstring utf16;
+	utf16.resize(length);
+
+	// Do the actual conversion
+	if (!::MultiByteToWideChar(CP_UTF8,             // convert from UTF-8
+		0,                   // default flags
+		utf8.data(),         // source UTF-8 string
+		(int)utf8.length(),  // length (in chars) of source UTF-8 string
+		&utf16[0],           // destination buffer
+		(int)utf16.length()  // size of destination buffer, in wchar_t's
+	))
+	{
+		throw std::exception("Can't convert string from UTF-8 to UTF-16");
+	}
+
+	return utf16;
+}
+
+
+std::string narrow(const std::wstring& str)
+{
+	if (str.empty())
+		return std::string();
+
+	// Get length (in wchar_t's), so we can reserve the size we need before the
+	// actual conversion
+	const int utf8_length = ::WideCharToMultiByte(CP_UTF8,              // convert to UTF-8
+		0,                    // default flags
+		str.data(),           // source UTF-16 string
+		(int)str.length(),  // source string length, in wchar_t's,
+		NULL,                 // unused - no conversion required in this step
+		0,                    // request buffer size
+		NULL,
+		NULL  // unused
+	);
+
+	if (utf8_length == 0)
+		throw "Can't get length of UTF-8 string";
+
+	std::string utf8;
+	utf8.resize(utf8_length);
+
+	// Do the actual conversion
+	if (!::WideCharToMultiByte(CP_UTF8,              // convert to UTF-8
+		0,                    // default flags
+		str.data(),           // source UTF-16 string
+		(int)str.length(),    // source string length, in wchar_t's,
+		&utf8[0],             // destination buffer
+		(int)utf8.length(),   // destination buffer size, in chars
+		NULL,
+		NULL  // unused
+	))
+	{
+		throw "Can't convert from UTF-16 to UTF-8";
+	}
+
+	return utf8;
+}
+#endif
+
 } // namespace cz
 
 

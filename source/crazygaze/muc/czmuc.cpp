@@ -10,6 +10,7 @@
 #include "czmucPCH.h"
 #include "crazygaze/muc/StringUtils.h"
 #include "crazygaze/muc/Logging.h"
+#include "crazygaze/muc/ScopeGuard.h"
 
 #if defined(_MSC_VER)
 extern "C" {
@@ -93,32 +94,45 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 }
 
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32
-const char* getLastWin32ErrorMsg(int err)
+std::string getWin32Error(const char* funcname)
 {
-	DWORD errCode = (err==0) ? GetLastError() : err;
-	char* errString = cz::getTemporaryString();
-	// http://msdn.microsoft.com/en-us/library/ms679351(VS.85).aspx
-	int size = FormatMessageA(
-		FORMAT_MESSAGE_FROM_SYSTEM, // use windows internal message table
-		0,       // 0 since source is internal message table
-		errCode, // this is the error code returned by WSAGetLastError()
-		// Could just as well have been an error code from generic
-		// Windows errors from GetLastError()
-		0,       // auto-determine language to use
-		errString, // this is WHERE we want FormatMessage
-		CZ_TEMPORARY_STRING_MAX_SIZE,
-		0 );               // 0, since getting message from system tables
+	LPVOID lpMsgBuf;
+	LPVOID lpDisplayBuf;
+	DWORD dw = GetLastError();
 
+	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+	               NULL,
+	               dw,
+	               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+	               (LPWSTR)&lpMsgBuf,
+	               0,
+	               NULL);
+	SCOPE_EXIT{ LocalFree(lpMsgBuf); };
 
-	// FormatMessage leaves a new line (\r\n) at the end, so remove if that's the case.
-	size_t i = strlen(errString);
-	while (errString[i] < ' ')
-	{
-		errString[i] = 0;
-		i--;
-	}
+	int funcnameLength = funcname ? lstrlen((LPCTSTR)funcname) : 0;
+	lpDisplayBuf =
+	    (LPVOID)LocalAlloc(LMEM_ZEROINIT, (lstrlen((LPCTSTR)lpMsgBuf) + funcnameLength + 50) * sizeof(wchar_t));
+	if (lpDisplayBuf == NULL)
+		return "Win32ErrorMsg failed";
+	SCOPE_EXIT{ LocalFree(lpDisplayBuf); };
 
-	return errString;
+	auto wfuncname = funcname ? widen(funcname) : L"";
+
+	StringCchPrintfW((LPWSTR)lpDisplayBuf,
+	                 LocalSize(lpDisplayBuf) / sizeof(wchar_t),
+	                 L"%s failed with error %lu: %s",
+	                 wfuncname.c_str(),
+	                 dw,
+	                 (LPWSTR)lpMsgBuf);
+
+	std::wstring ret = (LPWSTR)lpDisplayBuf;
+
+	// Remove the \r\n at the end
+	while (ret.size() && ret.back() < ' ')
+		ret.pop_back();
+
+	assert(0);
+	return narrow(ret);
 }
 #endif
 

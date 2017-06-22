@@ -11,6 +11,8 @@
 *********************************************************************/
 #pragma once
 
+#include "crazygaze/muc/czmuc.h"
+
 namespace cz
 {
 

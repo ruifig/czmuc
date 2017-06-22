@@ -94,6 +94,13 @@ namespace cz
 	}
 #endif
 
+#if CZ_PLATFORM_WIN32
+	//! Converts a string from UTF-8 to UTF-16.
+	std::wstring widen(const std::string& str);
+	//! Converts a string from UTF-16 to UTF-8.
+	std::string narrow(const std::wstring& str);
+#endif
+
 }
 
 
