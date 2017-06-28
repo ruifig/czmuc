@@ -47,8 +47,10 @@ void ChildProcessLauncher::addOutput(const std::string& str)
 			if (m_tmpline.size() && m_tmpline.back() == 0xD)
 				m_tmpline.pop_back();
 
-			m_tmpline.push_back(c);
 			m_output += m_tmpline;
+			m_output.push_back(c);
+			if (m_logNewLines)
+				m_tmpline.push_back(c);
 			if (m_logfunc)
 				m_logfunc(false, m_tmpline);
 			m_tmpline.clear();
@@ -184,6 +186,12 @@ int ChildProcessLauncher::launch(const std::string& name, const std::string& par
 	return m_errmsg.size() ? 1 : exitcode;
 }
 
+int ChildProcessLauncher::launch(const std::string& name, const std::string& params, bool logNewLines, const std::function<void(bool, const std::string& str)>& logfunc)
+{
+	m_logNewLines = logNewLines;
+	return launch(name, params, logfunc);
+}
+
 int ChildProcessLauncher::PrepAndLaunchRedirectedChild(
 							HANDLE hChildStdOut,
 							HANDLE hChildStdIn,
@@ -206,7 +214,7 @@ int ChildProcessLauncher::PrepAndLaunchRedirectedChild(
 
 	std::string cmdline = std::string("\"") + m_name + "\" " + m_params;
 
-	m_logfunc(true, cmdline + "\n");
+	m_logfunc(true, cmdline + (m_logNewLines ? "\n" : ""));
 	// Launch the process that you want to redirect (in this case,
 	// Child.exe). Make sure Child.exe is in the same directory as
 	// redirect.c launch redirect from a command line to prevent location

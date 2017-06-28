@@ -25,6 +25,7 @@ public:
 	ChildProcessLauncher();
 	~ChildProcessLauncher();
 	int launch(const std::string& name, const std::string& params, const std::function<void(bool, const std::string& str)>& logfunc=nullptr);
+	int launch(const std::string& name, const std::string& params, bool logNewLines, const std::function<void(bool, const std::string& str)>& logfunc=nullptr);
 
 	const std::string& getLaunchErrorMsg()
 	{
@@ -49,6 +50,7 @@ private:
 	std::string m_params;
 	std::string m_output;
 	std::string m_tmpline;
+	bool m_logNewLines = true; // If true, the out passed to the logging function will include the new line characters
 	std::function<void(bool isLaunchCmd, const std::string& str)> m_logfunc;
 };
 
