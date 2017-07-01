@@ -9,6 +9,7 @@ ucm_add_files(
 	"crazygaze/muc/AsyncCommandQueue.h"
 	"crazygaze/muc/Buffer.cpp"
 	"crazygaze/muc/Buffer.h"
+	"crazygaze/muc/Callstack.h"
 	"crazygaze/muc/ChildProcessLauncher.cpp"
 	"crazygaze/muc/ChildProcessLauncher.h"
 	"crazygaze/muc/ChunkBuffer.cpp"

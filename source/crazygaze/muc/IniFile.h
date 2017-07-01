@@ -37,7 +37,7 @@ namespace cz
 
 			int getNumEntries() const
 			{
-				return mEntries.size();
+				return static_cast<int>(mEntries.size());
 			}
 
 			Entry* getEntry(int index)
@@ -169,7 +169,7 @@ namespace cz
 
 		int getNumSections() const
 		{
-			return mSections.size();
+			return static_cast<int>(mSections.size());
 		}
 
 		Section* getSection(int index)

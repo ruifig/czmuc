@@ -81,6 +81,7 @@
 #endif
 
 #include <assert.h>
+#include <string>
 
 //
 // Assert
