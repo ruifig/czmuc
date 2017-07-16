@@ -5,6 +5,7 @@ include(../cmake/ucm.cmake)
 
 ucm_add_files(
 	"crazygaze/muc/Algorithm.h"
+	"crazygaze/muc/ArrayView.h"
 	"crazygaze/muc/AsyncCommandQueue.cpp"
 	"crazygaze/muc/AsyncCommandQueue.h"
 	"crazygaze/muc/Buffer.cpp"
