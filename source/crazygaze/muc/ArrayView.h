@@ -35,6 +35,11 @@ public:
 		return m_data + m_size;
 	}
 
+	size_type size() const noexcept
+	{
+		return m_size;
+	}
+
 private:
 	T* m_data;
 	size_type m_size;
