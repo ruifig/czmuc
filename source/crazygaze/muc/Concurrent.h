@@ -7,7 +7,7 @@
 	Inspired by Herb Sutter's call at 
 	https://channel9.msdn.com/Shows/Going+Deep/C-and-Beyond-2012-Herb-Sutter-Concurrency-and-Parallelism ,
 	but with some changes.
-	- Queued work can return values (you get a Future<R>) when queuing work
+	- Queued work can return values (you get a std::future<R>) when queuing work
 	- A ConcurrentTicker<T> version allows for automatic calls to a tick function.
 
 *********************************************************************/
@@ -15,6 +15,7 @@
 
 #include "SharedQueue.h"
 #include "Timer.h"
+#include <future>
 
 #ifdef max
 	#undef max
@@ -56,11 +57,11 @@ public:
 	template<typename F>
 	auto operator()(F f) const -> std::future<decltype(f(m_t))>
 	{
-		std::promise<decltype(f(m_t))> pr;
-		auto ft = pr.get_future();
+		auto pr = std::make_shared<std::promise<decltype(f(m_t))>>();
+		auto ft = pr->get_future();
 		m_q.push([pr = std::move(pr), f=std::move(f), this]() mutable
 		{
-			fulfillPromise(pr, f, m_t);
+			fulfillPromise(*pr, f, m_t);
 		});
 
 		return ft;
@@ -71,12 +72,12 @@ private:
 	template<typename R, typename F, typename... Params>
 	static void fulfillPromise(std::promise<R>& pr, F& f, Params&&... params)
 	{
-		pr.set_value(f(std::forward<Params>(params)..));
+		pr.set_value(f(std::forward<Params>(params)...));
 	}
 	template<typename F, typename... Params>
 	static void fulfillPromise(std::promise<void>& pr, F& f, Params&&... params)
 	{
-		f(std::forward<Params>(params)..);
+		f(std::forward<Params>(params)...);
 		pr.set_value();
 	}
 };

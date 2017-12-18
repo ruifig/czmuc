@@ -7,10 +7,10 @@ namespace cz
 	
 std::string to_json(const char* val)
 {
-	return formatString("\"%s\"", val);
+	return cz::formatString("\"%s\"", val);
 }
 
-std::string to_json(std::string val)
+std::string to_json(const std::string& val)
 {
 	return to_json(val.c_str());
 }
@@ -59,5 +59,6 @@ std::string to_json(long double val)
 {
 	return std::to_string(val);
 }
-}
+
+} // namespace cz
 

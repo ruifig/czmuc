@@ -11,6 +11,7 @@
 
 #include "crazygaze/muc/czmuc.h"
 #include <locale>
+#include <vector>
 
 namespace cz
 {

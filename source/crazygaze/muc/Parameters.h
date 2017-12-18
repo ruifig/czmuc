@@ -11,6 +11,7 @@
 
 #include "crazygaze/muc/czmuc.h"
 #include "crazygaze/muc/UTF8String.h"
+#include <vector>
 
 namespace cz
 {

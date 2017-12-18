@@ -13,7 +13,7 @@ namespace cz
 {
 
 std::string to_json(const char* val);
-std::string to_json(std::string val);
+std::string to_json(const std::string& val);
 std::string to_json(int val);
 std::string to_json(long val);
 std::string to_json(long long val);
@@ -45,7 +45,4 @@ std::string to_json(const std::pair<FIRST,SECOND>& val)
 	return res;
 }
 
-}
-
-
-
+} // namespace cz
