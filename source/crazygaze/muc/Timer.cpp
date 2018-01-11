@@ -24,6 +24,7 @@ void HighResolutionTimer::reset()
 	QueryPerformanceFrequency( &perf );
 	m_secondsPerCycle = (double)1.0 / perf.QuadPart;
 	QueryPerformanceCounter( &m_base );
+	m_lapSeconds = seconds();
 }
 
 double HighResolutionTimer::seconds()

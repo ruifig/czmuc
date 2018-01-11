@@ -193,6 +193,26 @@ public:
 		}
 	}
 
+	template<class ExtraParameter1, class ExtraParameter2, class ExtraParameter3>
+	__forceinline void tickExt2(TimeType deltatime, ExtraParameter1& extra1, ExtraParameter2& extra2, ExtraParameter3& extra3)
+	{
+		if (m_tickEnabled)
+		{
+			if (update(deltatime))
+			{
+				TimeType res = m_obj->tick(m_timeSinceLastTick + deltatime, extra1, extra2, extra3);
+				if (res==0)
+					m_tickEnabled = false;
+				reset(res);
+				m_timeSinceLastTick = 0;
+			}
+			else
+			{
+				m_timeSinceLastTick += deltatime;
+			}
+		}
+	}
+
 	__forceinline ObjectType& getObj()
 	{
 		return m_obj;

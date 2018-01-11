@@ -42,8 +42,17 @@ namespace cz
 			return seconds() * 1000.0;
 		}
 
+		double lapSeconds()
+		{
+			double t = seconds();
+			double ret = t - m_lapSeconds;
+			m_lapSeconds = t;
+			return ret;
+		}
+
 	private:
 		double m_secondsPerCycle;
+		double m_lapSeconds;
 		LARGE_INTEGER  m_base;
 	};
 
