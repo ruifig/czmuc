@@ -93,6 +93,25 @@ namespace cz
 		if (it != str1.end()) return it - str1.begin();
 		else return -1; // not found
 	}
+
+	// Check if two strings are equal, case insensitive
+	template<typename T>
+	static bool ci_equals(const T& str1, const T& str2, const std::locale& loc = std::locale())
+	{
+		if (str1.size() != str2.size())
+			return false;
+		typename T::const_iterator it1 = str1.begin();
+		typename T::const_iterator it2 = str2.begin();
+		my_equal<typename T::value_type> eq(loc);
+		while (it1 != str1.end())
+		{
+			if (!eq(*it1, *it2))
+				return false;
+			++it1;
+			++it2;
+		}
+		return true;
+	}
 #endif
 
 #if CZ_PLATFORM_WIN32
