@@ -2,15 +2,16 @@
 	CrazyGaze (http://www.crazygaze.com)
 	Author : Rui Figueira
 	Email  : rui@crazygaze.com
-	
+
 	purpose:
-	
+
 *********************************************************************/
 
 #pragma once
 
 #include "crazygaze/muc/czmuc.h"
 #include <string>
+#include <bitset>
 #include "crazygaze/muc/ChunkBuffer.h"
 
 namespace cz
@@ -39,7 +40,7 @@ namespace cz
 
 		bool operator==(const Guid& other) const
 		{
-			return (a==other.a && b==other.b && c==other.c && d==other.d);
+			return (a == other.a && b == other.b && c == other.c && d == other.d);
 		}
 
 		bool operator!=(const Guid& other) const
@@ -49,7 +50,7 @@ namespace cz
 
 		bool isValid() const
 		{
-			return (a | b | c | d) !=0;
+			return (a | b | c | d) != 0;
 		}
 
 		void invalidate()
@@ -57,13 +58,13 @@ namespace cz
 			a = b = c = d = 0;
 		}
 
-		std::string toString() const;		
+		std::string toString() const;
 		bool fromString(const std::string& str);
 
 		// So it can be used as a key in maps
 		bool operator<(const Guid& other) const;
 
-		uint32_t a,b,c,d;
+		uint32_t a, b, c, d;
 	};
 
 	const ChunkBuffer& operator >> (const ChunkBuffer& stream, cz::Guid& v);
@@ -76,3 +77,20 @@ namespace cz
 	*/
 
 } // namespace cz
+
+
+// Define std::hash<Guid>, so it can be used as a key for std::unordered_map
+namespace std
+{
+	template<>
+	struct hash<cz::Guid>
+	{
+		std::size_t operator()(const cz::Guid& guid) const
+		{
+			using guidbitset = std::bitset<128>;
+			static_assert(sizeof(guidbitset) == sizeof(cz::Guid), "bitset doesn't match Guid size");
+			const guidbitset& bits = *reinterpret_cast<const guidbitset*>(&guid);
+			return std::hash<guidbitset>()(bits);
+		}
+	};
+}
