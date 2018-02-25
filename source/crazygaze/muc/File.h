@@ -61,6 +61,15 @@ namespace cz
 			return mName;
 		}
 
+		//! Returns the internal FILE handle.
+		/*
+		* NOTE: Be careful what you do with it.
+		*/
+		FILE* getHandle()
+		{
+			return mFile;
+		}
+
 	protected:
 		bool _open(const UTF8String& filename, Mode mode, bool raiseError);
 
