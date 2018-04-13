@@ -142,7 +142,7 @@ size_t File::write(const void* buffer, int size, int count)
 	CZ_ASSERT(mFile);
 	CZ_ASSERT(mMode==FILEMODE_WRITE || mMode==FILEMODE_READWRITE_EXISTING || mMode==FILEMODE_APPEND || mMode==FILEMODE_APPENDNEW);
 	size_t r = fwrite(buffer, size, count, mFile);
-	CZ_ASSERT_F(r==count, "%s failed. Requested %d elements (%d bytes each), and did %d", __FUNCTION__, static_cast<int>(count), static_cast<int>(size), static_cast<int>(r));
+	CZ_ASSERT_F((size*count==0) || (r==count), "%s failed. Requested %d elements (%d bytes each), and did %d", __FUNCTION__, static_cast<int>(count), static_cast<int>(size), static_cast<int>(r));
 	return r;
 }
 
