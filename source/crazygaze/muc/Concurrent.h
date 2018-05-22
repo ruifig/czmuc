@@ -115,7 +115,7 @@ protected:
 	using TickReturnType = decltype(m_t.tick(0));
 public:
 	template<typename... Args>
-	ConcurrentTicker(Args&&... args) : ConcurrentBase(std::forward<Args>(args)...)
+	ConcurrentTicker(Args&&... args) : ConcurrentBase<T>(std::forward<Args>(args)...)
 	{
 		if (AutoStart)
 			start();
