@@ -104,7 +104,8 @@ TEST(WriteBlock)
 
 	buf << short(0x1122);
 	int capacity = 4;
-	auto data = std::unique_ptr<char[]>(new char[capacity]);
+	//auto data = std::unique_ptr<char[]>(new char[capacity]);
+	auto data = std::shared_ptr<char[]>(new char[capacity]);
 	for (char i = 0; i < capacity-1; i++)
 		data[i] = i;
 

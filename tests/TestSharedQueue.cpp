@@ -44,8 +44,6 @@ TEST(1)
 	CHECK_EQUAL("1", f.s);
 	q.wait_and_pop(f);
 	CHECK_EQUAL("2", f.s);
-
-	printf("Derp\n");
 }
 
 TEST(2)

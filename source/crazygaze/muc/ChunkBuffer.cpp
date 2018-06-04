@@ -36,7 +36,7 @@ struct BlockReserveWriteInfo
 //
 //////////////////////////////////////////////////////////////////////////
 
-ChunkBuffer::Block::Block(std::shared_ptr<char> ptr, unsigned capacity, unsigned usedSize)
+ChunkBuffer::Block::Block(std::shared_ptr<char[]> ptr, unsigned capacity, unsigned usedSize)
 	: m_ptr(std::move(ptr))
 	, m_capacity(capacity)
 	, m_readPos(0)
@@ -145,7 +145,7 @@ void ChunkBuffer::iterateBlocks(std::function<void(const char*, unsigned)> f)
 		f(i.getReadPtr(), i.size());
 }
 
-void ChunkBuffer::writeBlock(std::shared_ptr<char> data, unsigned capacity, unsigned size)
+void ChunkBuffer::writeBlock(std::shared_ptr<char[]> data, unsigned capacity, unsigned size)
 {
 	CZ_ASSERT(capacity && size <= capacity);
 	m_blocks.emplace(std::move(data), capacity, size);
