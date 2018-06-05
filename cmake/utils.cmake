@@ -10,6 +10,17 @@ endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
 
 if (MSVC)
 	SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D \"_CRT_SECURE_NO_WARNINGS\" /MP /bigobj")
+	
+	# Change the language standard VS targets
+	# From https://stackoverflow.com/questions/44960715/how-to-enable-stdc17-in-vs2017-with-cmake
+	if (MSVC_VERSION GREATER_EQUAL "1900")
+		include(CheckCXXCompilerFlag)
+		CHECK_CXX_COMPILER_FLAG("/std:c++latest" _cpp_latest_flag_supported)
+		if (_cpp_latest_flag_supported)
+			add_compile_options("/std:c++latest")
+		endif()
+	endif()
+
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))

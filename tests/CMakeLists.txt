@@ -7,6 +7,7 @@ include(../cmake/ucm.cmake)
 ucm_add_files(
 		"targetver.h"
 		"TestBuffer.cpp"
+		"TestQuickVector.cpp"
 		"TestChunkBuffer.cpp"
 		"TestRingBuffer.cpp"
 		"TestSharedQueue.cpp"

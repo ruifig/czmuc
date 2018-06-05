@@ -38,7 +38,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		printf("*** Run %d\n***", c++);
 		int ret;
 
-		ret = runAllTests();
+		ret = UnitTest::RunAllTests();
 		if (ret!= EXIT_SUCCESS)
 			return ret;
 	}

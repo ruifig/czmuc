@@ -2,6 +2,13 @@
 #include <type_traits>
 #include <assert.h>
 
+/*
+TODO:
+Align m_quickbuf and m_buf as per T requirements
+	- see https://en.cppreference.com/w/cpp/types/alignment_of
+
+*/
+
 namespace cz
 {
 
@@ -9,17 +16,43 @@ namespace cz
 /*
 Minimalistic vector class, which allocates N items on the stack before growing
 dynamically
+
+The limited interface it provides is compatible with std::vector
 */
 template<typename T, size_t QuickSize>
 class QuickVector
 {
 public:
-
 	using value_type = T;
 	using size_type = size_t;
 
+	template<typename T, size_t NN>
+	friend class QuickVector;
+
 	QuickVector()
 	{
+	}
+
+	QuickVector(const QuickVector& other)
+	{
+		copyFrom(other);
+	}
+
+	template<size_t NN>
+	QuickVector(const QuickVector<T, NN>& other)
+	{
+		copyFrom(other);
+	}
+
+	QuickVector(QuickVector&& other)
+	{
+		moveFrom(std::move(other));
+	}
+
+	template<size_t NN>
+	QuickVector(QuickVector<T, NN>&& other)
+	{
+		moveFrom(std::move(other));
 	}
 
 	~QuickVector()
@@ -27,6 +60,32 @@ public:
 		destroyRange(begin(), end());
 		if (m_buf)
 			::free(m_buf);
+	}
+
+	QuickVector& operator=(const QuickVector& other)
+	{
+		copyFrom(other);
+		return *this;
+	}
+
+	template<size_t NN>
+	QuickVector& operator=(const QuickVector<T, NN>& other)
+	{
+		copyFrom(other);
+		return *this;
+	}
+
+	QuickVector& operator=(QuickVector&& other)
+	{
+		moveFrom(std::move(other));
+		return *this;
+	}
+
+	template<size_t NN>
+	QuickVector& operator=(QuickVector<T, NN>&& other)
+	{
+		moveFrom(std::move(other));
+		return *this;
 	}
 
 	void reserve(size_t capacity)
@@ -42,7 +101,7 @@ public:
 		if (!newbuf)
 			throw std::bad_alloc();
 
-		moveConstructAndDestroy(begin(), end(), reinterpret_cast<T*>(newbuf));
+		moveConstruct<true>(begin(), end(), reinterpret_cast<T*>(newbuf));
 		if (m_buf)
 			::free(m_buf);
 		m_buf = reinterpret_cast<uint8_t*>(newbuf);
@@ -120,11 +179,70 @@ public:
 	}
 
 private:
+
+	template<size_t NN>
+	void copyFrom(const QuickVector<T, NN>& other)
+	{
+		if (m_size)
+			clear();
+		reserve(other.m_size);
+		m_size = other.m_size;
+		copyConstruct(other.begin(), other.end(), getPtr());
+	}
+
+	template<size_t NN>
+	void moveFrom(QuickVector<T, NN>&& other)
+	{
+		if (m_size)
+			clear();
+
+		auto freeBuffer = [this]()
+		{
+			if (m_buf)
+			{
+				::free(m_buf);
+				m_buf = nullptr;
+				m_capacity = QuickSize;
+			}
+		};
+
+		// If it fits in our quick buffer, we give preference to that
+		if (other.m_size <= QuickSize)
+		{
+			freeBuffer();
+
+			m_size = other.m_size;
+			moveConstruct<true>(other.begin(), other.end(), begin());
+			other.m_size = 0;
+		}
+		else
+		{
+			if (other.m_buf)
+			{
+				freeBuffer();
+				m_capacity = other.m_capacity;
+				m_size = other.m_size;
+				m_buf = other.m_buf;
+				other.m_capacity = NN;
+				other.m_size = 0;
+				other.m_buf = nullptr;
+			}
+			else
+			{
+				reserve(other.m_size);
+				m_size = other.m_size;
+				moveConstruct<true>(other.begin(), other.end(), begin());
+				other.m_size = 0;
+			}
+		}
+	}
+
 	/*
 	Moves a range of T elements into a new section of memory, constructing using
 	the new elements by moving if possible, and destroying the old elements
 	*/
-	static void moveConstructAndDestroy(T* first, T* last, T* dst)
+	template<bool destroy>
+	static void moveConstruct(T* first, T* last, T* dst)
 	{
 		assert(dst < first || dst >= last);
 		if constexpr(std::is_trivial_v<T>)
@@ -136,7 +254,26 @@ private:
 			while (first != last)
 			{
 				::new((void*)dst) T(std::move(*first));
-				first->~T();
+				if constexpr(destroy)
+					first->~T();
+				first++;
+				dst++;
+			}
+		}
+	}
+
+	static void copyConstruct(const T* first, const T* last, T* dst)
+	{
+		assert(dst < first || dst >= last);
+		if constexpr(std::is_trivial_v<T>)
+		{
+			::memcpy(dst, first, (last - first) * sizeof(T));
+		}
+		else
+		{
+			while (first != last)
+			{
+				::new((void*)dst) T(*first);
 				first++;
 				dst++;
 			}
@@ -145,7 +282,11 @@ private:
 
 	static void destroyRange(T* first, T* last)
 	{
-		if constexpr(!std::is_trivial_v<T>)
+		if constexpr(std::is_trivial_v<T>)
+		{
+			// Nothing to do
+		}
+		else
 		{
 			while (first != last)
 			{

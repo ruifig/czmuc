@@ -7,47 +7,57 @@ namespace
 {
 
 	std::unordered_map<int, int> gFoos;
-	int gFooCounter = 0;
-	int gFooConstructedCount = 0;
-	int gFooNonEmptyDestroyed = 0;
+	int gFoosCreated = 0;
+	int gFoosDestroyed = 0;
 
 	void clearFooStats()
 	{
+		CHECK(gFoosCreated == gFoosDestroyed);
 		gFoos.clear();
+		//gFoosCreated = 0;
+		//gFoosDestroyed = 0;
 	}
 
 	struct Foo
 	{
 		Foo(int n) : n(n)
 		{
-			//printf("%s : %d\n", __FUNCTION__, n);
-			id = gFooCounter++;
-			gFoos[id] = n;
+			gFoosCreated++;
+			gFoos[n]++;
 		}
 
-		Foo(const Foo& other) = delete;
+		Foo(const Foo& other)
+		{
+			gFoosCreated++;
+			n = other.n;
+			gFoos[n]++;
+		}
 
 		Foo(Foo&& other)
 		{
+			gFoosCreated++;
 			n = other.n;
-			id = other.id;
 			other.n = -1;
-			other.id = -1;
 		}
+
+		Foo& operator= (const Foo& other) = delete;
+		Foo& operator= (Foo&& other) = delete;
 
 		~Foo()
 		{
-			//printf("%s : %d\n", __FUNCTION__, n);
+			gFoosDestroyed++;
 			if (n != -1)
 			{
-				auto it = gFoos.find(id);
-				assert(it != gFoos.end());
-				gFoos.erase(it);
+				assert(gFoos[n] > 0);
+				gFoos[n]--;
+				if (gFoos[n] == 0)
+					gFoos.erase(n);
 			}
 		}
 	
 		int n;
-		int id;
+		// Make Foo big, to make it easier to spot leaks
+		char padding[1024];
 	};
 
 }
@@ -68,6 +78,7 @@ SUITE(QuickVector)
 
 TEST(EmptyVector)
 {
+	clearFooStats();
 	QuickVector<int, 4> v;
 	CHECK_EQUAL(0, v.size());
 	CHECK_EQUAL(4, v.capacity());
@@ -76,6 +87,7 @@ TEST(EmptyVector)
 
 TEST(reserve)
 {
+	clearFooStats();
 	QuickVector<int, 4> v;
 
 	CHECK_EQUAL(4, v.capacity());
@@ -89,6 +101,7 @@ TEST(reserve)
 
 TEST(push_back_emplace_back)
 {
+	clearFooStats();
 	QuickVector<int, 4> v;
 	std::vector<int> expected{10, 11, 12, 13, 14, 15};
 
@@ -118,6 +131,7 @@ TEST(push_back_emplace_back)
 
 TEST(clear)
 {
+	clearFooStats();
 	QuickVector<int, 2> v;
 	v.push_back(0);
 	v.push_back(1);
@@ -132,10 +146,12 @@ TEST(clear)
 	v.push_back(2);
 	CHECK_EQUAL(3, v.size());
 	CHECK_EQUAL(4, v.capacity());
+	CHECK_EQUAL(0, gFoos.size());
 }
 
 TEST(NonTrivial)
 {
+	clearFooStats();
 	static_assert(std::is_trivial_v<Foo> == false);
 	static_assert(std::is_trivial_v<std::string> == false);
 
@@ -157,6 +173,7 @@ TEST(NonTrivial)
 
 TEST(NonTrivialString)
 {
+	clearFooStats();
 	static_assert(std::is_trivial_v<std::string> == false);
 
 	QuickVector<std::string, 2> v;
@@ -175,6 +192,7 @@ TEST(NonTrivialString)
 
 TEST(indexing)
 {
+	clearFooStats();
 	QuickVector<int, 2> v;
 	const QuickVector<int, 2>& vv = v;
 
@@ -207,6 +225,7 @@ int testForLoop(const std::vector<int>& v, QV& q)
 
 TEST(ForLoop)
 {
+	clearFooStats();
 	std::vector<int> expected{10, 11, 12, 13, 14, 15};
 	QuickVector<int, 4> v;
 	const QuickVector<int, 4>& vv = v;
@@ -222,6 +241,132 @@ TEST(ForLoop)
 	CHECK_EQUAL(5, testForLoop(expected, vv));
 }
 
+template<size_t N1, size_t N2, bool assign>
+void testCopyImpl()
+{
+	clearFooStats();
+	std::vector<int> expected{10, 11, 12, 13, 14, 15};
+	QuickVector<Foo, N1> v;
+	v.push_back(10);
+	v.push_back(11);
+	v.push_back(12);
+	if constexpr(assign)
+	{
+		QuickVector<Foo, N2> vv;
+		vv.push_back(0);
+		vv = v;
+		CHECK_EQUAL(3, vv.size());
+		CHECK_ARRAY_EQUAL(expected, vv, 3);
+
+		CHECK_EQUAL(2, gFoos[10]);
+		CHECK_EQUAL(2, gFoos[11]);
+		CHECK_EQUAL(2, gFoos[12]);
+	}
+	else
+	{
+		QuickVector<Foo, N2> vv(v);
+		CHECK_EQUAL(3, vv.size());
+		CHECK_ARRAY_EQUAL(expected, vv, 3);
+
+		CHECK_EQUAL(2, gFoos[10]);
+		CHECK_EQUAL(2, gFoos[11]);
+		CHECK_EQUAL(2, gFoos[12]);
+	}
+
+	CHECK_EQUAL(1, gFoos[10]);
+	CHECK_EQUAL(1, gFoos[11]);
+	CHECK_EQUAL(1, gFoos[12]);
+
+	CHECK_EQUAL(3, v.size());
+	CHECK_ARRAY_EQUAL(expected, v, 3);
+}
+
+template<bool assign>
+void testCopy()
+{
+	clearFooStats();
+
+	testCopyImpl<4, 2, assign>();
+	testCopyImpl<4, 3, assign>();
+	testCopyImpl<4, 4, assign>();
+	testCopyImpl<4, 5, assign>();
+	CHECK_EQUAL(0, gFoos.size());
+
+	testCopyImpl<2, 1, assign>();
+	testCopyImpl<2, 2, assign>();
+	testCopyImpl<2, 3, assign>();
+	testCopyImpl<2, 4, assign>();
+	CHECK_EQUAL(0, gFoos.size());
+}
+
+TEST(Copy)
+{
+	testCopy<false>();
+	testCopy<true>();
+}
+
+template<size_t N1, size_t N2, bool assign>
+void testMoveImpl()
+{
+	clearFooStats();
+	std::vector<int> expected{10, 11, 12, 13, 14, 15};
+	QuickVector<Foo, N1> v;
+	v.push_back(10);
+	v.push_back(11);
+	v.push_back(12);
+
+	if constexpr(assign)
+	{
+		QuickVector<Foo, N2> vv;
+		vv.push_back(0);
+		vv = (std::move(v));
+
+		CHECK_EQUAL(3, vv.size());
+		CHECK_ARRAY_EQUAL(expected, vv, 3);
+
+		CHECK_EQUAL(1, gFoos[10]);
+		CHECK_EQUAL(1, gFoos[11]);
+		CHECK_EQUAL(1, gFoos[12]);
+	}
+	else
+	{
+		QuickVector<Foo, N2> vv(std::move(v));
+
+		CHECK_EQUAL(3, vv.size());
+		CHECK_ARRAY_EQUAL(expected, vv, 3);
+
+		CHECK_EQUAL(1, gFoos[10]);
+		CHECK_EQUAL(1, gFoos[11]);
+		CHECK_EQUAL(1, gFoos[12]);
+	}
+
+	CHECK_EQUAL(0, gFoos.size());
+	CHECK_EQUAL(0, v.size());
+}
+
+template<bool assign>
+void testMove()
+{
+	clearFooStats();
+
+	testMoveImpl<4, 2, assign>();
+	testMoveImpl<4, 3, assign>();
+	testMoveImpl<4, 4, assign>();
+	testMoveImpl<4, 5, assign>();
+	CHECK_EQUAL(0, gFoos.size());
+
+	testMoveImpl<2, 1, assign>();
+	testMoveImpl<2, 2, assign>();
+	testMoveImpl<2, 3, assign>();
+	testMoveImpl<2, 4, assign>();
+	CHECK_EQUAL(0, gFoos.size());
+}
+
+TEST(Move)
+{
+	testMove<false>();
+	testMove<true>();
+}
 
 }
 

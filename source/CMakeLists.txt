@@ -41,6 +41,7 @@ ucm_add_files(
 	"crazygaze/muc/Logging.h"
 	"crazygaze/muc/Parameters.cpp"
 	"crazygaze/muc/Parameters.h"
+	"crazygaze/muc/QuickVector.h"
 	"crazygaze/muc/Random.cpp"
 	"crazygaze/muc/Random.h"
 	"crazygaze/muc/RingBuffer.cpp"
