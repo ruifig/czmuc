@@ -18,6 +18,9 @@ namespace cz
 class WindowsConsole : public LogOutput
 {
   public:
+
+	// #TODO : Make this a class enum and short the names to e.g:
+	// Colour::Black
 	enum Colour
 	{
 		CONSOLE_COLOUR_BLACK = 0x0,
@@ -38,9 +41,9 @@ class WindowsConsole : public LogOutput
 	};
 
 	WindowsConsole();
-	WindowsConsole(int width, int height, int bufferWidth, int bufferHeight);
+	WindowsConsole(short width, short height, short bufferWidth, short bufferHeight);
 	virtual ~WindowsConsole();
-	void init(int width = 100, int height = 30, int bufferWidth = 110, int bufferHeight = 1000);
+	void init(short width = 100, short height = 30, short bufferWidth = 110, short bufferHeight = 1000);
 	void redirectStd(bool redirectStdOut = true, bool redirectStdIn = true, bool redirectStdErr = true,
 	                 bool redirectCPP = true);
 	void center();

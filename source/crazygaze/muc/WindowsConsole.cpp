@@ -27,7 +27,7 @@ WindowsConsole::WindowsConsole()
 {
 	mConsoleHandle = INVALID_HANDLE_VALUE;
 }
- WindowsConsole::WindowsConsole(int width, int height, int bufferWidth, int bufferHeight)
+ WindowsConsole::WindowsConsole(short width, short height, short bufferWidth, short bufferHeight)
  {
 	 mConsoleHandle = INVALID_HANDLE_VALUE;;
 	 init(width, height, bufferWidth, bufferHeight);
@@ -39,7 +39,7 @@ WindowsConsole::~WindowsConsole()
 		FreeConsole();
 }
 
-void WindowsConsole::init(int width, int height, int bufferWidth, int bufferHeight)
+void WindowsConsole::init(short width, short height, short bufferWidth, short bufferHeight)
 {
 	CZ_ASSERT(mConsoleHandle==INVALID_HANDLE_VALUE);
 	if (mConsoleHandle!=INVALID_HANDLE_VALUE)
@@ -135,7 +135,7 @@ void WindowsConsole::center()
 
 void WindowsConsole::setTextColour(WindowsConsole::Colour colour)
 {
-	SetConsoleTextAttribute(mConsoleHandle,colour);
+	SetConsoleTextAttribute(mConsoleHandle, (WORD)colour);
 	mCurrColour = colour;
 }
 void WindowsConsole::print(const char* str)
