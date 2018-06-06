@@ -1,17 +1,46 @@
 #pragma once
 #include <type_traits>
+#if defined(_MSC_VER)
+#else
+	#include <cstdlib>
+#endif
 #include <assert.h>
-
-/*
-TODO:
-Align m_quickbuf and m_buf as per T requirements
-	- see https://en.cppreference.com/w/cpp/types/alignment_of
-
-*/
 
 namespace cz
 {
 
+namespace detail
+{
+	// From https://stackoverflow.com/questions/10585450/how-do-i-check-if-a-template-parameter-is-a-power-of-two
+	constexpr bool is_powerof2(int v)
+	{
+		return v && ((v & (v - 1)) == 0);
+	}
+	constexpr bool is_powerof2(size_t v)
+	{
+		return v && ((v & (v - 1)) == 0);
+	}
+
+	template<typename T>
+	void* alignedAlloc(size_t n)
+	{
+#if defined(_MSC_VER)
+		static_assert(detail::is_powerof2(alignof(T)));
+		return _aligned_malloc(sizeof(T) * n, alignof(T));
+#else
+		return std::aligned_alloc(alignof(T), std::max(alignof(T), n * sizeof(T)));
+#endif
+	}
+
+	inline void alignedFree(void* ptr)
+	{
+#if defined(_MSC_VER)
+		_aligned_free(ptr);
+#else
+		std::free(ptr);
+#endif
+	}
+}
 
 /*
 Minimalistic vector class, which allocates N items on the stack before growing
@@ -19,16 +48,19 @@ dynamically
 
 The limited interface it provides is compatible with std::vector
 */
-template<typename T, size_t QuickSize>
-class QuickVector
+template<typename T, unsigned int N, typename SIZE_TYPE=size_t>
+class alignas(alignof(T) > alignof(size_t) ? alignof(T) : alignof(size_t)) QuickVector
 {
 public:
 	using value_type = T;
-	using size_type = size_t;
+	using size_type = SIZE_TYPE;
 
-	template<typename T, size_t NN>
+	template<typename T, unsigned int N, typename SIZE_TYPE>
 	friend class QuickVector;
 
+	//////////////////////////////////////////////////////////////////////////
+	// Member Functions
+	//////////////////////////////////////////////////////////////////////////
 	QuickVector()
 	{
 	}
@@ -38,8 +70,8 @@ public:
 		copyFrom(other);
 	}
 
-	template<size_t NN>
-	QuickVector(const QuickVector<T, NN>& other)
+	template<unsigned int NN>
+	QuickVector(const QuickVector<T, NN, size_type>& other)
 	{
 		copyFrom(other);
 	}
@@ -49,17 +81,22 @@ public:
 		moveFrom(std::move(other));
 	}
 
-	template<size_t NN>
-	QuickVector(QuickVector<T, NN>&& other)
+	template<unsigned int NN>
+	QuickVector(QuickVector<T, NN, size_type>&& other)
 	{
 		moveFrom(std::move(other));
 	}
 
 	~QuickVector()
 	{
+		static_assert(std::is_unsigned_v<size_type>);
+		static_assert(N >= 1);
+		// Make sure we got the alignment right
+		// Putting this here, since the destructor is surely compiled in
+		static_assert(alignof(QuickVector) >= alignof(T));
 		destroyRange(begin(), end());
 		if (m_buf)
-			::free(m_buf);
+			detail::alignedFree(m_buf);
 	}
 
 	QuickVector& operator=(const QuickVector& other)
@@ -68,8 +105,8 @@ public:
 		return *this;
 	}
 
-	template<size_t NN>
-	QuickVector& operator=(const QuickVector<T, NN>& other)
+	template<unsigned int NN>
+	QuickVector& operator=(const QuickVector<T, NN, size_type>& other)
 	{
 		copyFrom(other);
 		return *this;
@@ -81,41 +118,73 @@ public:
 		return *this;
 	}
 
-	template<size_t NN>
-	QuickVector& operator=(QuickVector<T, NN>&& other)
+	template<unsigned int NN>
+	QuickVector& operator=(QuickVector<T, NN, size_type>&& other)
 	{
 		moveFrom(std::move(other));
 		return *this;
 	}
 
-	void reserve(size_t capacity)
+	//////////////////////////////////////////////////////////////////////////
+	// Element access
+	//////////////////////////////////////////////////////////////////////////
+
+	T& at(size_type pos)
 	{
-		if (capacity <= m_capacity)
-			return;
-
-		m_capacity = capacity;
-		if (m_capacity <= QuickSize)
-			return;
-
-		auto newbuf = ::malloc(m_capacity * sizeof(T));
-		if (!newbuf)
-			throw std::bad_alloc();
-
-		moveConstruct<true>(begin(), end(), reinterpret_cast<T*>(newbuf));
-		if (m_buf)
-			::free(m_buf);
-		m_buf = reinterpret_cast<uint8_t*>(newbuf);
+		if (pos >= m_size)
+			throw std::out_of_range("Out of range at QuickVector::at");
+		return getRef(pos);
 	}
 
-	size_t size() const
+	const T& at(size_type pos) const
 	{
-		return m_size;
+		if (pos >= m_size)
+			throw std::out_of_range("Out of range at QuickVector::at");
+		return getRef(pos);
 	}
 
-	size_t capacity() const
+	T& operator[](size_type pos)
 	{
-		return m_capacity;
+		return getRef(pos);
 	}
+
+	const T& operator[](size_type pos) const
+	{
+		return getRef(pos);
+	}
+
+	T& front()
+	{
+		return *getPtr();
+	}
+
+	const T& front() const
+	{
+		return *getPtr();
+	}
+
+	T& back()
+	{
+		return getRef(m_size - 1);
+	}
+
+	const T& back() const
+	{
+		return getRef(m_size - 1);
+	}
+
+	T* data() noexcept
+	{
+		return getPtr();
+	}
+	const T* data() const noexcept
+	{
+		return getPtr();
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// Iterators
+	//////////////////////////////////////////////////////////////////////////
 
 	T* begin()
 	{
@@ -135,6 +204,59 @@ public:
 	const T* end() const
 	{
 		return getPtr() + m_size;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// Capacity
+	//////////////////////////////////////////////////////////////////////////
+
+	bool empty() const noexcept
+	{
+		return m_size == 0;
+	}
+
+	size_type size() const
+	{
+		return m_size;
+	}
+
+	size_type max_size() const noexcept
+	{
+		return size_type(~0) / sizeof(T);
+	}
+
+	void reserve(size_type capacity)
+	{
+		if (capacity <= m_capacity)
+			return;
+
+		m_capacity = capacity;
+		if (m_capacity <= N)
+			return;
+
+		auto newbuf = detail::alignedAlloc<T>(m_capacity);
+		if (!newbuf)
+			throw std::bad_alloc();
+
+		moveConstruct<true>(begin(), end(), reinterpret_cast<T*>(newbuf));
+		if (m_buf)
+			detail::alignedFree(m_buf);
+		m_buf = reinterpret_cast<uint8_t*>(newbuf);
+	}
+
+	size_type capacity() const
+	{
+		return m_capacity;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// Modifiers
+	//////////////////////////////////////////////////////////////////////////
+
+	void clear()
+	{
+		destroyRange(begin(), end());
+		m_size = 0;
 	}
 
 	void push_back(const T& value)
@@ -162,26 +284,13 @@ public:
 		m_size++;
 	}
 
-	void clear()
-	{
-		destroyRange(begin(), end());
-		m_size = 0;
-	}
-
-	T& operator[](size_t pos)
-	{
-		return getRef(pos);
-	}
-
-	const T& operator[](size_t pos) const
-	{
-		return getRef(pos);
-	}
-
+	//////////////////////////////////////////////////////////////////////////
+	// Private bits
+	//////////////////////////////////////////////////////////////////////////
 private:
 
-	template<size_t NN>
-	void copyFrom(const QuickVector<T, NN>& other)
+	template<unsigned int NN>
+	void copyFrom(const QuickVector<T, NN, size_type>& other)
 	{
 		if (m_size)
 			clear();
@@ -190,8 +299,8 @@ private:
 		copyConstruct(other.begin(), other.end(), getPtr());
 	}
 
-	template<size_t NN>
-	void moveFrom(QuickVector<T, NN>&& other)
+	template<unsigned int NN>
+	void moveFrom(QuickVector<T, NN, size_type>&& other)
 	{
 		if (m_size)
 			clear();
@@ -200,14 +309,14 @@ private:
 		{
 			if (m_buf)
 			{
-				::free(m_buf);
+				detail::alignedFree(m_buf);
 				m_buf = nullptr;
-				m_capacity = QuickSize;
+				m_capacity = N;
 			}
 		};
 
 		// If it fits in our quick buffer, we give preference to that
-		if (other.m_size <= QuickSize)
+		if (other.m_size <= N)
 		{
 			freeBuffer();
 
@@ -306,22 +415,23 @@ private:
 		return m_buf ? reinterpret_cast<const T*>(m_buf) : reinterpret_cast<const T*>(m_quickbuf);
 	}
 
-	T& getRef(size_t idx)
+	T& getRef(size_type idx)
 	{
 		assert(idx < m_size);
 		return getPtr()[idx];
 	}
 
-	const T& getRef(size_t idx) const
+	const T& getRef(size_type idx) const
 	{
 		assert(idx < m_size);
 		return getPtr()[idx];
 	}
 
-	size_t m_capacity = QuickSize;
-	size_t m_size = 0;
-	uint8_t m_quickbuf[sizeof(T)* QuickSize];
+	// This needs to be the first member, because of the alignment
+	uint8_t m_quickbuf[sizeof(T)* N];
 	uint8_t* m_buf = nullptr;
+	size_type m_capacity = N;
+	size_type m_size = 0;
 };
 
 }

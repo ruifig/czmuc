@@ -57,7 +57,7 @@ namespace
 	
 		int n;
 		// Make Foo big, to make it easier to spot leaks
-		char padding[1024];
+		alignas(16) char padding[1024];
 	};
 
 }
@@ -76,13 +76,52 @@ std::ostream& operator<<(std::ostream& s, const Foo& f)
 SUITE(QuickVector)
 {
 
+template<typename T>
+void testAlign()
+{
+	QuickVector<T, 1> v;
+	v.push_back(0);
+	void* p1 = &v[0];
+	v.push_back(1);
+
+	void* p2 = &v[0];
+	CHECK(p1 == &v); // making sure it's the quickbuffer
+	CHECK(p2 != p1);
+
+	size_t alignment = alignof(T);
+	CHECK((((size_t)p1) % alignment) == 0);
+	CHECK((((size_t)p2) % alignment) == 0);
+}
+
+TEST(Alignment)
+{
+	static_assert(alignof(Foo)==16);
+	static_assert(alignof(QuickVector<Foo, 2>)==alignof(Foo));
+
+	static_assert(alignof(char)==1);
+	static_assert(alignof(uint32_t)==4);
+	static_assert(alignof(uint64_t)==8);
+	static_assert(alignof(QuickVector<char, 2, uint32_t>)==alignof(size_t));
+	static_assert(alignof(QuickVector<char, 2, size_t>)==alignof(size_t));
+
+	testAlign<uint8_t>();
+	testAlign<uint16_t>();
+	testAlign<uint32_t>();
+	testAlign<uint64_t>();
+	testAlign<Foo>();
+}
+
 TEST(EmptyVector)
 {
 	clearFooStats();
 	QuickVector<int, 4> v;
 	CHECK_EQUAL(0, v.size());
+	CHECK(v.empty());
 	CHECK_EQUAL(4, v.capacity());
 	CHECK(v.begin() == v.end());
+	CHECK(v.data() == v.begin());
+
+	CHECK_EQUAL(decltype(v)::size_type(~0) / sizeof(int), v.max_size());
 }
 
 TEST(reserve)
@@ -94,6 +133,7 @@ TEST(reserve)
 	auto b = v.begin();
 	v.reserve(5);
 	CHECK_EQUAL(0, v.size());
+	CHECK(v.empty());
 	CHECK_EQUAL(5, v.capacity());
 	CHECK(v.begin() != b);
 	CHECK(v.begin() == v.end());
@@ -108,6 +148,7 @@ TEST(push_back_emplace_back)
 	v.emplace_back(10);
 	CHECK_ARRAY_EQUAL(expected.begin(), v.begin(), 1);
 	CHECK_EQUAL(1, v.size());
+	CHECK(!v.empty());
 	CHECK_EQUAL(4, v.capacity());
 	CHECK((v.begin()+1) == v.end());
 
@@ -367,6 +408,53 @@ TEST(Move)
 	testMove<false>();
 	testMove<true>();
 }
+
+template<size_t N>
+void testFront_Back()
+{
+	QuickVector<Foo, N> v;
+	const QuickVector<Foo, N>& vv = v;
+	v.push_back(10);
+	v.push_back(11);
+	v.push_back(12);
+
+	CHECK_EQUAL(10, v.front());
+	CHECK_EQUAL(12, v.back());
+	CHECK_EQUAL(10, vv.front());
+	CHECK_EQUAL(12, vv.back());
+}
+
+TEST(Front_Back)
+{
+	testFront_Back<4>();
+	testFront_Back<2>();
+}
+
+template<size_t N>
+void test_at()
+{
+	QuickVector<Foo, N> v;
+	const QuickVector<Foo, N>& vv = v;
+	v.push_back(10);
+	v.push_back(11);
+	v.push_back(12);
+
+	CHECK_EQUAL(10, v.at(0));
+	CHECK_EQUAL(12, v.at(2));
+	CHECK_THROW(v.at(-1), std::out_of_range);
+	CHECK_THROW(v.at(3), std::out_of_range);
+	CHECK_EQUAL(10, vv.at(0));
+	CHECK_EQUAL(12, vv.at(2));
+	CHECK_THROW(vv.at(-1), std::out_of_range);
+	CHECK_THROW(vv.at(3), std::out_of_range);
+}
+
+TEST(at)
+{
+	test_at<4>();
+	test_at<2>();
+}
+
 
 }
 
