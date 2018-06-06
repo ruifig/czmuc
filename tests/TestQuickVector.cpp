@@ -3,8 +3,7 @@
 
 using namespace cz;
 
-namespace
-{
+//namespace {
 
 	std::unordered_map<int, int> gFoos;
 	int gFoosCreated = 0;
@@ -29,19 +28,14 @@ namespace
 		Foo(const Foo& other)
 		{
 			gFoosCreated++;
-			n = other.n;
-			gFoos[n]++;
+			copyFrom(other);
 		}
 
 		Foo(Foo&& other)
 		{
 			gFoosCreated++;
-			n = other.n;
-			other.n = -1;
+			moveFrom(std::move(other));
 		}
-
-		Foo& operator= (const Foo& other) = delete;
-		Foo& operator= (Foo&& other) = delete;
 
 		~Foo()
 		{
@@ -54,13 +48,49 @@ namespace
 					gFoos.erase(n);
 			}
 		}
-	
-		int n;
+
+
+		Foo& operator= (const Foo& other)
+		{
+			copyFrom(other);
+			return *this;
+		}
+
+		Foo& operator= (Foo&& other)
+		{
+			moveFrom(std::move(other));
+			return *this;
+		}
+
+		void moveFrom(Foo&& other)
+		{
+			if (n!=-1)
+				gFoos[n]--;
+			n = other.n;
+
+			if (other.n != -1)
+			{
+				other.n = -1;
+				other.movedCount++;
+			}
+		}
+
+		void copyFrom(const Foo& other)
+		{
+			if (n!=-1)
+				gFoos[n]--;
+			n = other.n;
+			if (n!=-1)
+				gFoos[n]++;
+		}
+
+		int n = -1;
+		int movedCount = 0;
 		// Make Foo big, to make it easier to spot leaks
 		alignas(16) char padding[1024];
 	};
 
-}
+//}
 
 bool operator==(const Foo& a, const Foo& b)
 {
@@ -75,6 +105,22 @@ std::ostream& operator<<(std::ostream& s, const Foo& f)
 
 SUITE(QuickVector)
 {
+
+#if 0
+TEST(Derp)
+{
+	std::vector<Foo> v;
+	v.reserve(10);
+	v.push_back(1);
+	v.push_back(2);
+	v.push_back(3);
+	v.push_back(4);
+	v.push_back(5);
+
+	Foo f(0);
+	v.insert(v.begin(), std::move(f));
+}
+#endif
 
 template<typename T>
 void testAlign()
@@ -441,11 +487,11 @@ void test_at()
 
 	CHECK_EQUAL(10, v.at(0));
 	CHECK_EQUAL(12, v.at(2));
-	CHECK_THROW(v.at(-1), std::out_of_range);
+	CHECK_THROW(v.at(~(size_t)0), std::out_of_range);
 	CHECK_THROW(v.at(3), std::out_of_range);
 	CHECK_EQUAL(10, vv.at(0));
 	CHECK_EQUAL(12, vv.at(2));
-	CHECK_THROW(vv.at(-1), std::out_of_range);
+	CHECK_THROW(vv.at(~(size_t)0), std::out_of_range);
 	CHECK_THROW(vv.at(3), std::out_of_range);
 }
 

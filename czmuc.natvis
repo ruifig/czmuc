@@ -40,6 +40,18 @@ Also, to detect errors in the visualizer, set this in the register, add this DWO
     </Expand>	
 </Type>
 
+<Type Name="cz::QuickVector&lt;*,*,*&gt;">
+    <DisplayString>{{ size = {m_size} }}</DisplayString>
+
+    <Expand>
+        <Item Name="[size]">m_size</Item>
+        <Item Name="[capacity]">m_capacity</Item>
+        <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>($T1*)(m_buf==0 ? m_quickbuf : m_buf)</ValuePointer>
+        </ArrayItems>
+    </Expand>	
+</Type>
 
 
 </AutoVisualizer>

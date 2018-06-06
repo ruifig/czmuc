@@ -94,7 +94,7 @@ TEST(3)
 	CHECK(q.wait_and_pop(f, 1000) == true);
 	CHECK(f.s == "2");
 
-	std::async(std::launch::async, [&]
+	auto ft = std::async(std::launch::async, [&]
 	{
 		UnitTest::TimeHelpers::SleepMs(10);
 		q.push("3");
@@ -102,7 +102,6 @@ TEST(3)
 
 	CHECK(q.wait_and_pop(f, 1000) == true);
 	CHECK(f.s == "3");
-
 }
 
 }

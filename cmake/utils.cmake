@@ -21,6 +21,7 @@ if (MSVC)
 		endif()
 	endif()
 
+	add_compile_options("/W4")
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
