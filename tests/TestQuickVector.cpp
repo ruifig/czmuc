@@ -5,6 +5,11 @@ using namespace cz;
 
 //namespace {
 
+class DerpDerp
+{
+	int a;
+};
+
 	std::unordered_map<int, int> gFoos;
 	int gFoosCreated = 0;
 	int gFoosDestroyed = 0;
@@ -501,6 +506,103 @@ TEST(at)
 	test_at<2>();
 }
 
+
+template<typename T, size_t N>
+struct StdVector : public std::vector<T>
+{
+};
+
+template <template<typename, size_t> class VT, typename T, size_t N>
+void testInsert()
+{
+	clearFooStats();
+
+	VT<T, N> v;
+	std::vector<int> expected{0, 1, 2, 3, 4, 5};
+
+	T a = 1;
+	auto it = v.insert(v.end(), a); // Test using "const T&"
+	CHECK(it == v.end() - 1);
+	CHECK_EQUAL(1, v.size());
+	CHECK_ARRAY_EQUAL(&expected[1], v, 1);
+
+	it = v.insert(v.end(), 2); // "Test using T&&"
+	CHECK(it == v.end() - 1);
+	CHECK_EQUAL(2, v.size());
+	CHECK_ARRAY_EQUAL(&expected[1], v, 2);
+
+	v.insert(v.begin(), 0);
+	CHECK_EQUAL(3, v.size());
+	CHECK_ARRAY_EQUAL(&expected[0], v, 3);
+
+	a = 10;
+	v.insert(v.begin()+1, a); // Test using "const T&"
+	CHECK_EQUAL(4, v.size());
+	std::vector<int> exp2{0, 10, 1, 2, 3, 4};
+	CHECK_ARRAY_EQUAL(exp2, v, 4);
+}
+
+
+template <template<typename, size_t> class VT>
+void testInsertAll()
+{
+	testInsert<VT, Foo, 4>();
+	testInsert<VT, Foo, 1>();
+}
+
+TEST(insert)
+{
+	testInsertAll<QuickVector>();
+	testInsertAll<StdVector>();
+}
+
+
+template <template<typename, size_t> class VT, typename T, size_t N>
+void testEmplace()
+{
+	clearFooStats();
+
+	VT<T, N> v;
+	std::vector<int> expected{0, 1, 2, 3, 4, 5};
+
+
+	auto it = v.emplace(v.end(), 1);
+	CHECK(it == v.end() - 1);
+	CHECK_EQUAL(1, v.size());
+	CHECK_ARRAY_EQUAL(&expected[1], v, 1);
+
+	v.emplace_back(2);
+	CHECK_EQUAL(2, v.size());
+	CHECK_ARRAY_EQUAL(&expected[1], v, 2);
+
+	v.emplace(v.begin(), 0);
+	CHECK_EQUAL(3, v.size());
+	CHECK_ARRAY_EQUAL(&expected[0], v, 3);
+
+	T a = 10;
+	v.emplace(v.begin()+1, a);
+	CHECK_EQUAL(4, v.size());
+	std::vector<int> exp2{0, 10, 1, 2, 3, 4};
+	CHECK_ARRAY_EQUAL(exp2, v, 4);
+}
+
+template <template<typename, size_t> class VT>
+void testEmplaceAll()
+{
+	testEmplace<VT, Foo, 4>();
+	testEmplace<VT, Foo, 1>();
+}
+
+TEST(emplace)
+{
+	testEmplaceAll<QuickVector>();
+	testEmplaceAll<StdVector>();
+}
+
+TEST(dummyend)
+{
+	CHECK(gFoos.size() == 0);
+}
 
 }
 

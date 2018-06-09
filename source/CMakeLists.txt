@@ -66,6 +66,7 @@ ucm_add_files(
 	"crazygaze/muc/UTF8String.cpp"
 	"crazygaze/muc/UTF8String.h"
 	"crazygaze/muc/WindowsConsole.cpp"
+	"crazygaze/muc/WindowsConsole.h"
 	TO SOURCE_FILES
 	)
 

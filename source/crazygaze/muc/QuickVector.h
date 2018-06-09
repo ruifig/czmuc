@@ -55,9 +55,9 @@ class QuickVector
 public:
 	using value_type = T;
 	using size_type = SIZE_TYPE;
-	using iterator = value_type* ;
+	using iterator = value_type * ;
 	using const_iterator = const value_type*;
-	using reference = value_type& ;
+	using reference = value_type & ;
 	using const_reference = const value_type&;
 
 	template<typename T, unsigned int N, typename SIZE_TYPE>
@@ -251,10 +251,33 @@ public:
 		m_size = 0;
 	}
 
+	iterator insert(const_iterator pos, const T& value)
+	{
+		return insertImpl(pos, value);
+	}
+
+	iterator insert(const_iterator pos, T&& value)
+	{
+		return insertImpl(pos, std::move(value));
+	}
+
+	template<class ... Args>
+	iterator emplace(const_iterator pos, Args&&... args)
+	{
+		assert(pos >= begin() && pos <= end());
+		auto [ptr, mode] = insertSlots(pos, 1);
+		if (mode == SlotMode::Assign)
+			*ptr = T(std::forward<Args>(args)...);
+		else
+			::new((void*)ptr) T(std::forward<Args>(args)...);
+
+		return ptr;
+	}
+
 	void push_back(const T& value)
 	{
 		if (m_size == m_capacity)
-			reserve(m_capacity * 2);
+			grow(m_capacity);
 		::new((void*)end()) T(value);
 		m_size++;
 	}
@@ -262,7 +285,7 @@ public:
 	void push_back(T&& value)
 	{
 		if (m_size == m_capacity)
-			reserve(m_capacity * 2);
+			grow(m_capacity);
 		::new((void*)end()) T(std::move(value));
 		m_size++;
 	}
@@ -271,7 +294,7 @@ public:
 	void emplace_back(Args&&... args)
 	{
 		if (m_size == m_capacity)
-			reserve(m_capacity * 2);
+			grow(m_capacity);
 		::new((void*)end()) T(std::forward<Args>(args)...);
 		m_size++;
 	}
@@ -281,8 +304,82 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 private:
 
+	template<typename TT>
+	iterator insertImpl(const_iterator pos, TT&& value)
+	{
+		assert(pos >= begin() && pos <= end());
+		auto [ptr, mode] = insertSlots(pos, 1);
+		if (mode == SlotMode::Assign)
+			*ptr = std::move(value);
+		else
+			::new((void*)ptr) T(std::forward<TT>(value));
+
+		return ptr;
+	}
+
+	enum class SlotMode
+	{
+		Construct,
+		Assign
+	};
+
+	struct InsertSlotsResult
+	{
+		T* ptr;
+		SlotMode mode;
+	};
+
+	//! Creates empty or unallocated slots, so the caller can insert new items
+	// \ returns a pointer to the slot
+	InsertSlotsResult insertSlots(const_iterator pos, size_type count)
+	{
+		size_type idx = pos - begin();
+		assert(idx <= m_size);
+		SlotMode mode;
+
+		if (m_size < m_capacity)
+		{
+			size_t todo = m_size - idx;
+
+			if (todo == 0) // Insert at the end
+			{
+				mode = SlotMode::Construct;
+			}
+			else
+			{
+				if constexpr(std::is_trivial_v<T>)
+				{
+					::memmove(const_cast<iterator>(pos + 1), pos, todo * sizeof(T));
+				}
+				else
+				{
+					T* dst = end();
+					// At the end, there is no constructed element (was unused space),
+					// so we need to construct
+					::new((void*)dst) T(std::move(*(dst - 1)));
+					todo--;
+					dst--;
+					while (todo--)
+					{
+						*dst = std::move(*(dst - 1));
+						dst--;
+					}
+				}
+				mode = SlotMode::Assign;
+			}
+		}
+		else
+		{
+			grow(m_capacity, begin() + idx, 1);
+			mode = SlotMode::Construct;
+		}
+
+		m_size++;
+		return { begin() + idx, mode };
+	}
+
 	// Increase the capacity
-	void grow(size_type count)
+	void grow(size_type count, T *emptySlot = nullptr, size_t emptySlotCount = 0)
 	{
 		if (count == 0)
 			return;
@@ -296,26 +393,20 @@ private:
 		if (!newbuf)
 			throw std::bad_alloc();
 
-		moveConstruct<true>(begin(), end(), reinterpret_cast<value_type*>(newbuf));
+		if (emptySlot == nullptr)
+		{
+			moveConstruct<true>(begin(), end(), reinterpret_cast<value_type*>(newbuf));
+		}
+		else
+		{
+			value_type* ptr = reinterpret_cast<value_type*>(newbuf);
+			moveConstruct<true>(begin(), emptySlot, ptr);
+			ptr += (emptySlot - begin()) + emptySlotCount;
+			moveConstruct<true>(emptySlot, end(), ptr);
+		}
 
 		releaseBuffer<false>();
 		m_buf = reinterpret_cast<uint8_t*>(newbuf);
-	}
-
-	T* insertEmpty(iterator pos, size_type count)
-	{
-		if ((m_size + count) <= m_capacity)
-		{
-
-
-
-
-		}
-
-	}
-
-	void moveRange(T* first, T* last, T* dst)
-	{
 	}
 
 	template<unsigned int NN>
@@ -392,14 +483,48 @@ private:
 
 	// #TODO : Implement this
 	template<bool destroy>
-	void moveRange(T* first, T* last, T* dst)
+	static void moveRange(T* first, T* last, T* dst, T* firstAlive, T* lastAlive)
 	{
 		assert(last >= first);
+		assert(first >= firstAlive && last <= lastAlive);
+
+		size_t count = last - first;
 		if (dst == first)
 			return;
 
-		// Overlap
-		if (dst < last && dst >first)
+		if constexpr(std::is_trivial_v<T>)
+		{
+			::memmove(dst, first, count * sizeof(T));
+		}
+		else
+		{
+			if (dst < first)
+			{
+
+				while(dst < firstAlive && first!=last)
+				{
+					::new((void*)dst) T(std::move(*first));
+					if constexpr(destroy)
+						first->~T();
+					first++;
+					dst++;
+				}
+
+				while (first != last)
+				{
+					::new((void*)dst) T(std::move(*first));
+					if constexpr(destroy)
+						first->~T();
+					first++;
+					dst++;
+
+				}
+
+			}
+		}
+
+		// Overlap [first, last)
+		if (dst < last && dst>first)
 		{
 		}
 
