@@ -114,17 +114,20 @@ SUITE(QuickVector)
 #if 0
 TEST(Derp)
 {
-	std::vector<Foo> v;
-	v.reserve(10);
-	v.push_back(1);
-	v.push_back(2);
-	v.push_back(3);
-	v.push_back(4);
-	v.push_back(5);
+    {
+      std::vector<Foo> v;
+      v.insert(v.end(), 1, 1);
+      v.insert(v.end(), 2, 2);
+      v.insert(v.end(), 100, 3);
+    }
 
-	Foo f(0);
-	v.insert(v.begin(), std::move(f));
-}
+    {
+      std::vector<Foo> v;
+      v.push_back(1);
+      v.push_back(2);
+      v.push_back(3);
+    }
+  }
 #endif
 
 template<typename T>
@@ -152,8 +155,7 @@ TEST(Alignment)
 	static_assert(alignof(char)==1);
 	static_assert(alignof(uint32_t)==4);
 	static_assert(alignof(uint64_t)==8);
-	static_assert(alignof(QuickVector<char, 2, uint32_t>)==alignof(size_t));
-	static_assert(alignof(QuickVector<char, 2, size_t>)==alignof(size_t));
+	static_assert(alignof(QuickVector<char, 2>)==alignof(size_t));
 
 	testAlign<uint8_t>();
 	testAlign<uint16_t>();
@@ -513,7 +515,7 @@ struct StdVector : public std::vector<T>
 };
 
 template <template<typename, size_t> class VT, typename T, size_t N>
-void testInsert()
+void testInsertSingle()
 {
 	clearFooStats();
 
@@ -538,24 +540,153 @@ void testInsert()
 	a = 10;
 	v.insert(v.begin()+1, a); // Test using "const T&"
 	CHECK_EQUAL(4, v.size());
-	std::vector<int> exp2{0, 10, 1, 2, 3, 4};
+	std::vector<int> exp2{0, 10, 1, 2, 3, 4, 5};
 	CHECK_ARRAY_EQUAL(exp2, v, 4);
+
+	v.insert(v.begin() + 2, -1);
+	CHECK_EQUAL(5, v.size());
+	std::vector<int> exp3{0, 10, -1, 1, 2, 3, 4, 5};
+	CHECK_ARRAY_EQUAL(exp3, v, 5);
 }
 
 
 template <template<typename, size_t> class VT>
-void testInsertAll()
+void testInsertSingleAll()
 {
-	testInsert<VT, Foo, 4>();
-	testInsert<VT, Foo, 1>();
+	testInsertSingle<VT, Foo, 4>();
+	testInsertSingle<VT, Foo, 1>();
+	testInsertSingle<VT, Foo, 10>();
 }
 
-TEST(insert)
+TEST(insertSingle)
 {
-	testInsertAll<QuickVector>();
-	testInsertAll<StdVector>();
+	testInsertSingleAll<QuickVector>();
+	testInsertSingleAll<StdVector>();
 }
 
+
+template <template<typename, size_t> class VT, typename T, size_t N>
+void testInsertMultiple()
+{
+	clearFooStats();
+	{
+		VT<T, N> v;
+		auto it = v.insert(v.end(), 0, 0);
+		CHECK_EQUAL(0, v.size());
+		CHECK(it == v.end());
+
+		std::vector<int> exp{ 0 };
+		it = v.insert(v.end(), 1, 0);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		exp = { 0, 1, 1 };
+		it = v.insert(v.end(), 2, 1);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin() + 1);
+		CHECK_ARRAY_EQUAL(exp, v, 3);
+
+		exp = { -1, -1, 0, 1, 1 };
+		it = v.insert(v.begin(), 2, -1);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin());
+		CHECK_ARRAY_EQUAL(exp, v, 5);
+
+		exp = { -1, -1, 0, 1, 1, 2, 2 };
+		it = v.insert(v.end(), 2, 2);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin() + 5);
+		CHECK_ARRAY_EQUAL(exp, v, 7);
+
+		exp = { -1, -1, 0, 1, 1, -2, -2, -2, 2, 2 };
+		it = v.insert(v.begin() + 5, 3, -2);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin() + 5);
+		CHECK_ARRAY_EQUAL(exp, v, 7);
+	}
+	clearFooStats();
+}
+
+template <template<typename, size_t> class VT>
+void testInsertMultipleAll()
+{
+	testInsertMultiple<VT, Foo, 1>();
+	testInsertMultiple<VT, Foo, 2>();
+	testInsertMultiple<VT, Foo, 3>();
+	testInsertMultiple<VT, Foo, 4>();
+	testInsertMultiple<VT, Foo, 5>();
+	testInsertMultiple<VT, Foo, 6>();
+	testInsertMultiple<VT, Foo, 7>();
+	testInsertMultiple<VT, Foo, 8>();
+	testInsertMultiple<VT, Foo, 9>();
+	testInsertMultiple<VT, Foo, 10>();
+}
+
+TEST(insertMultiple)
+{
+	testInsertMultipleAll<QuickVector>();
+	testInsertMultipleAll<StdVector>();
+}
+
+template <template<typename, size_t> class VT, typename T, size_t N>
+void testInsertRange()
+{
+	clearFooStats();
+	{
+		VT<T, N> v;
+		auto it = v.insert(v.end(), 0, 0);
+		CHECK_EQUAL(0, v.size());
+		CHECK(it == v.end());
+
+		std::vector<T> exp{ 0 };
+		it = v.insert(v.end(), exp.begin(), exp.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		exp = {0, 1, 2};
+		std::vector<T> in{ 1 ,2 };
+		it = v.insert(v.end(), in.begin(), in.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin() + 1);
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		exp = {0, -1, -2, -3, 1, 2};
+		in = { -1 , -2, -3 };
+		it = v.insert(v.begin()+1, in.begin(), in.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin() + 1);
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		exp = {-4, -5, 0, -1, -2, -3, 1, 2};
+		in = { -4 , -5 };
+		it = v.insert(v.begin(), in.begin(), in.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK(it == v.begin());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+	}
+	clearFooStats();
+}
+template <template<typename, size_t> class VT>
+void testInsertRangeAll()
+{
+	testInsertRange<VT, Foo, 1>();
+	testInsertRange<VT, Foo, 2>();
+	testInsertRange<VT, Foo, 3>();
+	testInsertRange<VT, Foo, 4>();
+	testInsertRange<VT, Foo, 5>();
+	testInsertRange<VT, Foo, 6>();
+	testInsertRange<VT, Foo, 7>();
+	testInsertRange<VT, Foo, 8>();
+	testInsertRange<VT, Foo, 9>();
+	testInsertRange<VT, Foo, 10>();
+}
+TEST(insertRange)
+{
+	testInsertRangeAll<QuickVector>();
+	testInsertRangeAll<StdVector>();
+}
 
 template <template<typename, size_t> class VT, typename T, size_t N>
 void testEmplace()
@@ -564,7 +695,6 @@ void testEmplace()
 
 	VT<T, N> v;
 	std::vector<int> expected{0, 1, 2, 3, 4, 5};
-
 
 	auto it = v.emplace(v.end(), 1);
 	CHECK(it == v.end() - 1);

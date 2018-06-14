@@ -40,7 +40,7 @@ Also, to detect errors in the visualizer, set this in the register, add this DWO
     </Expand>	
 </Type>
 
-<Type Name="cz::QuickVector&lt;*,*,*&gt;">
+<Type Name="cz::QuickVector&lt;*,*&gt;">
     <DisplayString>{{ size = {m_size} }}</DisplayString>
 
     <Expand>

@@ -40,6 +40,16 @@ namespace detail
 		std::free(ptr);
 #endif
 	}
+
+	template <class T, class = void>
+	struct is_iterator : std::false_type
+	{
+	};
+
+	template <class T>
+	struct is_iterator<T, std::void_t<typename std::iterator_traits<T>::iterator_category>> : std::true_type
+	{
+	};
 }
 
 /*
@@ -48,19 +58,19 @@ dynamically
 
 The limited interface it provides is compatible with std::vector
 */
-template<typename T, unsigned int N, typename SIZE_TYPE=size_t>
+template<typename T, unsigned int N>
 //class alignas(alignof(T) > alignof(size_t) ? alignof(T) : alignof(size_t)) QuickVector
 class QuickVector
 {
 public:
 	using value_type = T;
-	using size_type = SIZE_TYPE;
+	using size_type = size_t;
 	using iterator = value_type * ;
 	using const_iterator = const value_type*;
 	using reference = value_type & ;
 	using const_reference = const value_type&;
 
-	template<typename T, unsigned int N, typename SIZE_TYPE>
+	template<typename T, unsigned int N>
 	friend class QuickVector;
 
 	//////////////////////////////////////////////////////////////////////////
@@ -76,7 +86,7 @@ public:
 	}
 
 	template<unsigned int NN>
-	QuickVector(const QuickVector<value_type, NN, size_type>& other)
+	QuickVector(const QuickVector<value_type, NN>& other)
 	{
 		copyFrom(other);
 	}
@@ -87,7 +97,7 @@ public:
 	}
 
 	template<unsigned int NN>
-	QuickVector(QuickVector<value_type, NN, size_type>&& other)
+	QuickVector(QuickVector<value_type, NN>&& other)
 	{
 		moveFrom(std::move(other));
 	}
@@ -110,7 +120,7 @@ public:
 	}
 
 	template<unsigned int NN>
-	QuickVector& operator=(const QuickVector<value_type, NN, size_type>& other)
+	QuickVector& operator=(const QuickVector<value_type, NN>& other)
 	{
 		copyFrom(other);
 		return *this;
@@ -123,7 +133,7 @@ public:
 	}
 
 	template<unsigned int NN>
-	QuickVector& operator=(QuickVector<value_type, NN, size_type>&& other)
+	QuickVector& operator=(QuickVector<value_type, NN>&& other)
 	{
 		moveFrom(std::move(other));
 		return *this;
@@ -261,16 +271,75 @@ public:
 		return insertImpl(pos, std::move(value));
 	}
 
+	iterator insert(const_iterator pos, size_type count, const T& value)
+	{
+		assert(pos >= begin() && pos <= end());
+
+		// Do the same as std::vector, according to http://en.cppreference.com/w/cpp/container/vector/insert
+		if (count == 0)
+			return const_cast<T*>(pos);
+
+		auto[ptr, assignCount, constructCount] = insertSlots(pos, count);
+		T* ret = ptr;
+		while (assignCount--)
+		{
+			*ptr = value;
+			ptr++;
+		}
+
+		while (constructCount--)
+		{
+			::new((void*)ptr) T(value);
+			ptr++;
+		}
+
+		return ret;
+	}
+
+	template<class Iter,
+		class = std::enable_if_t<detail::is_iterator<Iter>::value>>
+	iterator insert(const_iterator pos, Iter first, Iter last)
+	{
+		assert(pos >= begin() && pos <= end());
+		assert(last >= first);
+
+		// Do the same as std::vector, according to http://en.cppreference.com/w/cpp/container/vector/insert
+		if (first==last)
+			return const_cast<T*>(pos);
+
+		auto[ptr, assignCount, constructCount] = insertSlots(pos, last - first);
+		T* ret = ptr;
+		while (assignCount--)
+		{
+			*ptr = *first;
+			ptr++;
+			first++;
+		}
+
+		while (constructCount--)
+		{
+			::new((void*)ptr) T(*first);
+			ptr++;
+			first++;
+		}
+
+		return ret;
+	}
+
 	template<class ... Args>
 	iterator emplace(const_iterator pos, Args&&... args)
 	{
 		assert(pos >= begin() && pos <= end());
-		auto [ptr, mode] = insertSlots(pos, 1);
-		if (mode == SlotMode::Assign)
+		auto [ptr, assignCount, constructCount] = insertSlots(pos, 1);
+		if (assignCount)
+		{
+			assert(constructCount == 0);
 			*ptr = T(std::forward<Args>(args)...);
+		}
 		else
+		{
 			::new((void*)ptr) T(std::forward<Args>(args)...);
-
+		}
 		return ptr;
 	}
 
@@ -308,25 +377,24 @@ private:
 	iterator insertImpl(const_iterator pos, TT&& value)
 	{
 		assert(pos >= begin() && pos <= end());
-		auto [ptr, mode] = insertSlots(pos, 1);
-		if (mode == SlotMode::Assign)
+		auto [ptr, assignCount, constructCount] = insertSlots(pos, 1);
+		if (assignCount)
+		{
+			assert(constructCount == 0);
 			*ptr = std::move(value);
+		}
 		else
+		{
 			::new((void*)ptr) T(std::forward<TT>(value));
-
+		}
 		return ptr;
 	}
-
-	enum class SlotMode
-	{
-		Construct,
-		Assign
-	};
 
 	struct InsertSlotsResult
 	{
 		T* ptr;
-		SlotMode mode;
+		size_type assignCount;
+		size_type constructCount;
 	};
 
 	//! Creates empty or unallocated slots, so the caller can insert new items
@@ -334,52 +402,89 @@ private:
 	InsertSlotsResult insertSlots(const_iterator pos, size_type count)
 	{
 		size_type idx = pos - begin();
-		assert(idx <= m_size);
-		SlotMode mode;
+		assert(idx <= m_size && count>=1);
+		InsertSlotsResult res;
 
-		if (m_size < m_capacity)
+		const size_t newSize = m_size + count;
+		if (newSize <= m_capacity)
 		{
-			size_t todo = m_size - idx;
+			size_type todo = m_size - idx;
 
 			if (todo == 0) // Insert at the end
 			{
-				mode = SlotMode::Construct;
+				res.assignCount = 0;
+				res.constructCount = count;
 			}
 			else
 			{
 				if constexpr(std::is_trivial_v<T>)
 				{
-					::memmove(const_cast<iterator>(pos + 1), pos, todo * sizeof(T));
+					::memmove(const_cast<iterator>(pos + count), pos, todo * sizeof(T));
+					res.assignCount = count;
+					res.constructCount = 0;
 				}
 				else
 				{
-					T* dst = end();
-					// At the end, there is no constructed element (was unused space),
-					// so we need to construct
-					::new((void*)dst) T(std::move(*(dst - 1)));
-					todo--;
-					dst--;
-					while (todo--)
+					T* dst = end() + (count -1);
+					T* src = end() - 1;
+
+					// Depending on how many items we are inserting, the empty slots can end up being a combination
+					// of "Empty Slots + Unconstructed slots", where empty slots are slots that previously had elements,
+					// and unconstructed slots are uninitialized memory that had no elements at all.
+					size_t numElemsFromPos = end() - pos; // number of elements starting at position "pos"
+					if (count <= numElemsFromPos)
 					{
-						*dst = std::move(*(dst - 1));
+						res.assignCount = count;
+						res.constructCount = 0;
+					}
+					else
+					{
+						res.assignCount = numElemsFromPos;
+						res.constructCount = count - numElemsFromPos;
+					}
+
+					// Anything that ends up after the current last item is uninitialized memory, and
+					// needs to be fully constructed (as-in: Call the the T constructor)
+					while (todo && dst >= end())
+					{
+						::new((void*)dst) T(std::move(*src));
+						todo--;
 						dst--;
+						src--;
+					}
+
+					// The rest falls in memory that already had elements, so we use assignment instead
+					// of constructor
+					while (todo)
+					{
+						*dst = std::move(*src);
+						todo--;
+						dst--;
+						src--;
 					}
 				}
-				mode = SlotMode::Assign;
 			}
 		}
 		else
 		{
-			grow(m_capacity, begin() + idx, 1);
-			mode = SlotMode::Construct;
+			// Increment capacity as a multiple of the current capacity
+			size_type extra = newSize - m_capacity;
+			size_type multiplier = extra / m_capacity;
+			if (extra % m_capacity)
+				multiplier++;
+			grow(m_capacity*multiplier, begin() + idx, count);
+			res.assignCount = 0;
+			res.constructCount = count;
 		}
 
-		m_size++;
-		return { begin() + idx, mode };
+		m_size += count;
+		assert(m_size <= m_capacity);
+		res.ptr = begin() + idx;
+		return res;
 	}
 
 	// Increase the capacity
-	void grow(size_type count, T *emptySlot = nullptr, size_t emptySlotCount = 0)
+	void grow(size_type count, T *emptySlot = nullptr, size_type emptySlotCount = 0)
 	{
 		if (count == 0)
 			return;
@@ -410,7 +515,7 @@ private:
 	}
 
 	template<unsigned int NN>
-	void copyFrom(const QuickVector<T, NN, size_type>& other)
+	void copyFrom(const QuickVector<T, NN>& other)
 	{
 		if (m_size)
 			clear();
@@ -420,7 +525,7 @@ private:
 	}
 
 	template<unsigned int NN>
-	void moveFrom(QuickVector<T, NN, size_type>&& other)
+	void moveFrom(QuickVector<T, NN>&& other)
 	{
 		if (m_size)
 			clear();
@@ -488,7 +593,7 @@ private:
 		assert(last >= first);
 		assert(first >= firstAlive && last <= lastAlive);
 
-		size_t count = last - first;
+		size_type count = last - first;
 		if (dst == first)
 			return;
 
@@ -621,7 +726,6 @@ private:
 
 
 	// This needs to be the first member, because of the alignment
-	//class alignas(alignof(T) > alignof(size_t) ? alignof(T) : alignof(size_t)) QuickVector
 	alignas(alignof(T)) uint8_t m_quickbuf[sizeof(T)* N];
 	uint8_t* m_buf = nullptr;
 	size_type m_capacity = N;

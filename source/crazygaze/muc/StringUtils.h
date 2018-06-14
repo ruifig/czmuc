@@ -71,8 +71,8 @@ namespace cz
 	//
 	// Case insensitive string search copied from http://stackoverflow.com/questions/3152241/case-insensitive-stdstring-find
 	//
-
-#ifndef __clcpp_parse__
+namespace detail
+{
 	// templated version of my_equal so it could work with both char and wchar_t
 	template<typename charT>
 	struct my_equal {
@@ -83,13 +83,14 @@ namespace cz
 	private:
 		const std::locale& loc_;
 	};
+}
 
 	// find substring (case insensitive)
 	template<typename T>
 	static int ci_find_substr(const T& str1, const T& str2, const std::locale& loc = std::locale())
 	{
 		typename T::const_iterator it = std::search(str1.begin(), str1.end(),
-			str2.begin(), str2.end(), my_equal<typename T::value_type>(loc));
+			str2.begin(), str2.end(), detail::my_equal<typename T::value_type>(loc));
 		if (it != str1.end()) return it - str1.begin();
 		else return -1; // not found
 	}
@@ -102,7 +103,7 @@ namespace cz
 			return false;
 		typename T::const_iterator it1 = str1.begin();
 		typename T::const_iterator it2 = str2.begin();
-		my_equal<typename T::value_type> eq(loc);
+		detail::my_equal<typename T::value_type> eq(loc);
 		while (it1 != str1.end())
 		{
 			if (!eq(*it1, *it2))
@@ -112,7 +113,6 @@ namespace cz
 		}
 		return true;
 	}
-#endif
 
 #if CZ_PLATFORM_WIN32
 	//! Converts a string from UTF-8 to UTF-16.
