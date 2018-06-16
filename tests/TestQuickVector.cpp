@@ -42,9 +42,8 @@ class DerpDerp
 			moveFrom(std::move(other));
 		}
 
-		~Foo()
+		void decreaseFoo()
 		{
-			gFoosDestroyed++;
 			if (n != -1)
 			{
 				assert(gFoos[n] > 0);
@@ -52,6 +51,14 @@ class DerpDerp
 				if (gFoos[n] == 0)
 					gFoos.erase(n);
 			}
+		}
+
+
+		~Foo()
+		{
+			destroyed = true;
+			gFoosDestroyed++;
+			decreaseFoo();
 		}
 
 
@@ -69,8 +76,7 @@ class DerpDerp
 
 		void moveFrom(Foo&& other)
 		{
-			if (n!=-1)
-				gFoos[n]--;
+			decreaseFoo();
 			n = other.n;
 
 			if (other.n != -1)
@@ -82,8 +88,7 @@ class DerpDerp
 
 		void copyFrom(const Foo& other)
 		{
-			if (n!=-1)
-				gFoos[n]--;
+			decreaseFoo();
 			n = other.n;
 			if (n!=-1)
 				gFoos[n]++;
@@ -91,6 +96,7 @@ class DerpDerp
 
 		int n = -1;
 		int movedCount = 0;
+		bool destroyed = false;
 		// Make Foo big, to make it easier to spot leaks
 		alignas(16) char padding[1024];
 	};
@@ -665,7 +671,24 @@ void testInsertRange()
 		CHECK_EQUAL(exp.size(), v.size());
 		CHECK(it == v.begin());
 		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		// No-op (end,end)
+		it = v.insert(v.begin(), in.end(), in.end());
+		CHECK(it == v.begin());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+		// No-op (begin,begin)
+		it = v.insert(v.begin()+1, in.begin(), in.begin());
+		CHECK(it == v.begin()+1);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+		// No-op (begin+1,begin+1)
+		it = v.insert(v.begin(), in.begin()+1, in.begin()+1);
+		CHECK(it == v.begin());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
 	}
+
 	clearFooStats();
 }
 template <template<typename, size_t> class VT>
@@ -684,8 +707,8 @@ void testInsertRangeAll()
 }
 TEST(insertRange)
 {
-	testInsertRangeAll<QuickVector>();
 	testInsertRangeAll<StdVector>();
+	testInsertRangeAll<QuickVector>();
 }
 
 template <template<typename, size_t> class VT, typename T, size_t N>
@@ -728,6 +751,122 @@ TEST(emplace)
 	testEmplaceAll<QuickVector>();
 	testEmplaceAll<StdVector>();
 }
+
+
+template <template<typename, size_t> class VT, typename T, size_t N>
+void testErase()
+{
+	clearFooStats();
+	{
+
+		VT<T, N> v;
+
+		std::vector<int> exp{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+		v.insert(v.end(), exp.begin(), exp.end());
+
+		auto it = v.erase(v.end() - 1);
+		exp.erase(exp.end() - 1);
+		CHECK(it == v.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		it = v.erase(v.begin());
+		exp.erase(exp.begin());
+		CHECK(it == (v.begin()));
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		it = v.erase(v.begin() + 1);
+		exp.erase(exp.begin() + 1);
+		CHECK(it == (v.begin()+1));
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		//
+		// Erase range
+		//
+
+		// No-op (end,end)
+		it = v.erase(v.end(), v.end());
+		exp.erase(exp.end(), exp.end());
+		CHECK(it == v.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+		// No-op (begin,begin)
+		it = v.erase(v.begin(), v.begin());
+		exp.erase(exp.begin(), exp.begin());
+		CHECK(it == v.begin());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+		// No-op (begin+1,begin+1)
+		it = v.erase(v.begin()+1, v.begin()+1);
+		exp.erase(exp.begin()+1, exp.begin()+1);
+		CHECK(it == v.begin()+1);
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		// erase at the beginning (1 element)
+		it = v.erase(v.begin(), v.begin()+1);
+		exp.erase(exp.begin(), exp.begin()+1);
+		CHECK(it == v.begin());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		// erase at the beginning (2 element)
+		it = v.erase(v.begin(), v.begin()+2);
+		exp.erase(exp.begin(), exp.begin()+2);
+		CHECK(it == v.begin());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		// erase at the end (1 element)
+		it = v.erase(v.end() - 1, v.end());
+		exp.erase(exp.end() -1, exp.end());
+		CHECK(it == v.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		// erase at the end (2 element)
+		it = v.erase(v.end() - 2, v.end());
+		exp.erase(exp.end() - 2, exp.end());
+		CHECK(it == v.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+
+		// Erase all
+		it = v.erase(v.begin(), v.end());
+		exp.erase(exp.begin(), exp.end());
+		CHECK(it == v.end());
+		CHECK_EQUAL(exp.size(), v.size());
+		CHECK_EQUAL(0, v.size());
+		CHECK_ARRAY_EQUAL(exp, v, exp.size());
+	}
+	clearFooStats();
+
+}
+
+template<template<typename, size_t> class VT>
+void testEraseAll()
+{
+	testErase<VT, Foo, 1>();
+	testErase<VT, Foo, 2>();
+	testErase<VT, Foo, 3>();
+	testErase<VT, Foo, 4>();
+	testErase<VT, Foo, 5>();
+	testErase<VT, Foo, 6>();
+	testErase<VT, Foo, 7>();
+	testErase<VT, Foo, 8>();
+	testErase<VT, Foo, 9>();
+	testErase<VT, Foo, 10>();
+	testErase<VT, Foo, 11>();
+}
+
+TEST(erase)
+{
+	testEraseAll<StdVector>();
+	testEraseAll<QuickVector>();
+}
+
 
 TEST(dummyend)
 {

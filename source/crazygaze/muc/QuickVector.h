@@ -343,6 +343,58 @@ public:
 		return ptr;
 	}
 
+	iterator erase(const_iterator pos)
+	{
+		assert(pos >= begin() && pos < end());
+
+		T* ptr = const_cast<iterator>(pos);
+		T* last = &back();
+
+		T* ret = ptr;
+		while (ptr != last)
+		{
+			*ptr = std::move(*(ptr + 1));
+			ptr++;
+		}
+
+		// For the last one we call the destructor
+		ptr->~T();
+		m_size--;
+		return ret;
+	}
+
+	iterator erase(const_iterator first, const_iterator last)
+	{
+		assert(
+			last <= end() &&
+			(first == last || (first < last && first >= begin()))
+		);
+
+		if (first == last)
+			return const_cast<iterator>(first);
+
+		T* dst = const_cast<iterator>(first);
+		T* src = const_cast<iterator>(last);
+		T* res = const_cast<iterator>(first);
+
+		T* endPtr = end();
+		while (src != endPtr)
+		{
+			*dst = std::move(*src);
+			dst++;
+			src++;
+		}
+
+		while (dst != end())
+		{
+			dst->~T();
+			dst++;
+		}
+
+		m_size -= last - first;
+		return res;
+	}
+
 	void push_back(const T& value)
 	{
 		if (m_size == m_capacity)
@@ -586,72 +638,6 @@ private:
 		}
 	}
 
-	// #TODO : Implement this
-	template<bool destroy>
-	static void moveRange(T* first, T* last, T* dst, T* firstAlive, T* lastAlive)
-	{
-		assert(last >= first);
-		assert(first >= firstAlive && last <= lastAlive);
-
-		size_type count = last - first;
-		if (dst == first)
-			return;
-
-		if constexpr(std::is_trivial_v<T>)
-		{
-			::memmove(dst, first, count * sizeof(T));
-		}
-		else
-		{
-			if (dst < first)
-			{
-
-				while(dst < firstAlive && first!=last)
-				{
-					::new((void*)dst) T(std::move(*first));
-					if constexpr(destroy)
-						first->~T();
-					first++;
-					dst++;
-				}
-
-				while (first != last)
-				{
-					::new((void*)dst) T(std::move(*first));
-					if constexpr(destroy)
-						first->~T();
-					first++;
-					dst++;
-
-				}
-
-			}
-		}
-
-		// Overlap [first, last)
-		if (dst < last && dst>first)
-		{
-		}
-
-
-		assert(dst < first || dst >= last);
-		if constexpr(std::is_trivial_v<T>)
-		{
-			::memcpy(dst, first, (last - first) * sizeof(T));
-		}
-		else
-		{
-			while (first != last)
-			{
-				::new((void*)dst) T(std::move(*first));
-				if constexpr(destroy)
-					first->~T();
-				first++;
-				dst++;
-			}
-		}
-	}
-
 	static void copyConstruct(const T* first, const T* last, T* dst)
 	{
 		assert(dst < first || dst >= last);
@@ -723,7 +709,6 @@ private:
 			}
 		}
 	}
-
 
 	// This needs to be the first member, because of the alignment
 	alignas(alignof(T)) uint8_t m_quickbuf[sizeof(T)* N];
