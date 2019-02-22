@@ -51,7 +51,6 @@ namespace cz
 		static bool createRelativePath(UTF8String& dst, const UTF8String& from, const UTF8String& to);
 		static bool createDirectory(const UTF8String& path);
 
-
 		enum class Type
 		{
 			Directory,

@@ -125,7 +125,7 @@ bool File::_open(const UTF8String& filename, Mode mode, bool raiseError)
 	if (mFile==NULL)
 	{
 		if (raiseError)
-			CZ_LOG(logDefault, Error, "Couldn't open file <%s>, with mode <%d>.", filename, static_cast<int>(mode));
+			CZ_LOG(logDefault, Error, "Couldn't open file <%s>, with mode <%d>.", filename.c_str(), static_cast<int>(mode));
 		return false;
 	}
 	mMode = mode;

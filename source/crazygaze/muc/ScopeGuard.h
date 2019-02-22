@@ -41,7 +41,7 @@ public:
 	ScopeGuard(const ScopeGuard&) = delete;
 	ScopeGuard& operator=(const ScopeGuard&) = delete;
 	ScopeGuard(ScopeGuard&& rhs)
-		: m_func(std::move(rhs.m_func))
+		: m_fun(std::move(rhs.m_fun))
 		, m_active(rhs.active)
 	{
 		rhs.dismiss();

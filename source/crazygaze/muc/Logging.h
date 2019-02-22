@@ -22,7 +22,8 @@ enum class LogVerbosity : uint8_t
 	Fatal,
 	Error,
 	Warning,
-	Log
+	Log,
+	Verbose
 };
 
 static inline const char* logVerbosityToString(LogVerbosity v)
@@ -34,6 +35,7 @@ static inline const char* logVerbosityToString(LogVerbosity v)
 	case LogVerbosity::Error  : return "ERR";
 	case LogVerbosity::Warning: return "WRN";
 	case LogVerbosity::Log    : return "LOG";
+	case LogVerbosity::Verbose: return "VER";
 	};
 	return "Unknown";
 }

@@ -96,7 +96,7 @@ namespace cz
 } // namespace cz
 
 
-#if CZ_USER_BUILD
+#if CZ_USER_BUILD || !CZ_DEBUG
 	#define CZ_ASSERT(expression) ((void)0)
 	#define CZ_ASSERT_F(expression, fmt, ...) ((void)0)
 	#define CZ_CHECK(expression) expression
@@ -130,6 +130,17 @@ The difference between this and \link CZ_ASSERT \endlink is that it's suitable t
 
 	#define CZ_UNEXPECTED() ::cz::_doAssert(__FILE__, __LINE__, "Unexpected code path")
 	#define CZ_UNEXPECTED_F(fmt, ...) ::cz::_doAssert(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
+
+//
+// SLOW versions
+//
+#if CZ_DEBUG
+	#define CZ_ASSERT_SLOW CZ_ASSERT
+	#define CZ_ASSERT_F_SLOW CZ_ASSERT_F
+#else
+	#define CZ_ASSERT_SLOW(expression) ((void)0)
+	#define CZ_ASSERT_F_SLOW(expression, fmt, ...) ((void)0)
 #endif
 
 struct ReentrantCheck

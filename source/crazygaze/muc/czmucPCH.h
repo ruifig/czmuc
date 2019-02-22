@@ -9,9 +9,7 @@
 
 #pragma once
 
-#ifndef __clcpp_parse__
 #include "crazygaze/muc/targetver.h"
-#endif
 
 #include <vector>
 #include <locale>
