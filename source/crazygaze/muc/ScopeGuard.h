@@ -12,6 +12,7 @@
 #pragma once
 
 #include "crazygaze/muc/czmuc.h"
+#include <functional>
 
 namespace cz
 {
@@ -63,6 +64,21 @@ template< class Func>
 ScopeGuard<Func> scopeGuard(Func f)
 {
 	return ScopeGuard<Func>(std::move(f));
+}
+
+
+/**
+	By putting a ScopeGuard in a shared_ptr, we can have arbitrary code execute once all strong references
+	to the shared pointer are destroyed.
+	This is useful for example when we want to queue asynchronous work, and would like for some code to execute
+	once all work is done. By passing the std::shared_ptr to the work lambdas, the arbitrary code will automatically execute
+	once all work lambdas are finished.
+*/
+using LifetimeGuard = ScopeGuard<std::function<void()>>;
+template<class Func>
+std::shared_ptr<LifetimeGuard> lifetimeGuard(Func f)
+{
+	return std::make_shared<LifetimeGuard>(std::move(f));
 }
 
 } // namespace cz

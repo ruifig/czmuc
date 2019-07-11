@@ -9,6 +9,9 @@
 //
 // Requires a compiler with C++11 support
 // See main(...) for examples
+
+namespace cz
+{
  
 namespace hash
 {
@@ -210,6 +213,8 @@ struct Hash
 	}
 
 };
+
+} // namespace cz
 
 /*
 #include <iostream>
