@@ -85,6 +85,18 @@ public:
 		return NoCvT::tryGetObject(m_id);
 	}
 
+	template<typename U>
+	U& getObjectAs() const
+	{
+		return static_cast<U&>(NoCvT::getObject(m_id));
+	}
+
+	template<typename U>
+	U* tryGetObjectAs() const
+	{
+		return static_cast<U*>(NoCvT::tryGetObject(m_id));
+	}
+
 	bool operator==(const ObjectId<NoCvT>& rhs) const
 	{
 		return m_id==rhs.m_id;
@@ -123,7 +135,6 @@ class IdAccessible
 
 	IdAccessible()
 	{
-		printf("%s:%p\n", __FUNCTION__, this);
 		static CounterType counter = 0;
 		m_objectId = ++counter;
 		m_ids[m_objectId] = static_cast<T*>(this);
@@ -131,7 +142,6 @@ class IdAccessible
 
 	~IdAccessible()
 	{
-		printf("%s:%p\n", __FUNCTION__, this);
 		m_ids.erase(m_objectId);
 	}
 
