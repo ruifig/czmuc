@@ -91,6 +91,7 @@ namespace detail
 	{
 		typename T::const_iterator it = std::search(str1.begin(), str1.end(),
 			str2.begin(), str2.end(), detail::my_equal<typename T::value_type>(loc));
+		// #TODO : In 64 bits builds( e.g: VS 64 bits), the return type is getting clamped to 32 bits (int64 to int)
 		if (it != str1.end()) return it - str1.begin();
 		else return -1; // not found
 	}
