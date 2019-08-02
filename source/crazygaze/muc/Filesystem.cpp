@@ -191,7 +191,7 @@ std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8Stri
 	wchar_t szDir[MAX_PATH];
 	WIN32_FIND_DATAW ffd;
 
-	StringCchLengthW(path.widen().c_str(), MAX_PATH, &length_of_arg);
+	CZ_CHECK(StringCchLengthW(path.widen().c_str(), MAX_PATH, &length_of_arg)==S_OK);
 
 	if (length_of_arg > (MAX_PATH - 3))
 	{
