@@ -119,7 +119,6 @@ public:
 	}
 };
 
-
 using WorkQueue = SharedQueue<std::function<void()>>;
 
 } // namespace cz

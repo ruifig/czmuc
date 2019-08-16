@@ -84,10 +84,23 @@ void LogOutput::logToAll(const char* file, int line, const LogCategoryBase* cate
 
 	auto data = getSharedData();
 	auto lk = std::unique_lock<std::mutex>(data->mtx);
+
+	if (data->logToDebugger)
+	{
+		OutputDebugStringA(buf);
+		OutputDebugStringA("\n");
+	}
 	for (auto&& out : data->outputs)
 	{
 		out->log(file, line, category, verbosity, buf);
 	}
+}
+
+void LogOutput::setLogToDebugger(bool enabled)
+{
+	auto data = getSharedData();
+	auto lk = std::unique_lock<std::mutex>(data->mtx);
+	data->logToDebugger = enabled;
 }
 
 

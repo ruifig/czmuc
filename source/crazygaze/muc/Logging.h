@@ -85,6 +85,12 @@ public:
 	LogOutput();
 	virtual ~LogOutput();
 	static void logToAll(const char* file, int line, const LogCategoryBase* category, LogVerbosity verbosity, _Printf_format_string_ const char* fmt, ...);
+
+	/**
+	* Enables/disables outputting the log strings to any attached debugger.
+	* E.g: On windows. it makes calls to OutputDebugString
+	*/
+	static void setLogToDebugger(bool enabled);
 private:
 	virtual void log(const char* file, int line, const LogCategoryBase* category, LogVerbosity verbosity, const char* msg) = 0;
 
@@ -92,9 +98,9 @@ private:
 	{
 		std::mutex mtx;
 		std::vector<LogOutput*> outputs;
+		bool logToDebugger = true;
 	};
 	static SharedData* getSharedData();
-
 };
 
 
