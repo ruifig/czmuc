@@ -31,11 +31,11 @@ std::vector<std::string> splitString(const char* str, char delimiter)
 	return tokens;
 }
 
-void stringSplitIntoLines(const char* textbuffer, int buffersize, std::vector<std::string> *lines)
+std::vector<std::string> stringSplitIntoLines(const char* textbuffer, int buffersize)
 {
-    lines->clear();
+	std::vector<std::string> lines;
     if (*textbuffer ==0)
-        return;
+        return lines;;
 
     const char *s = textbuffer;
     while(*s!=0 && s<textbuffer+buffersize)
@@ -45,7 +45,7 @@ void stringSplitIntoLines(const char* textbuffer, int buffersize, std::vector<st
             s++;
 
         size_t numchars = s-ptrToChar;
-		lines->emplace_back(ptrToChar, ptrToChar + numchars);
+		lines.emplace_back(ptrToChar, ptrToChar + numchars);
 
         // New lines format are:
         // Unix		: 0xA
@@ -60,6 +60,8 @@ void stringSplitIntoLines(const char* textbuffer, int buffersize, std::vector<st
 
         s++; // skip the newline character
     }
+
+	return lines;
 }
 
 char* getTemporaryString()

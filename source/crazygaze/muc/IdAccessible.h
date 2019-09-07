@@ -182,7 +182,31 @@ class IdAccessible
   private:
 	friend ObjectId<T>;
 	CounterType m_objectId;
-	inline static std::unordered_map<CounterType, T*> m_ids;
+
+	// Instead of using std::unordered_map directly, we inherit from it,
+	// so we can put breakpoints in the destructor
+	struct MyMap : public std::unordered_map<CounterType, T*>
+	{
+		MyMap()
+			: this_(*this)
+		{
+		}
+
+		~MyMap()
+		{
+			CZ_LOG(logDefault, Log, "%p:%s", this, __FUNCTION__);
+			clear();
+		}
+
+		// To make it easier to debug
+		std::unordered_map<CounterType, T*>& this_;
+	};
+
+#if defined(_MSC_VER) && (_MSC_VER < 1920)
+	// See https://developercommunity.visualstudio.com/content/problem/185559/debugger-called-twice.html
+	#error "inline static have a bug in VS 2017. Use VS 2019"
+#endif
+	inline static MyMap m_ids;
 };
 
 } // namespace cz

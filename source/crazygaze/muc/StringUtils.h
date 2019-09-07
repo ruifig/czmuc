@@ -16,16 +16,16 @@
 namespace cz
 {
 
-    void stringSplitIntoLines(const char* textbuffer, int buffersize, std::vector<std::string> *lines);
+	std::vector<std::string> stringSplitIntoLines(const char* textbuffer, int buffersize);
 	std::vector<std::string> splitString(const char* str, char delimiter);
-    bool notSpace(int a);
+	bool notSpace(int a);
 
 	/*! Checks if a string ends with another substring */
 	bool hasEnding(const std::string& str, const std::string& ending);
 	bool hasEnding(const std::string& str, const char* ending);
 
 	// trim from start
-    template<class StringType>
+	template<class StringType>
 	static inline StringType ltrim(const StringType &s_) {
 		StringType s = s_;
 		s.erase(s.begin(), std::find_if(s.begin(), s.end(), notSpace));
@@ -33,7 +33,7 @@ namespace cz
 	}
 
 	// trim from end
-    template<class StringType>
+	template<class StringType>
 	static inline StringType rtrim(const StringType &s_) {
 		StringType s = s_;
 		s.erase(std::find_if(s.rbegin(), s.rend(), notSpace).base(), s.end());
@@ -41,7 +41,7 @@ namespace cz
 	}
 
 	// trim from both ends
-    template<class StringType>
+	template<class StringType>
 	static inline StringType trim(const StringType &s) {
 		return ltrim(rtrim(s));
 	}

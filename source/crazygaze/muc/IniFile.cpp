@@ -214,8 +214,7 @@ namespace cz
 		auto text = std::make_unique<char[]>(size+1);
 		file.read(text.get(), size);
 		text[size]=0;
-		std::vector<std::string> lines;
-		stringSplitIntoLines(text.get(), size, &lines);
+		std::vector<std::string> lines = stringSplitIntoLines(text.get(), size);
 
 		std::string tmp1, tmp2, tmp3;
 
