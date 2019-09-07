@@ -61,7 +61,6 @@ class DerpDerp
 			decreaseFoo();
 		}
 
-
 		Foo& operator= (const Foo& other)
 		{
 			copyFrom(other);
@@ -76,6 +75,8 @@ class DerpDerp
 
 		void moveFrom(Foo&& other)
 		{
+			if (this==&other)
+				return;
 			decreaseFoo();
 			n = other.n;
 
@@ -88,6 +89,8 @@ class DerpDerp
 
 		void copyFrom(const Foo& other)
 		{
+			if (this==&other)
+				return;
 			decreaseFoo();
 			n = other.n;
 			if (n!=-1)

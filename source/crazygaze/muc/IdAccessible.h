@@ -183,6 +183,7 @@ class IdAccessible
 	friend ObjectId<T>;
 	CounterType m_objectId;
 
+	// #DEBUGGER : Remove this. It was to figure out why it was crashing at exit. It was because of a compiler bu
 	// Instead of using std::unordered_map directly, we inherit from it,
 	// so we can put breakpoints in the destructor
 	struct MyMap : public std::unordered_map<CounterType, T*>
