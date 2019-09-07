@@ -99,7 +99,7 @@ namespace cz
 #if CZ_USER_BUILD || !CZ_DEBUG
 	#define CZ_ASSERT(expression) ((void)0)
 	#define CZ_ASSERT_F(expression, fmt, ...) ((void)0)
-	#define CZ_CHECK(expression) expression
+	#define CZ_CHECK(expression) if (expression) {}
 	#define CZ_UNEXPECTED() ::cz::_doAssert(__FILE__, __LINE__, "Unexpected code path")
 #else
 
