@@ -37,6 +37,7 @@
 #include "crazygaze/muc/RingBuffer.h"
 #include "crazygaze/muc/TimerQueue.h"
 #include "crazygaze/muc/QuickVector.h"
+#include "crazygaze/muc/ArrayView.h"
 
 CZ_DECLARE_LOG_CATEGORY(logTests, Log, Log)
 
