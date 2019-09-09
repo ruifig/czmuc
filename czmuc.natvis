@@ -4,9 +4,8 @@
 Visualizers for my own stuff
 To help escape/unescape strings, use http://www.freeformatter.com/xml-escape.html
 
-Also, to detect errors in the visualizer, set this in the register, add this DWORD to the register:
-	[HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\11.0_Config\Debugger]
-		"EnableNatvisDiagnostics"=dword:00000001
+Also, to detect errors in the visualizer, in Visual Studio go to:
+Tools > Options (or Debug > Options) > Debugging > Output Window, set Natvis diagnostic messages (C++ only) to Error, Warning, or Verbose
 !-->
 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
@@ -52,6 +51,5 @@ Also, to detect errors in the visualizer, set this in the register, add this DWO
         </ArrayItems>
     </Expand>	
 </Type>
-
 
 </AutoVisualizer>

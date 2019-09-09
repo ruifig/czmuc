@@ -26,7 +26,11 @@ public:
 	friend class ObjectId<const NoCvT>;
 	friend class ObjectId<NoCvT>;
 
-	ObjectId() : m_id(0)
+	ObjectId()
+		: m_id(0)
+#if CZ_DEBUG
+		, m_obj(nullptr)
+#endif
 	{
 	}
 
@@ -38,6 +42,9 @@ public:
 		typename = std::enable_if_t<std::is_const_v<T>> >
 	ObjectId(const NoCvT& obj)
 		: m_id(obj.m_objectId)
+#if CZ_DEBUG
+		, m_obj(obj.m_obj)
+#endif
 	{
 	}
 
@@ -50,16 +57,25 @@ public:
 		typename = std::enable_if_t<!std::is_const_v<T>> >
 	ObjectId(NoCvT& obj)
 		: m_id(obj.m_objectId)
+#if CZ_DEBUG
+		, m_obj(obj.m_obj)
+#endif
 	{
 	}
 
 	explicit ObjectId(CounterType id)
 		: m_id(id)
 	{
+#if CZ_DEBUG
+		m_obj = id==0 ? nullptr : tryGetObject();
+#endif
 	}
 
 	ObjectId(const ObjectId& rhs)
 		: m_id(rhs.m_id)
+#if CZ_DEBUG
+		, m_obj(rhs.m_obj)
+#endif
 	{
 	}
 
@@ -68,6 +84,9 @@ public:
 		typename = std::enable_if_t<std::is_const_v<T>> >
 	ObjectId(const ObjectId<NoCvT>& rhs)
 		: m_id(rhs.m_id)
+#if CZ_DEBUG
+		, m_obj(rhs.m_obj)
+#endif
 	{
 	}
 
@@ -125,6 +144,12 @@ public:
 
 private:
 	CounterType m_id = 0;
+
+	// If running a debug build, we keep the actual object pointer, to help with debugging.
+	// Note that this might not point to a valid object
+#if CZ_DEBUG
+	T* m_obj;
+#endif
 };
 
 template <typename T, typename CT>
