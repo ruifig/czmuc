@@ -40,6 +40,16 @@ namespace cz
 				return static_cast<int>(mEntries.size());
 			}
 
+			Entry* begin()
+			{
+				return &(*mEntries.begin());
+			}
+
+			Entry* end()
+			{
+				return begin() + mEntries.size();
+			}
+
 			Entry* getEntry(int index)
 			{
 				return &mEntries[index];

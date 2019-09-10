@@ -40,7 +40,8 @@ static inline const char* logVerbosityToString(LogVerbosity v)
 	return "Unknown";
 }
 
-#define CZ_LOG_MINIMUM_VERBOSITY Log
+// Globally sets maximum compile time verbosity
+#define CZ_LOG_MAXIMUM_VERBOSITY Verbose
 
 class LogCategoryBase
 {
@@ -55,11 +56,20 @@ public:
 		return verbosity > m_verbosity;
 	}
 	void setVerbosity(LogVerbosity verbosity);
+	LogCategoryBase* getNext();
+	static LogCategoryBase* getFirst();
+	static LogCategoryBase* find(const char* name);
+	static LogCategoryBase* find(const std::string& name)
+	{
+		return find(name.c_str());
+	}
 
 protected:
 	LogVerbosity m_verbosity;
 	LogVerbosity m_compileTimeVerbosity;
 	std::string m_name;
+	LogCategoryBase* m_next = nullptr;
+	inline static LogCategoryBase* ms_first = nullptr;
 };
 
 template<LogVerbosity DEFAULT, LogVerbosity COMPILETIME>
@@ -140,7 +150,7 @@ extern LogCategoryLogNone logNone;
 
 #define CZ_LOG_CHECK_COMPILETIME_VERBOSITY(NAME, VERBOSITY) \
 	(((int)::cz::LogVerbosity::VERBOSITY <= LogCategory##NAME::CompileTimeVerbosity) && \
-	 ((int)::cz::LogVerbosity::VERBOSITY <= (int)::cz::LogVerbosity::CZ_LOG_MINIMUM_VERBOSITY))
+	 ((int)::cz::LogVerbosity::VERBOSITY <= (int)::cz::LogVerbosity::CZ_LOG_MAXIMUM_VERBOSITY))
 
 #define CZ_LOG(NAME, VERBOSITY, fmt, ...)                                                                \
 	{                                                                                                    \
@@ -162,5 +172,5 @@ extern LogCategoryLogNone logNone;
 
 } // namespace cz
 
-CZ_DECLARE_LOG_CATEGORY(logDefault, Log, Log)
+CZ_DECLARE_LOG_CATEGORY(logDefault, Log, Verbose)
 

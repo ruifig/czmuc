@@ -27,13 +27,45 @@ LogCategoryBase::LogCategoryBase(const char* name, LogVerbosity verbosity, LogVe
 , m_verbosity(verbosity)
 , m_compileTimeVerbosity(compileTimeVerbosity)
 {
-
+	if (ms_first==nullptr)
+		ms_first = this;
+	else
+	{
+		// Find the last category
+		LogCategoryBase* ptr = ms_first;
+		while(ptr->m_next)
+			ptr = ptr->m_next;
+		ptr->m_next = this;
+	}
 }
 
 void LogCategoryBase::setVerbosity(LogVerbosity verbosity)
 {
 	// Take into considering the minimum compiled verbosity
 	m_verbosity = LogVerbosity( std::min((int)m_compileTimeVerbosity, (int)verbosity) );
+}
+
+cz::LogCategoryBase* LogCategoryBase::getNext()
+{
+	return m_next;
+}
+
+cz::LogCategoryBase* LogCategoryBase::getFirst()
+{
+	return ms_first;
+}
+
+cz::LogCategoryBase* LogCategoryBase::find(const char* name)
+{
+	LogCategoryBase* ptr = ms_first;
+	while(ptr)
+	{
+		if (ptr->m_name==name)
+			return ptr;
+		ptr = ptr->m_next;
+	};
+
+	return nullptr;
 }
 
 LogOutput::SharedData* LogOutput::getSharedData()
@@ -69,7 +101,7 @@ void LogOutput::logToAll(const char* file, int line, const LogCategoryBase* cate
 		struct tm d;
 		localtime_s(&d, &t);
 		#if LOG_VERBOSITY
-			prefix = formatString("%02d:%02d:%02d: %s: ", d.tm_hour, d.tm_min, d.tm_sec, logVerbosityToString(verbosity));
+			prefix = formatString("%02d:%02d:%02d: %s: %s: ", d.tm_hour, d.tm_min, d.tm_sec, category->getName().c_str(), logVerbosityToString(verbosity));
 		#else
 			prefix = formatString("%02d:%02d:%02d: ", d.tm_hour, d.tm_min, d.tm_sec);
 		#endif
