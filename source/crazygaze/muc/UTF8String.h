@@ -222,7 +222,7 @@ namespace cz
 			return mData.getSizeCodePoints();
 		}
 
-		//! Same as #size
+		//! Same as size()
 		int length() const
 		{
 			return size();
@@ -337,7 +337,7 @@ namespace cz
 			return getReadPointer();
 		}
 
-		/*! Same as #c_str */
+		/*! Same as c_str() */
 		const char* data() const
 		{
 			return c_str();
@@ -347,13 +347,13 @@ namespace cz
 		\param codepoint character to search for
 		\param offset Character index to at which to begin the search.
 		\return
-			The index at which the character was found, or #npos if not found. Note that this is not an index to be used
+			The index at which the character was found, or 'npos' if not found. Note that this is not an index to be used
 			with a c-style array, since utf8 strings are multibyte strings.
 			If you intend to use the return value to access the string again somehow, it's recommended
 			to use iterators instead, like for example with std::find algorithm
 		*/
 		size_t find(uint32_t codepoint, size_t offset = 0) const;
-		/*! Searches for a string (encoded as ANSI ) and returns where it was found, or #npos if not.
+		/*! Searches for a string (encoded as ANSI ) and returns where it was found, or 'npos' if not.
 		*/
 		size_t find(const char* str, size_t offset = 0) const;
 		/*! Searches for a string and returns where it was found, or #npos if not.*/
