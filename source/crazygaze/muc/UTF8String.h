@@ -356,7 +356,7 @@ namespace cz
 		/*! Searches for a string (encoded as ANSI ) and returns where it was found, or 'npos' if not.
 		*/
 		size_t find(const char* str, size_t offset = 0) const;
-		/*! Searches for a string and returns where it was found, or #npos if not.*/
+		/*! Searches for a string and returns where it was found, or npos if not.*/
 		size_t find(const UTF8String& str, size_t offset = 0) const;
 
 		/* Kind of the same thing as std::string::replace, but highly inneficient */
