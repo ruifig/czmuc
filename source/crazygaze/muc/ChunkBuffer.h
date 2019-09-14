@@ -89,7 +89,7 @@ public:
 
 	ChunkBuffer(unsigned initialCapacity=0, unsigned defaultBlockSize=4096);
 	ChunkBuffer(ChunkBuffer&) = delete; // Implement this if required
-	ChunkBuffer(ChunkBuffer&& other)
+	ChunkBuffer(ChunkBuffer&& other) noexcept
 		: m_blocks(std::move(other.m_blocks))
 		, m_defaultBlockSize(std::move(other.m_defaultBlockSize))
 #ifndef NDEBUG
