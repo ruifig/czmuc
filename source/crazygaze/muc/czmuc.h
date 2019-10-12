@@ -91,7 +91,7 @@ namespace cz
 	// Assert types
 	void _doAssert(const char* file, int line, const char* fmt, ...);
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32
-	std::string getWin32Error(const char* funcname = nullptr);
+	std::string getWin32Error(DWORD err = ERROR_SUCCESS, const char* funcname = nullptr);
 #endif
 } // namespace cz
 

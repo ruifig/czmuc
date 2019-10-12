@@ -24,6 +24,7 @@
 #include <future>
 #include <condition_variable>
 #include <algorithm>
+#include <optional>
 
 #include "crazygaze/muc/czmuc.h"
 

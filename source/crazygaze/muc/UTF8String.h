@@ -383,6 +383,7 @@ namespace cz
 		// Conversion
 		//////////////////////////////////////////////////////////////////////////
 		std::u16string toUtf16() const;
+		std::u32string toUtf32() const;
 		std::wstring widen() const;
 
 

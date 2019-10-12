@@ -42,6 +42,8 @@ ucm_add_files(
 	"crazygaze/muc/Json.h"
 	"crazygaze/muc/Logging.cpp"
 	"crazygaze/muc/Logging.h"
+	"crazygaze/muc/NetworkUtils.h"
+	"crazygaze/muc/NetworkUtils.cpp"
 	"crazygaze/muc/Parameters.cpp"
 	"crazygaze/muc/Parameters.h"
 	"crazygaze/muc/QuickVector.h"

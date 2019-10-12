@@ -9,9 +9,21 @@
 
 #include "czmucPCH.h"
 #include "crazygaze/muc/Parameters.h"
+#include "crazygaze/muc/StringUtils.h"
 
 namespace cz
 {
+
+namespace
+{
+	bool isEqual(const UTF8String& a, const UTF8String& b, bool caseSensitive)
+	{
+		if (caseSensitive)
+			return a==b ? true : false;
+		else
+			return ci_equals(a.toUtf32(),b.toUtf32());
+	}
+}
 
 cz::UTF8String Parameters::ms_empty;
 Parameters::Parameters()
@@ -55,11 +67,11 @@ const Parameters::Param* Parameters::end() const
 	return begin() + m_args.size();
 }
 
-bool Parameters::has( const char* name ) const
+bool Parameters::has( const char* name, bool caseSensitive) const
 {
 	for(auto &i: m_args)
 	{
-		if (i.name==name)
+		if (isEqual(i.name, name, caseSensitive))
 		{
 			return true;
 		}
@@ -67,16 +79,16 @@ bool Parameters::has( const char* name ) const
 	return false;
 }
 
-bool Parameters::has( const cz::UTF8String& name ) const
+bool Parameters::has( const cz::UTF8String& name, bool caseSensitive ) const
 {
-	return has(name.c_str());
+	return has(name.c_str(), caseSensitive);
 }
 
-const cz::UTF8String& Parameters::get( const char *name ) const
+const cz::UTF8String& Parameters::get( const char *name, bool caseSensitive) const
 {
 	for (auto &i: m_args)
 	{
-		if (i.name==name)
+		if (isEqual(i.name, name, caseSensitive))
 			return i.value;
 	}
 	return ms_empty;

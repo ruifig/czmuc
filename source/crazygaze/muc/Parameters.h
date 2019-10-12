@@ -30,9 +30,9 @@ public:
 	void set(int argc, char* argv[]);
 	const Param* begin() const;
 	const Param* end() const;
-	bool has(const char* name) const;
-	bool has(const UTF8String& name) const;
-	const cz::UTF8String& get(const char *name) const;
+	bool has(const char* name, bool caseSensitive = false) const;
+	bool has(const UTF8String& name, bool caseSensitive = false) const;
+	const cz::UTF8String& get(const char* name, bool caseSensitive = false) const;
 	void clear()
 	{
 		m_args.clear();

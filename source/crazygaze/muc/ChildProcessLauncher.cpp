@@ -33,7 +33,7 @@ int ChildProcessLauncher::ErrorMessage(const char* funcname)
 	if (m_errmsg.size())
 		return 1;
 
-	m_errmsg = getWin32Error(funcname);
+	m_errmsg = getWin32Error(ERROR_SUCCESS, funcname);
 
 	return 1;
 }

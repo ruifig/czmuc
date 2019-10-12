@@ -94,24 +94,26 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 }
 
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32
-std::string getWin32Error(const char* funcname)
+std::string getWin32Error(DWORD err, const char* funcname)
 {
 	LPVOID lpMsgBuf;
 	LPVOID lpDisplayBuf;
-	DWORD dw = GetLastError();
+	if (err == ERROR_SUCCESS)
+		err = GetLastError();
 
 	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-	               NULL,
-	               dw,
-	               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-	               (LPWSTR)&lpMsgBuf,
-	               0,
-	               NULL);
+				   NULL,
+				   err,
+				   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+				   (LPWSTR)&lpMsgBuf,
+				   0,
+				   NULL);
 	SCOPE_EXIT{ LocalFree(lpMsgBuf); };
 
-	int funcnameLength = funcname ? lstrlen((LPCTSTR)funcname) : 0;
+	int funcnameLength = funcname ? strlen((LPCTSTR)funcname) : 0;
+
 	lpDisplayBuf =
-	    (LPVOID)LocalAlloc(LMEM_ZEROINIT, (lstrlen((LPCTSTR)lpMsgBuf) + funcnameLength + 50) * sizeof(wchar_t));
+		(LPVOID)LocalAlloc(LMEM_ZEROINIT, (lstrlenW((LPCWSTR)lpMsgBuf) + funcnameLength + 50) * sizeof(wchar_t));
 	if (lpDisplayBuf == NULL)
 		return "Win32ErrorMsg failed";
 	SCOPE_EXIT{ LocalFree(lpDisplayBuf); };
@@ -119,11 +121,11 @@ std::string getWin32Error(const char* funcname)
 	auto wfuncname = funcname ? widen(funcname) : L"";
 
 	StringCchPrintfW((LPWSTR)lpDisplayBuf,
-	                 LocalSize(lpDisplayBuf) / sizeof(wchar_t),
-	                 L"%s failed with error %lu: %s",
-	                 wfuncname.c_str(),
-	                 dw,
-	                 (LPWSTR)lpMsgBuf);
+					 LocalSize(lpDisplayBuf) / sizeof(wchar_t),
+					 L"%s failed with error %lu: %s",
+					 wfuncname.c_str(),
+					 err,
+					 (LPWSTR)lpMsgBuf);
 
 	std::wstring ret = (LPWSTR)lpDisplayBuf;
 
@@ -131,7 +133,6 @@ std::string getWin32Error(const char* funcname)
 	while (ret.size() && ret.back() < ' ')
 		ret.pop_back();
 
-	assert(0);
 	return narrow(ret);
 }
 #endif

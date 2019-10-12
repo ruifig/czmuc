@@ -213,6 +213,13 @@ namespace cz
 		return s;
 	}
 
+	std::u32string UTF8String::toUtf32() const
+	{
+		std::u32string s;
+		utf8::unchecked::utf8to32(getReadPointer(),getReadPointer()+sizeBytes(), back_inserter(s)); 
+		return s;
+	}
+
 	std::wstring UTF8String::widen() const
 	{
 		std::wstring s;
