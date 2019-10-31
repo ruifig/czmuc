@@ -9,7 +9,7 @@
 	but with some changes.
 	- Queued work can return values (you get a std::future<R>) when queuing work
 	- A ConcurrentTicker<T> version allows for automatic calls to a tick function.
-
+	- Allows T*, so we can have a base class
 *********************************************************************/
 #pragma once
 
@@ -25,17 +25,38 @@ namespace cz
 {
 
 template<typename T>
-class ConcurrentBase
+class ConcurrentBaseObjectWrapper
+{
+private:
+protected:
+	mutable T m_t;
+	using Type = T;
+	template<typename... Args>
+	ConcurrentBaseObjectWrapper(Args&&... args) : m_t(std::forward<Args>(args)...) {}
+	Type& obj() const { return m_t; }
+};
+
+template<typename T>
+class ConcurrentBaseObjectWrapper<T*>
+{
+private:
+	std::unique_ptr<mutable T> m_t;
+protected:
+	using Type = T;
+	ConcurrentBaseObjectWrapper(std::unique_ptr<T> ptr) : m_t(std::move(ptr)) {}
+	Type& obj() const { return *m_t; }
+};
+
+template<typename T>
+class ConcurrentBase : protected ConcurrentBaseObjectWrapper<T>
 {
 protected:
 	mutable WorkQueue m_q;
-	mutable T m_t;
 	std::thread m_th;
 	bool m_done = false;
 
-	template<typename... Args>
-	ConcurrentBase(Args&&... args) : m_t(std::forward<Args>(args)...)
-	{}
+	// Inherit constructors
+	using ConcurrentBaseObjectWrapper::ConcurrentBaseObjectWrapper;
 
 	~ConcurrentBase()
 	{
@@ -54,6 +75,20 @@ public:
 		return m_th.get_id();
 	}
 
+#if 1
+	template<typename F>
+	auto operator()(F f) const -> std::future<decltype(f(obj()))>
+	{
+		auto pr = std::make_shared<std::promise<decltype(f(obj()))>>();
+		auto ft = pr->get_future();
+		m_q.push([pr = std::move(pr), f=std::move(f), this]() mutable
+		{
+			fulfillPromise(*pr, f, obj());
+		});
+
+		return ft;
+	}
+#else
 	template<typename F>
 	auto operator()(F f) const -> std::future<decltype(f(m_t))>
 	{
@@ -61,11 +96,12 @@ public:
 		auto ft = pr->get_future();
 		m_q.push([pr = std::move(pr), f=std::move(f), this]() mutable
 		{
-			fulfillPromise(*pr, f, m_t);
+			fulfillPromise(*pr, f, obj());
 		});
 
 		return ft;
 	}
+#endif
 private:
 
 	// Allows using the same code to set a promise with a value or void
@@ -112,7 +148,9 @@ template<typename T, bool AutoStart=true>
 class ConcurrentTicker : public ConcurrentBase<T>
 {
 protected:
-	using TickReturnType = decltype(m_t.tick(0));
+	// How to get a return type of a member function without an object...
+	// https://stackoverflow.com/questions/5580253/get-return-type-of-member-function-without-an-object
+	using TickReturnType = decltype(((Type*)nullptr)->tick(0));
 public:
 	template<typename... Args>
 	ConcurrentTicker(Args&&... args) : ConcurrentBase<T>(std::forward<Args>(args)...)
@@ -142,7 +180,7 @@ public:
 				{
 					double delta = timer.seconds();
 					timer.reset();
-					interval = m_t.tick(static_cast<TickReturnType>(std::max((double)eps,delta)));
+					interval = obj().tick(static_cast<TickReturnType>(std::max((double)eps,delta)));
 					interval = clip(interval, double(0), double(std::numeric_limits<int>::max()));
 				}
 			}

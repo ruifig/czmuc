@@ -162,7 +162,6 @@ static std::vector<NetworkAdapterInfo::Address> walkAddresses(T pFirstAddr, cons
 			}
 			pAddr = pAddr->Next;
 		}
-
 	}
 
 	getAdaptersAddressesLog("\tNumber of %s Addresses: %d\n", addrType, (int)res.size());

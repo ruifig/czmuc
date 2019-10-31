@@ -101,6 +101,7 @@ namespace cz
 	#define CZ_ASSERT_F(expression, fmt, ...) ((void)0)
 	#define CZ_CHECK(expression) if (expression) {}
 	#define CZ_UNEXPECTED() ::cz::_doAssert(__FILE__, __LINE__, "Unexpected code path")
+	#define CZ_UNEXPECTED_F(fmt, ...) ::cz::_doAssert(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #else
 
 /*! Checks if the expression is true/false and causes an assert if it's false.

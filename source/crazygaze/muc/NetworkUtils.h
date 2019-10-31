@@ -34,7 +34,6 @@ bool isPrivateIP(const std::string& ip);
 // Returns the IP, or "" on error
 std::string resolveHostName(const std::string hostName);
 
-
 struct NetworkAdapterInfo
 {
 	struct Address

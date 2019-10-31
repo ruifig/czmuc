@@ -94,6 +94,17 @@ const cz::UTF8String& Parameters::get( const char *name, bool caseSensitive) con
 	return ms_empty;
 }
 
+const std::vector<UTF8String> Parameters::getMultiple(const char* name, bool caseSensitive) const
+{
+	std::vector<UTF8String> res;
+	for (auto &i: m_args)
+	{
+		if (isEqual(i.name, name, caseSensitive))
+			res.push_back(i.value);
+	}
+	return res;
+}
+
 } // namespace cz
 
 
