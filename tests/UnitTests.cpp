@@ -1,5 +1,9 @@
 #include "UnitTestsPCH.h"
 
+CZ_DEFINE_LOG_CATEGORY(logTests)
+CZ_DEFINE_LOG_CATEGORY(logTestsVerbose)
+
+
 /*
 int _tmain(int argc, _TCHAR* argv[])
 {

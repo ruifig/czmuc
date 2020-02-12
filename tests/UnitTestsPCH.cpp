@@ -9,9 +9,7 @@
 
 #include "UnitTestsPCH.h"
 
-CZ_DEFINE_LOG_CATEGORY(logTests)
-CZ_DEFINE_LOG_CATEGORY(logTestsVerbose)
-
+#if 0
 void spinMs(double ms)
 {
 	Sleep((int)ms);
@@ -25,3 +23,4 @@ void spinMs(double ms)
 	}
 	*/
 }
+#endif

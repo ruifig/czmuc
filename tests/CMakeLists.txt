@@ -9,7 +9,6 @@ set(SOURCE_FILES
 		"TestSharedQueue.cpp"
 		"TestThreadingUtils.cpp"
 		"UnitTests.cpp"
-		"UnitTestsPCH.cpp"
 		"UnitTestsPCH.h"
 		)
 
