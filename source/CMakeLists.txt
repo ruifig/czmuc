@@ -16,7 +16,6 @@ set(CZMUC_SOURCE_FILES
 	"crazygaze/muc/config.h"
 	"crazygaze/muc/czmuc.cpp"
 	"crazygaze/muc/czmuc.h"
-	"crazygaze/muc/czmucPCH.cpp"
 	"crazygaze/muc/czmucPCH.h"
 	"crazygaze/muc/Expected.h"
 	"crazygaze/muc/File.cpp"
