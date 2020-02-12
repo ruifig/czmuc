@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
-include(../cmake/utils.cmake)
-include(../cmake/ucm.cmake)
-
-ucm_add_files(
+set(CZMUC_SOURCE_FILES
 	"crazygaze/muc/Algorithm.h"
 	"crazygaze/muc/ArrayView.h"
 	"crazygaze/muc/AsyncCommandQueue.cpp"
@@ -72,17 +69,48 @@ ucm_add_files(
 	"crazygaze/muc/UTF8String.h"
 	"crazygaze/muc/WindowsConsole.cpp"
 	"crazygaze/muc/WindowsConsole.h"
-	TO SOURCE_FILES
 	)
 
-ucm_add_dirs("crazygaze/muc/detail" TO SOURCE_FILES RECURSIVE)
-ucm_remove_files(
-	"crazygaze/muc/detail/SFMT/SFMT.c"
-	"crazygaze/muc/detail/SFMT/test.c"
-	FROM SOURCE_FILES)
+# Add SFMT sources
+set(SFMT_SOURCE_FILES
+	"crazygaze/muc/detail/SFMT/SFMT-alti.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params11213.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params1279.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params132049.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params19937.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params216091.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params2281.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params4253.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params44497.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params607.h"
+	"crazygaze/muc/detail/SFMT/SFMT-params86243.h"
+	"crazygaze/muc/detail/SFMT/SFMT-sse2.h"
+	"crazygaze/muc/detail/SFMT/SFMT.h"
+   )
 
-add_library(czmuc STATIC ${SOURCE_FILES})
-cz_set_precompiled_header(czmuc "czmucPCH.h" "crazygaze/muc/czmucPCH.cpp")
+#Add utfcpp sources
+set(UTFCPP_SOURCE_FILES
+		"crazygaze/muc/detail/utfcpp/source/utf8.h"
+		"crazygaze/muc/detail/utfcpp/source/utf8/checked.h"
+		"crazygaze/muc/detail/utfcpp/source/utf8/core.h"
+		"crazygaze/muc/detail/utfcpp/source/utf8/unchecked.h"
+	)
+
+source_group("crazygaze\\muc" FILES ${CZMUC_SOURCE_FILES})
+source_group("crazygaze\\muc\\detail\\SFMT" FILES ${SFMT_SOURCE_FILES})
+source_group("crazygaze\\muc\\detail\\utfcpp" FILES ${UTFCPP_SOURCE_FILES})
+
+add_library(czmuc STATIC
+		${CZMUC_SOURCE_FILES}
+		${SFMT_SOURCE_FILES}
+		${UTFCPP_SOURCE_FILES})
+
+add_library(cz::muc ALIAS czmuc)
 target_include_directories(czmuc PUBLIC "")
-cz_set_postfix(czmuc)
+set_target_properties(czmuc
+		PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_features(czmuc PUBLIC cxx_std_17)
+target_precompile_headers(czmuc
+		PUBLIC "crazygaze/muc/czMUCPCH.h")
 
