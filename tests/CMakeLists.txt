@@ -22,3 +22,5 @@ endif()
 target_precompile_headers(czmuc_tests
 		PUBLIC "UnitTestsPCH.h")
 
+set_property(TARGET czmuc_tests PROPERTY FOLDER "unit tests")
+
