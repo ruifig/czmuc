@@ -10,6 +10,7 @@ Tools > Options (or Debug > Options) > Debugging > Output Window, set Natvis dia
 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
+<!--
 <Type Name="cz::TArray&lt;*,*&gt;">
     <DisplayString>{{ size={mSize} }}</DisplayString>
     <Expand>
@@ -21,6 +22,7 @@ Tools > Options (or Debug > Options) > Debugging > Output Window, set Natvis dia
         </ArrayItems>
     </Expand>
 </Type>
+!-->
 
 <Type Name="cz::UTF8String">
     <DisplayString Condition="mData.mBuf==0">{mData.mQuickBuf,s8}</DisplayString>

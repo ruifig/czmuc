@@ -1,10 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
-project(tests)
+cmake_minimum_required(VERSION 3.16)
 
-include(../cmake/utils.cmake)
-include(../cmake/ucm.cmake)
-
-ucm_add_files(
+set(SOURCE_FILES
 		"targetver.h"
 		"TestBuffer.cpp"
 		"TestQuickVector.cpp"
@@ -15,14 +11,14 @@ ucm_add_files(
 		"UnitTests.cpp"
 		"UnitTestsPCH.cpp"
 		"UnitTestsPCH.h"
-		TO SOURCE_FILES
 		)
 
-add_executable(tests ${SOURCE_FILES})
-cz_set_precompiled_header(tests "UnitTestsPCH.h" "UnitTestsPCH.cpp")
-target_link_libraries(tests czmuc UnitTest++)
+add_executable(czmuc_tests ${SOURCE_FILES})
+target_link_libraries(czmuc_tests czmuc UnitTest++)
 if (MSVC)
-	target_link_libraries(tests winmm)
+	target_link_libraries(czmuc_tests winmm)
 endif()
-cz_set_postfix(tests)
+
+target_precompile_headers(czmuc_tests
+		PUBLIC "UnitTestsPCH.h")
 

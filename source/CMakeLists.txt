@@ -114,3 +114,7 @@ target_compile_features(czmuc PUBLIC cxx_std_17)
 target_precompile_headers(czmuc
 		PUBLIC "crazygaze/muc/czMUCPCH.h")
 
+if (MSVC)
+	target_sources(czmuc PUBLIC czmuc.natvis)
+endif()
+
