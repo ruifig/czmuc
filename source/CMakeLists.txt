@@ -115,5 +115,6 @@ target_precompile_headers(czmuc
 
 if (MSVC)
 	target_sources(czmuc PUBLIC czmuc.natvis)
+	target_link_libraries(czmuc PRIVATE Shlwapi)
 endif()
 

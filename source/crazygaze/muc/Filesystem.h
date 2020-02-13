@@ -36,15 +36,15 @@ namespace cz
 
 		/*! Changes the current working directory.
 		This only works for platforms that allow writing/reading from several folders.
-		Symbian for example only allows access to the app private folder (for normal apps).
 		*/
 		void setCWD(const UTF8String& path);
 
 		/*! Changes the current working directory to a sensible platform default.
 		On Windows, this will change the working directory to the process's location.
-		On Symbian, it will change it to "/private/appUID/".
 		*/
 		void setCWDToDefault();
+	
+		static Filename getExePath();
 
 		static bool isExistingDirectory(const UTF8String& path);
 		static bool isExistingFile(const UTF8String& filename);

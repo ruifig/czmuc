@@ -101,6 +101,15 @@ void Filesystem::setCWDToDefault()
 	_getAndSetDefaultCWD(mCWD);
 }
 
+Filename Filesystem::getExePath()
+{
+	const int bufferLength = MAX_PATH;
+	wchar_t buf[bufferLength + 1];
+	CZ_CHECK(GetModuleFileNameExW(GetCurrentProcess(), NULL, buf, bufferLength) != 0);
+	Filename f = &buf[0];
+	return f;
+}
+
 bool Filesystem::isExistingDirectory(const UTF8String& path)
 {
 	return _isExistingDirectory(path);
