@@ -12,37 +12,51 @@
 namespace cz
 {
 
-std::string to_json(const char* val);
-std::string to_json(const std::string& val);
-std::string to_json(int val);
-std::string to_json(long val);
-std::string to_json(long long val);
-std::string to_json(unsigned val);
-std::string to_json(unsigned long val);
-std::string to_json(unsigned long long val);
-std::string to_json(float val);
-std::string to_json(double val);
-std::string to_json(long double val);
+	template<
+		typename T,
+		typename = std::enable_if<std::is_arithmetic_v<T>>::type
+	>
+	std::string to_json(T val)
+	{
+		return std::to_string(val);
+	}
 
-template<typename T>
-std::string to_json(const std::vector<T>& val)
-{
-	if (val.size() == 0)
-		return "[]";
-	std::string res;
-	for (auto&& v : val)
-		res += "," + to_json(v);
-	res += "]";
-	res[0] = '[';
-	return res;
-}
+	inline std::string to_json(bool val)
+	{
+		return std::string(val ? "true" : "false");
+	}
 
-template<typename FIRST, typename SECOND>
-std::string to_json(const std::pair<FIRST,SECOND>& val)
-{
-	std::string res = "{\"first\":" + to_json(val.first);
-	res += ", \"second\":" + to_json(val.second) + "}";
-	return res;
-}
+	std::string to_json(const char* val);
+	inline std::string to_json(const std::string& val)
+	{
+		return to_json(val.c_str());
+	}
+
+	// std::vector of any T that can be converted to json
+	template<typename T>
+	std::string to_json(const std::vector<T>& val)
+	{
+		if (val.size() == 0)
+			return "[]";
+
+		std::string res;
+		for (auto&& v : val)
+			res += "," + to_json(v);
+		res += "]";
+		res[0] = '[';
+
+		return res;
+	}
+
+	// std::pair of any FIRST,SECOND that can be converted to json
+	// #RVF : Not sure this is appropriate.
+	// The user might not want fields named 'first' and 'second'
+	template<typename FIRST, typename SECOND>
+	std::string to_json(const std::pair<FIRST,SECOND>& val)
+	{
+		std::string res = "{\"first\":" + to_json(val.first);
+		res += ", \"second\":" + to_json(val.second) + "}";
+		return res;
+	}
 
 } // namespace cz
