@@ -68,6 +68,7 @@ set(CZMUC_SOURCE_FILES
 	"crazygaze/muc/UTF8String.h"
 	"crazygaze/muc/WindowsConsole.cpp"
 	"crazygaze/muc/WindowsConsole.h"
+	"crazygaze/muc/czMUCPCH.h"
 	)
 
 # Add SFMT sources
@@ -104,14 +105,14 @@ add_library(czmuc STATIC
 		${CZMUC_SOURCE_FILES}
 		${SFMT_SOURCE_FILES}
 		${UTFCPP_SOURCE_FILES})
-
 add_library(cz::muc ALIAS czmuc)
+set_target_properties(czmuc PROPERTIES FOLDER "${PROJECT_NAME}")
+
 target_include_directories(czmuc PUBLIC "")
 set_target_properties(czmuc
 		PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_features(czmuc PUBLIC cxx_std_17)
-target_precompile_headers(czmuc
-		PUBLIC "crazygaze/muc/czMUCPCH.h")
+target_precompile_headers(czmuc PUBLIC "crazygaze/muc/czMUCPCH.h")
 
 if (MSVC)
 	target_sources(czmuc PUBLIC czmuc.natvis)
