@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+Visualizers for my own stuff
+To help escape/unescape strings, use http://www.freeformatter.com/xml-escape.html
+
+Also, to detect errors in the visualizer, in Visual Studio go to:
+Tools > Options (or Debug > Options) > Debugging > Output Window, set Natvis diagnostic messages (C++ only) to Error, Warning, or Verbose
+!-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+<!--
+<Type Name="cz::TArray&lt;*,*&gt;">
+    <DisplayString>{{ size={mSize} }}</DisplayString>
+    <Expand>
+        <Item Name="[size]">mSize</Item>
+        <Item Name="[capacity]">mCapacity</Item>
+        <ArrayItems>
+            <Size>mSize</Size>
+            <ValuePointer>($T1 *)mData</ValuePointer>
+        </ArrayItems>
+    </Expand>
+</Type>
+!-->
+
+<Type Name="cz::UTF8String">
+    <DisplayString Condition="mData.mBuf==0">{mData.mQuickBuf,s8}</DisplayString>
+    <DisplayString Condition="mData.mBuf!=0">{mData.mBuf._Mypair._Myval2,s8}</DisplayString>
+
+    <Expand>
+        <Item Name="[sizeBytes]">mData.mStringLengthBytes</Item>
+        <Item Name="[sizeCodePoints]">mData.mStringLengthCodePoints</Item>
+        <Item Name="[capacityBytes]">mData.mBufferSize</Item>
+
+        <ArrayItems>
+            <Size>mData.mStringLengthBytes</Size>
+            <ValuePointer>mData.mBuf==0 ? mData.mQuickBuf : mData.mBuf._Mypair._Myval2</ValuePointer>
+        </ArrayItems>
+		
+    </Expand>	
+</Type>
+
+<Type Name="cz::QuickVector&lt;*,*&gt;">
+    <DisplayString>{{ size = {m_size} }}</DisplayString>
+
+    <Expand>
+        <Item Name="[size]">m_size</Item>
+        <Item Name="[capacity]">m_capacity</Item>
+        <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>($T1*)(m_buf==0 ? m_quickbuf : m_buf)</ValuePointer>
+        </ArrayItems>
+    </Expand>	
+</Type>
+
+<Type Name="cz::ArrayView&lt;*&gt;">
+    <DisplayString>{{ size = {m_size} }}</DisplayString>
+    <Expand>
+        <Item Name="[size]">m_size</Item>
+        <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>($T1*)(m_data)</ValuePointer>
+        </ArrayItems>
+    </Expand>	
+</Type>
+
+</AutoVisualizer>
