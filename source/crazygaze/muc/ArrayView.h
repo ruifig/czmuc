@@ -1,3 +1,13 @@
+/********************************************************************
+	CrazyGaze (http://www.crazygaze.com)
+	Author : Rui Figueira
+	Email  : rui@crazygaze.com
+	
+	purpose:
+	A similar implementation at : https://github.com/rhysd/array_view/blob/master/include/array_view.hpp
+	Intentionally simple for now.
+	
+*********************************************************************/
 #pragma once
 
 #include "crazygaze/muc/czmuc.h"
@@ -5,8 +15,6 @@
 namespace cz
 {
 
-// A similar implementation at : https://github.com/rhysd/array_view/blob/master/include/array_view.hpp
-// Intentionally simple for now.
 template<typename T>
 class ArrayView
 {
