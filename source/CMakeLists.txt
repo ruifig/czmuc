@@ -106,7 +106,7 @@ add_library(czmuc STATIC
 		${SFMT_SOURCE_FILES}
 		${UTFCPP_SOURCE_FILES})
 add_library(cz::muc ALIAS czmuc)
-set_target_properties(czmuc PROPERTIES FOLDER "${PROJECT_NAME}")
+set_target_properties(czmuc PROPERTIES FOLDER "${CZ_IDE_FOLDER}${PROJECT_NAME}")
 
 target_include_directories(czmuc PUBLIC "")
 set_target_properties(czmuc
