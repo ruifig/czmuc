@@ -116,6 +116,6 @@ target_precompile_headers(czmuc PUBLIC "crazygaze/muc/czMUCPCH.h")
 
 if (MSVC)
 	target_sources(czmuc PUBLIC czmuc.natvis)
-	target_link_libraries(czmuc PRIVATE Shlwapi)
+	target_link_libraries(czmuc PRIVATE Shlwapi Winmm Iphlpapi.lib)
 endif()
 
