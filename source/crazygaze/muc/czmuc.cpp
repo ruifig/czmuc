@@ -94,6 +94,7 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
 }
 
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32
+// #CMAKE : Test this for when building with UNICODE
 std::string getWin32Error(DWORD err, const char* funcname)
 {
 	LPVOID lpMsgBuf;
@@ -110,7 +111,7 @@ std::string getWin32Error(DWORD err, const char* funcname)
 				   NULL);
 	SCOPE_EXIT{ LocalFree(lpMsgBuf); };
 
-	int funcnameLength = funcname ? strlen((LPCTSTR)funcname) : 0;
+	int funcnameLength = funcname ? lstrlen((LPCTSTR)funcname) : 0;
 
 	lpDisplayBuf =
 		(LPVOID)LocalAlloc(LMEM_ZEROINIT, (lstrlenW((LPCWSTR)lpMsgBuf) + funcnameLength + 50) * sizeof(wchar_t));
