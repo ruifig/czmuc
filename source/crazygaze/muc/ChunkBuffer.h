@@ -173,6 +173,11 @@ public:
 
 };
 
+template<typename T>
+inline const ChunkBuffer& operator >> (const ChunkBuffer& stream, T& v);
+
+template<typename T>
+inline ChunkBuffer& operator << (ChunkBuffer& stream, T v);
 
 namespace details
 {

@@ -7,9 +7,15 @@
 
 *********************************************************************/
 
+#define CZ_DEBUG_FILESYSTEM 0
+
 #include "czmucPCH.h"
 #include "crazygaze/muc/Filesystem.h"
 #include "crazygaze/muc/Logging.h"
+#if CZ_DEBUG_FILESYSTEM
+	#include "crazygaze/muc/ScopeGuard.h"
+#endif
+
 #include "Shlwapi.h"
 #include "Shlobj.h"
 #include "Psapi.h"
@@ -40,7 +46,7 @@ namespace
 		wchar_t buf[bufferLength+1];
 		// Change Current directory to where the executable is
 		CZ_CHECK( GetModuleFileNameExW(GetCurrentProcess(), NULL, buf, bufferLength) !=0 );
-		Filename f = &buf[0];
+		Filename f(&buf[0]);
 		CZ_CHECK( SetCurrentDirectoryW(f.getDirectory().widen().c_str()) !=0 );
 		CZ_CHECK( GetCurrentDirectoryW(bufferLength, buf)!=0 );
 		dest = Filename(std::wstring(buf));
@@ -63,6 +69,106 @@ namespace
 	bool _createDirectory(const cz::UTF8String& path)
 	{
 		return SHCreateDirectoryExW(NULL, path.widen().c_str(), NULL)==ERROR_SUCCESS ? true : false;
+	}
+
+	std::vector<Filesystem::FileInfo> _getFilesInDirectory(const cz::Filename& path, const cz::UTF8String& wildcard, bool includeDirectories, bool recursive)
+	{
+		using namespace cz;
+
+	#if CZ_DEBUG_FILESYSTEM
+		static int indent = 0;
+		indent++;
+		SCOPE_EXIT{ indent--; };
+		std::string indentStr(indent*4, ' ');
+
+		CZ_LOG(logDefault, Log, "%sPath=%s", indentStr.c_str(), path.c_str());
+	#endif
+
+		std::vector<Filesystem::FileInfo> res;
+		std::vector<Filesystem::FileInfo> dirs;
+
+		// Check that the input path plus 3 is not longer than MAX_PATH.
+		// Three characters are for the "\*" plus NULL appended below.
+
+		size_t length_of_arg;
+		wchar_t szDir[MAX_PATH];
+		WIN32_FIND_DATAW ffd;
+
+		CZ_CHECK(StringCchLengthW(path.widen().c_str(), MAX_PATH, &length_of_arg)==S_OK);
+
+		if (length_of_arg > (MAX_PATH - 3))
+		{
+			CZ_LOG(logDefault, Warning, "Directory path is too long");
+			return res;
+		}
+
+		// Prepare string for use with FindFile functions.  First, copy the
+		// string to a buffer, then append '\*' to the directory name.
+		StringCchCopyW(szDir, MAX_PATH, path.widen().c_str());
+		StringCchCatW(szDir, MAX_PATH, (UTF8String("\\")+wildcard).widen().c_str());
+
+		// Find the first file in the directory.
+		auto hFind = FindFirstFileW(szDir, &ffd);
+
+		if (INVALID_HANDLE_VALUE == hFind)
+		{ 
+			if (GetLastError() == ERROR_FILE_NOT_FOUND)
+				return res;
+			CZ_LOG(logDefault, Warning, "%s failed: %s", __FUNCTION__, getWin32Error().c_str());
+			return res;
+		}
+
+		do
+		{
+			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				if ((StrCmpW(ffd.cFileName, L".") != 0) && (StrCmpW(ffd.cFileName, L"..") != 0))
+				{
+					if (includeDirectories)
+					{
+						dirs.push_back({ Filesystem::Type::Directory, Filename(ffd.cFileName), 0 });
+					}
+				}
+			}
+			else
+			{
+				LARGE_INTEGER filesize;
+				filesize.LowPart = ffd.nFileSizeLow;
+				filesize.HighPart = ffd.nFileSizeHigh;
+				res.push_back({ Filesystem::Type::File, Filename(ffd.cFileName), filesize.QuadPart });
+			}
+		} while (FindNextFileW(hFind, &ffd) != 0);
+
+
+	#if CZ_DEBUG_FILESYSTEM
+		for(auto&& r : res)
+		{
+			CZ_LOG(logDefault, Log, "%s%s", indentStr.c_str(), r.name.c_str());
+		}
+
+		for(auto&& d : dirs)
+		{
+			CZ_LOG(logDefault, Log, "%s%s", indentStr.c_str(), (d.name + "\\").c_str());
+		}
+	#endif
+
+		if (dirs.size())
+		{
+			res.insert(res.end(), dirs.begin(), dirs.end());
+			if (recursive)
+			{
+				for (auto&& d : dirs)
+				{
+					auto others = _getFilesInDirectory(path + d.name + "\\", wildcard, true, true);
+					for(auto&& o : others)
+					{
+						res.push_back({o.type, Filename(d.name + "\\" + o.name), o.size});
+					}
+				}
+			}
+		}
+
+		return res;
 	}
 
 #else
@@ -106,7 +212,7 @@ Filename Filesystem::getExePath()
 	const int bufferLength = MAX_PATH;
 	wchar_t buf[bufferLength + 1];
 	CZ_CHECK(GetModuleFileNameExW(GetCurrentProcess(), NULL, buf, bufferLength) != 0);
-	Filename f = &buf[0];
+	Filename f(&buf[0]);
 	return f;
 }
 
@@ -187,67 +293,10 @@ bool Filesystem::isRelativePath(const UTF8String& path)
 	return PathIsRelativeW(path.widen().c_str()) ? true : false;
 }
 
-
 // Copied from  http://msdn.microsoft.com/en-gb/library/windows/desktop/aa365200(v=vs.85).aspx
-std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8String& path, const UTF8String& wildcard, bool includeDirectories)
+std::vector<Filesystem::FileInfo> Filesystem::getFilesInDirectory(const UTF8String& path, const UTF8String& wildcard, bool includeDirectories, bool recursive)
 {
-	std::vector<FileInfo> res;
-
-	// Check that the input path plus 3 is not longer than MAX_PATH.
-	// Three characters are for the "\*" plus NULL appended below.
-
-	size_t length_of_arg;
-	wchar_t szDir[MAX_PATH];
-	WIN32_FIND_DATAW ffd;
-
-	CZ_CHECK(StringCchLengthW(path.widen().c_str(), MAX_PATH, &length_of_arg)==S_OK);
-
-	if (length_of_arg > (MAX_PATH - 3))
-	{
-		CZ_LOG(logDefault, Warning, "Directory path is too long");
-		return res;
-	}
-
-	// Prepare string for use with FindFile functions.  First, copy the
-	// string to a buffer, then append '\*' to the directory name.
-	StringCchCopyW(szDir, MAX_PATH, path.widen().c_str());
-	StringCchCatW(szDir, MAX_PATH, (UTF8String("\\")+wildcard).widen().c_str());
-
-	// Find the first file in the directory.
-	auto hFind = FindFirstFileW(szDir, &ffd);
-
-	if (INVALID_HANDLE_VALUE == hFind)
-	{ 
-		if (GetLastError() == ERROR_FILE_NOT_FOUND)
-			return res;
-		CZ_LOG(logDefault, Warning, "%s failed: %s", __FUNCTION__, getWin32Error().c_str());
-		return res;
-	}
-
-	// List all the files in the directory with some info about them.
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-		{
-			if (includeDirectories &&
-				(StrCmpW(ffd.cFileName, L".")!=0) &&
-				(StrCmpW(ffd.cFileName, L"..")!=0))
-			{
-				res.push_back({ Type::Directory, Filename(ffd.cFileName), 0 });
-			}
-		}
-		else
-		{
-			LARGE_INTEGER filesize;
-			filesize.LowPart = ffd.nFileSizeLow;
-			filesize.HighPart = ffd.nFileSizeHigh;
-			res.push_back({ Type::File, Filename(ffd.cFileName), filesize.QuadPart });
-		}
-	} while (FindNextFileW(hFind, &ffd) != 0);
-
-
-	return res;
+	return _getFilesInDirectory(Filename(path).addBackslash(), wildcard, includeDirectories, recursive);
 }
 
 } // namespace cz

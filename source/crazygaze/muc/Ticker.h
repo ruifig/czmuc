@@ -124,86 +124,24 @@ public:
 		m_obj(std::move(_tickedObj)), 
 		m_tickEnabled(tickEnabled)
 	{
-		reset();
+		this->reset();
 	}
 
 	~Ticker()
 	{
 	}
 
-	__forceinline void tick(TimeType deltatime)
+	template<typename... ExtraParameters>
+	__forceinline void tick(TimeType deltatime, ExtraParameters&&... extra)
 	{
 		if (m_tickEnabled)
 		{
-			if (update(deltatime))
+			if (this->update(deltatime))
 			{
-				auto res = m_obj->tick(m_timeSinceLastTick + deltatime);
+				TimeType res = m_obj->tick(m_timeSinceLastTick + deltatime, std::forward<ExtraParameters>(extra)...);
 				if (res==0)
 					m_tickEnabled = false;
-				reset(res);
-				m_timeSinceLastTick = 0;
-			}
-			else
-			{
-				m_timeSinceLastTick += deltatime;
-			}
-		}
-	}
-
-	/*
-	Same thing as tick, but with an extra parameter
-	*/
-	template<class ExtraParameter1>
-	__forceinline void tickExt1(TimeType deltatime, ExtraParameter1& extra)
-	{
-		if (m_tickEnabled)
-		{
-			if (update(deltatime))
-			{
-				auto res = m_obj->tick(m_timeSinceLastTick + deltatime, extra);
-				if (res==0)
-					m_tickEnabled = false;
-				reset(res);
-				m_timeSinceLastTick = 0;
-			}
-			else
-			{
-				m_timeSinceLastTick += deltatime;
-			}
-		}
-	}
-
-	template<class ExtraParameter1, class ExtraParameter2>
-	__forceinline void tickExt2(TimeType deltatime, ExtraParameter1& extra1, ExtraParameter2& extra2)
-	{
-		if (m_tickEnabled)
-		{
-			if (update(deltatime))
-			{
-				TimeType res = m_obj->tick(m_timeSinceLastTick + deltatime, extra1, extra2);
-				if (res==0)
-					m_tickEnabled = false;
-				reset(res);
-				m_timeSinceLastTick = 0;
-			}
-			else
-			{
-				m_timeSinceLastTick += deltatime;
-			}
-		}
-	}
-
-	template<class ExtraParameter1, class ExtraParameter2, class ExtraParameter3>
-	__forceinline void tickExt2(TimeType deltatime, ExtraParameter1& extra1, ExtraParameter2& extra2, ExtraParameter3& extra3)
-	{
-		if (m_tickEnabled)
-		{
-			if (update(deltatime))
-			{
-				TimeType res = m_obj->tick(m_timeSinceLastTick + deltatime, extra1, extra2, extra3);
-				if (res==0)
-					m_tickEnabled = false;
-				reset(res);
+				this->reset(res);
 				m_timeSinceLastTick = 0;
 			}
 			else
@@ -228,7 +166,7 @@ public:
 		m_obj = obj;
 		m_timeSinceLastTick=0;
 		m_tickEnabled = needsticking;
-		reset();
+		this->reset();
 	}
 
 	void setObj(ObjectType&& obj, bool needsticking)
@@ -236,14 +174,23 @@ public:
 		m_obj = std::move(obj);
 		m_timeSinceLastTick=0;
 		m_tickEnabled = needsticking;
-		reset();
+		this->reset();
+	}
+
+	/*
+	 * Removes and returns the object.
+	 * After calling this, no further ticks should occur, since the ticker doesn't have a valid object
+	 */
+	ObjectType removeObj()
+	{
+		return std::exchange(m_obj, nullptr);
 	}
 
 	void start(TimeType countdown)
 	{
 		m_timeSinceLastTick=0;
 		m_tickEnabled = true;
-		reset(countdown);
+		this->reset(countdown);
 	}
 
 	void stop()

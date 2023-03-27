@@ -63,7 +63,7 @@ namespace cz
 			int64_t size; // size, if it's a file
 		};
 
-		static std::vector<FileInfo> getFilesInDirectory(const UTF8String& path, const UTF8String& wildcard="*", bool includeDirectories=false);
+		static std::vector<FileInfo> getFilesInDirectory(const UTF8String& path, const UTF8String& wildcard="*", bool includeDirectories=false, bool recursive=false);
 
 		/*
 		*/

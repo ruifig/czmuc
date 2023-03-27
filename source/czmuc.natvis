@@ -25,8 +25,8 @@ Tools > Options (or Debug > Options) > Debugging > Output Window, set Natvis dia
 !-->
 
 <Type Name="cz::UTF8String">
-    <DisplayString Condition="mData.mBuf==0">{mData.mQuickBuf,s8}</DisplayString>
-    <DisplayString Condition="mData.mBuf!=0">{mData.mBuf._Mypair._Myval2,s8}</DisplayString>
+    <DisplayString Condition="mData.mBuf._Mypair._Myval2==0">{mData.mQuickBuf,s8}</DisplayString>
+    <DisplayString Condition="mData.mBuf._Mypair._Myval2!=0">{mData.mBuf._Mypair._Myval2,s8}</DisplayString>
 
     <Expand>
         <Item Name="[sizeBytes]">mData.mStringLengthBytes</Item>
@@ -35,7 +35,7 @@ Tools > Options (or Debug > Options) > Debugging > Output Window, set Natvis dia
 
         <ArrayItems>
             <Size>mData.mStringLengthBytes</Size>
-            <ValuePointer>mData.mBuf==0 ? mData.mQuickBuf : mData.mBuf._Mypair._Myval2</ValuePointer>
+            <ValuePointer>mData.mBuf._Mypair._Myval2==0 ? mData.mQuickBuf : mData.mBuf._Mypair._Myval2</ValuePointer>
         </ArrayItems>
 		
     </Expand>	

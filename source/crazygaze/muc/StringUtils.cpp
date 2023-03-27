@@ -79,7 +79,7 @@ char* getTemporaryString()
 	return buf;
 }
 
-const char* formatString(const char* format, ...)
+const char* formatString(_Printf_format_string_ const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);

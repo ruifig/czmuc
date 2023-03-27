@@ -12,11 +12,8 @@
 namespace cz
 {
 
-	template<
-		typename T,
-		typename = std::enable_if<std::is_arithmetic_v<T>>::type
-	>
-	std::string to_json(T val)
+	template< typename T >
+	std::enable_if_t<std::is_arithmetic_v<T>, std::string> to_json(T val)
 	{
 		return std::to_string(val);
 	}
@@ -27,6 +24,7 @@ namespace cz
 	}
 
 	std::string to_json(const char* val);
+
 	inline std::string to_json(const std::string& val)
 	{
 		return to_json(val.c_str());

@@ -15,6 +15,7 @@
 
 #include "SharedQueue.h"
 #include "Timer.h"
+#include "Algorithm.h"
 #include <future>
 
 #ifdef max
@@ -56,7 +57,7 @@ protected:
 	bool m_done = false;
 
 	// Inherit constructors
-	using ConcurrentBaseObjectWrapper::ConcurrentBaseObjectWrapper;
+	using ConcurrentBaseObjectWrapper<T>::ConcurrentBaseObjectWrapper;
 
 	~ConcurrentBase()
 	{
@@ -77,13 +78,13 @@ public:
 
 #if 1
 	template<typename F>
-	auto operator()(F f) const -> std::future<decltype(f(obj()))>
+	auto operator()(F f) const -> std::future<decltype(f(this->obj()))>
 	{
-		auto pr = std::make_shared<std::promise<decltype(f(obj()))>>();
+		auto pr = std::make_shared<std::promise<decltype(f(this->obj()))>>();
 		auto ft = pr->get_future();
 		m_q.push([pr = std::move(pr), f=std::move(f), this]() mutable
 		{
-			fulfillPromise(*pr, f, obj());
+			fulfillPromise(*pr, f, this->obj());
 		});
 
 		return ft;
@@ -131,13 +132,13 @@ public:
 
 	void start()
 	{
-		assert(!m_th.joinable());
-		m_th = std::thread([this]
+		assert(!this->m_th.joinable());
+		this->m_th = std::thread([this]
 		{
-			while (!m_done)
+			while (!this->m_done)
 			{
 				std::function<void()> f;
-				m_q.wait_and_pop(f);
+				this->m_q.wait_and_pop(f);
 				f();
 			}
 		});
@@ -148,6 +149,8 @@ template<typename T, bool AutoStart=true>
 class ConcurrentTicker : public ConcurrentBase<T>
 {
 protected:
+	using Type = ConcurrentBase<T>::Type;
+
 	// How to get a return type of a member function without an object...
 	// https://stackoverflow.com/questions/5580253/get-return-type-of-member-function-without-an-object
 	using TickReturnType = decltype(((Type*)nullptr)->tick(0));
@@ -161,26 +164,26 @@ public:
 
 	void start()
 	{
-		assert(!m_th.joinable());
-		m_th = std::thread([this]
+		assert(!this->m_th.joinable());
+		this->m_th = std::thread([this]
 		{
 			HighResolutionTimer timer;
 			const auto eps = std::numeric_limits<TickReturnType>::epsilon();
 			double interval = 0;
-			while (!m_done)
+			while (!this->m_done)
 			{
 				auto timeout = std::max(double(0), interval - timer.seconds());
 				std::function<void()> f;
 
 				auto timeoutMs = static_cast<int>(clip(timeout * 1000, double(0), double(std::numeric_limits<int>::max()-1)));
-				if (m_q.wait_and_pop(f, timeoutMs))
+				if (this->m_q.wait_and_pop(f, timeoutMs))
 					f();
 
 				if (timeout<=0)
 				{
 					double delta = timer.seconds();
 					timer.reset();
-					interval = obj().tick(static_cast<TickReturnType>(std::max((double)eps,delta)));
+					interval = this->obj().tick(static_cast<TickReturnType>(std::max((double)eps,delta)));
 					interval = clip(interval, double(0), double(std::numeric_limits<int>::max()));
 				}
 			}

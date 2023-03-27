@@ -91,6 +91,7 @@ void _doAssert(const char* file, int line, const char* fmt, ...)
     #error debugbreak not implemented for current platform/compiler
 #endif
 
+	executing = false;
 }
 
 #if CZ_PLATFORM==CZ_PLATFORM_WIN32

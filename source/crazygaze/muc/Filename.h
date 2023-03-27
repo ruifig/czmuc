@@ -74,6 +74,8 @@ namespace cz
 
 		UTF8String removeBackslash() const;
 
+		UTF8String addBackslash() const;
+
 	private:
 
 		void set(const UTF8String& path);

@@ -49,7 +49,7 @@ namespace cz
 	#define CZ_TEMPORARY_STRING_MAX_NESTING 20
 
 	char* getTemporaryString();
-	const char* formatString(const char* format, ...);
+	const char* formatString(_Printf_format_string_ const char* format, ...);
 	char* formatStringVA(const char* format, va_list argptr);
 
 

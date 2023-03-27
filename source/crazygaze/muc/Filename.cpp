@@ -38,11 +38,27 @@ namespace
 
 cz::UTF8String Filename::removeBackslash() const
 {
-	UTF8String::const_reverse_iterator it2 = std::find_if(this->rbegin(), this->rend(), isPathSeparator);
 	UTF8String::const_reverse_iterator it = std::find_if(this->rbegin(), this->rend(), notPathSeparator);
 	if (it==this->rend())
 		return *this;
 	return UTF8String(this->begin(), it.base());
+}
+
+UTF8String Filename::addBackslash() const
+{
+	UTF8String::const_reverse_iterator it = this->rbegin();
+	if (it == this->rend())
+	{
+		return "\\";
+	}
+	else if (notPathSeparator(*it))
+	{
+		return *this + "\\";
+	}
+	else
+	{
+		return *this;
+	}
 }
 
 UTF8String Filename::getFilename() const

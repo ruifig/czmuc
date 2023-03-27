@@ -17,6 +17,8 @@ set(CZMUC_SOURCE_FILES
 	"crazygaze/muc/czmuc.cpp"
 	"crazygaze/muc/czmuc.h"
 	"crazygaze/muc/czmucPCH.h"
+	"crazygaze/muc/DateTime.h"
+	"crazygaze/muc/DateTime.cpp"
 	"crazygaze/muc/Expected.h"
 	"crazygaze/muc/File.cpp"
 	"crazygaze/muc/File.h"
@@ -111,7 +113,7 @@ set_target_properties(czmuc PROPERTIES FOLDER "${CZ_IDE_FOLDER}${PROJECT_NAME}")
 target_include_directories(czmuc PUBLIC "")
 set_target_properties(czmuc
 		PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_features(czmuc PUBLIC cxx_std_17)
+#target_compile_features(czmuc PUBLIC cxx_std_17)
 target_precompile_headers(czmuc PUBLIC "crazygaze/muc/czMUCPCH.h")
 
 if (MSVC)

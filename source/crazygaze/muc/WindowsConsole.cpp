@@ -135,14 +135,24 @@ void WindowsConsole::center()
 
 void WindowsConsole::setTextColour(WindowsConsole::Colour colour)
 {
+	if (mConsoleHandle == INVALID_HANDLE_VALUE)
+	{
+		return;
+	}
+
 	SetConsoleTextAttribute(mConsoleHandle, (WORD)colour);
 	mCurrColour = colour;
 }
 void WindowsConsole::print(const char* str)
 {
+	if (mConsoleHandle == INVALID_HANDLE_VALUE)
+	{
+		return;
+	}
+
 	DWORD written;
 	// Using WriteConsoleA, to force using Ansi/UTF8
-	CZ_CHECK(WriteConsoleA(mConsoleHandle, str, static_cast<DWORD>(strlen(str)), &written, NULL )==TRUE);
+	WriteConsoleA(mConsoleHandle, str, static_cast<DWORD>(strlen(str)), &written, NULL );
 }
 
 void WindowsConsole::printf(const char *format, ...)
