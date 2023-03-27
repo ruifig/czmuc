@@ -218,6 +218,8 @@ namespace cz
 
 		std::string tmp1, tmp2, tmp3;
 
+		mSections.push_back(std::make_unique<Section>());
+
 		for(auto&& line : lines)
 		{
 			line = trim(line);
